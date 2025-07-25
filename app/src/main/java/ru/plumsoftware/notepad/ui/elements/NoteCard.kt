@@ -36,11 +36,15 @@ import ru.plumsoftware.notepad.ui.NoteViewModel
 import ru.plumsoftware.notepad.ui.Screen
 
 @Composable
-fun NoteCard(note: Note, viewModel: NoteViewModel, navController: NavController) {
+fun NoteCard(
+    note: Note,
+    viewModel: NoteViewModel,
+    navController: NavController,
+    modifier: Modifier = Modifier
+) {
     Card(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp)
             .clip(RoundedCornerShape(16.dp))
             .border(1.dp, MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f), RoundedCornerShape(16.dp))
             .clickable { navController.navigate(Screen.EditNote.createRoute(note.id)) },

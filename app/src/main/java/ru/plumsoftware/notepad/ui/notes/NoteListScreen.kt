@@ -2,6 +2,7 @@ package ru.plumsoftware.notepad.ui.notes
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -26,6 +27,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardType
@@ -34,6 +36,7 @@ import androidx.navigation.NavController
 import ru.plumsoftware.notepad.ui.NoteViewModel
 import ru.plumsoftware.notepad.ui.Screen
 import ru.plumsoftware.notepad.ui.elements.NoteCard
+import ru.plumsoftware.notepad.ui.formatDate
 
 @Composable
 fun NoteListScreen(navController: NavController, viewModel: NoteViewModel) {
@@ -85,7 +88,26 @@ fun NoteListScreen(navController: NavController, viewModel: NoteViewModel) {
             // Notes List
             LazyColumn {
                 items(notes) { note ->
-                    NoteCard(note, viewModel, navController)
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp)
+                    ) {
+                        Text(
+                            text = formatDate(note.createdAt),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+                            modifier = Modifier
+                                .align(Alignment.TopStart)
+                                .padding(bottom = 4.dp)
+                        )
+                        NoteCard(
+                            note = note,
+                            viewModel = viewModel,
+                            navController = navController,
+                            modifier = Modifier.padding(top = 16.dp)
+                        )
+                    }
                 }
             }
         }
