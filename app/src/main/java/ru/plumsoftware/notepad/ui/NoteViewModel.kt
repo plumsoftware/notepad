@@ -3,9 +3,9 @@ package ru.plumsoftware.notepad.ui
 import android.app.Application
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.room.Room
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import ru.plumsoftware.notepad.data.database.NoteDatabase
 import ru.plumsoftware.notepad.data.model.Note
@@ -17,7 +17,7 @@ class NoteViewModel(application: Application) : ViewModel() {
 
     init {
         viewModelScope.launch {
-            db.noteDao().searchNotes("").collect { notes ->
+            db.noteDao().getAllNotes().collectLatest { notes ->
                 _notes.value = notes
             }
         }
@@ -25,7 +25,7 @@ class NoteViewModel(application: Application) : ViewModel() {
 
     fun searchNotes(query: String) {
         viewModelScope.launch {
-            db.noteDao().searchNotes(query).collect { notes ->
+            db.noteDao().searchNotes(query).collectLatest { notes ->
                 _notes.value = notes
             }
         }
@@ -40,6 +40,12 @@ class NoteViewModel(application: Application) : ViewModel() {
     fun updateNote(note: Note) {
         viewModelScope.launch {
             db.noteDao().update(note)
+        }
+    }
+
+    fun deleteNote(note: Note) {
+        viewModelScope.launch {
+            db.noteDao().delete(note)
         }
     }
 }

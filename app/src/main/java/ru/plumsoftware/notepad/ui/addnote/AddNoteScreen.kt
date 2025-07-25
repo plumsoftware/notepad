@@ -1,5 +1,6 @@
 package ru.plumsoftware.notepad.ui.addnote
 
+import android.annotation.SuppressLint
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -43,15 +44,22 @@ import androidx.navigation.NavController
 import ru.plumsoftware.notepad.data.model.Note
 import ru.plumsoftware.notepad.data.model.Task
 import ru.plumsoftware.notepad.ui.NoteViewModel
+import java.util.UUID
 
+@SuppressLint("MutableCollectionMutableState")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AddNoteScreen(navController: NavController, viewModel: NoteViewModel) {
-    var title by remember { mutableStateOf("") }
-    var description by remember { mutableStateOf("") }
-    var tasks by remember { mutableStateOf(listOf<Task>()) }
+fun AddNoteScreen(
+    navController: NavController,
+    viewModel: NoteViewModel,
+    note: Note? = null
+) {
+    val isEditing = note != null
+    var title by remember { mutableStateOf(note?.title ?: "") }
+    var description by remember { mutableStateOf(note?.description ?: "") }
+    var tasks by remember { mutableStateOf<MutableList<Task>>(note?.tasks?.toMutableList() ?: mutableListOf()) }
     var newTaskText by remember { mutableStateOf("") }
-    var selectedColor by remember { mutableStateOf(Color.White.value) }
+    var selectedColor by remember { mutableStateOf(note?.color?.toULong() ?: Color.White.value) }
 
     val colors = listOf(
         Color.White.value,
@@ -64,7 +72,7 @@ fun AddNoteScreen(navController: NavController, viewModel: NoteViewModel) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Add Note") },
+                title = { Text(if (isEditing) "Edit Note" else "Add Note") },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
@@ -74,20 +82,24 @@ fun AddNoteScreen(navController: NavController, viewModel: NoteViewModel) {
                     Button(
                         onClick = {
                             if (title.isNotBlank()) {
-                                viewModel.addNote(
-                                    Note(
-                                        title = title,
-                                        description = description,
-                                        color = selectedColor.toLong(),
-                                        tasks = tasks
-                                    )
+                                val updatedNote = Note(
+                                    id = note?.id ?: UUID.randomUUID().toString(),
+                                    title = title,
+                                    description = description,
+                                    color = selectedColor.toLong(),
+                                    tasks = tasks
                                 )
+                                if (isEditing) {
+                                    viewModel.updateNote(updatedNote)
+                                } else {
+                                    viewModel.addNote(updatedNote)
+                                }
                                 navController.popBackStack()
                             }
                         },
                         enabled = title.isNotBlank()
                     ) {
-                        Text("Save")
+                        Text(if (isEditing) "Edit" else "Save")
                     }
                 }
             )
@@ -158,7 +170,7 @@ fun AddNoteScreen(navController: NavController, viewModel: NoteViewModel) {
                 IconButton(
                     onClick = {
                         if (newTaskText.isNotBlank()) {
-                            tasks = tasks + Task(text = newTaskText)
+                            tasks.add(Task(text = newTaskText))
                             newTaskText = ""
                         }
                     }

@@ -21,6 +21,7 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -37,6 +38,7 @@ import ru.plumsoftware.notepad.ui.elements.NoteCard
 @Composable
 fun NoteListScreen(navController: NavController, viewModel: NoteViewModel) {
     var searchQuery by remember { mutableStateOf("") }
+    val notes by viewModel.notes.collectAsState()
 
     Scaffold(
         floatingActionButton = {
@@ -55,7 +57,6 @@ fun NoteListScreen(navController: NavController, viewModel: NoteViewModel) {
                 .background(MaterialTheme.colorScheme.background)
                 .padding(padding)
         ) {
-            // Search Bar
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { query ->
@@ -80,10 +81,9 @@ fun NoteListScreen(navController: NavController, viewModel: NoteViewModel) {
                 )
             )
 
-            // Notes List
             LazyColumn {
-                items(viewModel.notes.value) { note ->
-                    NoteCard(note, viewModel)
+                items(notes) { note ->
+                    NoteCard(note, viewModel, navController)
                 }
             }
         }
