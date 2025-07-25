@@ -1,5 +1,7 @@
 package ru.plumsoftware.notepad.ui.notes
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -9,7 +11,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -22,13 +26,15 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -42,6 +48,27 @@ import ru.plumsoftware.notepad.ui.formatDate
 fun NoteListScreen(navController: NavController, viewModel: NoteViewModel) {
     var searchQuery by remember { mutableStateOf("") }
     val notes by viewModel.notes.collectAsState()
+    val lazyListState = rememberLazyListState()
+    val firstVisibleItemIndex by remember { derivedStateOf { lazyListState.firstVisibleItemIndex } }
+    val currentDate by remember {
+        derivedStateOf {
+            notes.getOrNull(firstVisibleItemIndex)?.createdAt?.let { formatDate(it) } ?: ""
+        }
+    }
+    val scale = remember { Animatable(1f) }
+
+    LaunchedEffect(currentDate) {
+        if (currentDate.isNotEmpty()) {
+            scale.animateTo(
+                targetValue = 1.2f,
+                animationSpec = tween(durationMillis = 200)
+            )
+            scale.animateTo(
+                targetValue = 1.0f,
+                animationSpec = tween(durationMillis = 200)
+            )
+        }
+    }
 
     Scaffold(
         floatingActionButton = {
@@ -69,7 +96,7 @@ fun NoteListScreen(navController: NavController, viewModel: NoteViewModel) {
                 },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp),
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
                 placeholder = { Text("Search notes...") },
                 trailingIcon = {
                     Icon(
@@ -85,27 +112,38 @@ fun NoteListScreen(navController: NavController, viewModel: NoteViewModel) {
                 )
             )
 
-            // Notes List
-            LazyColumn {
-                items(notes) { note ->
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 8.dp)
-                    ) {
-                        Text(
-                            text = formatDate(note.createdAt),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
-                            modifier = Modifier
-                                .align(Alignment.TopStart)
-                                .padding(bottom = 4.dp)
+            // Fixed Date Label and Notes List
+            Box(
+                modifier = Modifier.fillMaxSize()
+            ) {
+                // Fixed Date Label
+                Text(
+                    text = currentDate,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+                    modifier = Modifier
+                        .padding(start = 16.dp, top = 4.dp)
+                        .background(
+                            MaterialTheme.colorScheme.background.copy(alpha = 0.9f),
+                            RoundedCornerShape(4.dp)
                         )
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                        .scale(scale.value)
+                )
+
+                // Notes List
+                LazyColumn(
+                    state = lazyListState,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(top = 28.dp) // Offset to avoid overlapping with date
+                ) {
+                    items(notes) { note ->
                         NoteCard(
                             note = note,
                             viewModel = viewModel,
                             navController = navController,
-                            modifier = Modifier.padding(top = 16.dp)
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                         )
                     }
                 }
