@@ -87,7 +87,8 @@ fun AddNoteScreen(
                                     title = title,
                                     description = description,
                                     color = selectedColor.toLong(),
-                                    tasks = tasks
+                                    tasks = tasks,
+                                    createdAt = note?.createdAt ?: System.currentTimeMillis()
                                 )
                                 if (isEditing) {
                                     viewModel.updateNote(updatedNote)

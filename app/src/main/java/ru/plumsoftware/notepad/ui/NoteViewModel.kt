@@ -33,7 +33,7 @@ class NoteViewModel(application: Application) : ViewModel() {
 
     fun addNote(note: Note) {
         viewModelScope.launch {
-            db.noteDao().insert(note)
+            db.noteDao().insert(note.copy(createdAt = System.currentTimeMillis()))
         }
     }
 

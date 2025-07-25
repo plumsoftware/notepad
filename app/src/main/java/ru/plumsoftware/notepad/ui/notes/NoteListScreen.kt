@@ -57,6 +57,7 @@ fun NoteListScreen(navController: NavController, viewModel: NoteViewModel) {
                 .background(MaterialTheme.colorScheme.background)
                 .padding(padding)
         ) {
+            // Search Bar
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { query ->
@@ -81,6 +82,7 @@ fun NoteListScreen(navController: NavController, viewModel: NoteViewModel) {
                 )
             )
 
+            // Notes List
             LazyColumn {
                 items(notes) { note ->
                     NoteCard(note, viewModel, navController)

@@ -10,10 +10,10 @@ import ru.plumsoftware.notepad.data.model.Note
 
 @Dao
 interface NoteDao {
-    @Query("SELECT * FROM notes WHERE title LIKE '%' || :query || '%' OR description LIKE '%' || :query || '%'")
+    @Query("SELECT * FROM notes WHERE title LIKE '%' || :query || '%' OR description LIKE '%' || :query || '%' ORDER BY createdAt DESC")
     fun searchNotes(query: String): Flow<List<Note>>
 
-    @Query("SELECT * FROM notes")
+    @Query("SELECT * FROM notes ORDER BY createdAt DESC")
     fun getAllNotes(): Flow<List<Note>>
 
     @Insert

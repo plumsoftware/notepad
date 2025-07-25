@@ -10,5 +10,6 @@ data class Note(
     val title: String,
     val description: String,
     val color: Long,
+    val createdAt: Long = System.currentTimeMillis(),
     val tasks: List<Task> = emptyList()
 )
