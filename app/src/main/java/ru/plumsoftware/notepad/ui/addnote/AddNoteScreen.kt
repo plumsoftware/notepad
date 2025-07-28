@@ -22,6 +22,7 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -31,6 +32,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -39,11 +41,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import ru.plumsoftware.notepad.R
 import ru.plumsoftware.notepad.data.model.Note
 import ru.plumsoftware.notepad.data.model.Task
 import ru.plumsoftware.notepad.ui.NoteViewModel
+import ru.plumsoftware.notepad.ui.dialog.LoadingDialog
+import ru.plumsoftware.notepad.ui.player.playSound
+import ru.plumsoftware.notepad.ui.player.rememberExoPlayer
 import java.util.UUID
 
 @SuppressLint("MutableCollectionMutableState")
@@ -60,6 +67,9 @@ fun AddNoteScreen(
     var tasks by remember { mutableStateOf<MutableList<Task>>(note?.tasks?.toMutableList() ?: mutableListOf()) }
     var newTaskText by remember { mutableStateOf("") }
     var selectedColor by remember { mutableStateOf(note?.color?.toULong() ?: Color.White.value) }
+    val isLoading by viewModel.isLoading.collectAsState()
+    val exoPlayer = rememberExoPlayer()
+    val context = LocalContext.current
 
     val colors = listOf(
         Color.White.value,
@@ -72,7 +82,7 @@ fun AddNoteScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(if (isEditing) "Edit Note" else "Add Note") },
+                title = { Text(if (isEditing) "Редактировать заметку" else "Добавить заметку") },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
@@ -91,119 +101,142 @@ fun AddNoteScreen(
                                     createdAt = note?.createdAt ?: System.currentTimeMillis()
                                 )
                                 if (isEditing) {
+                                    playSound(context, exoPlayer, R.raw.note_create) //note_edit
                                     viewModel.updateNote(updatedNote)
                                 } else {
+                                    playSound(context, exoPlayer, R.raw.note_create)
                                     viewModel.addNote(updatedNote)
                                 }
                                 navController.popBackStack()
                             }
                         },
-                        enabled = title.isNotBlank()
+                        enabled = title.isNotBlank() && !isLoading
                     ) {
-                        Text(if (isEditing) "Edit" else "Save")
+                        Text(if (isEditing) "Сохранить" else "Добавить")
                     }
                 }
             )
         }
     ) { padding ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.background)
                 .padding(padding)
-                .padding(16.dp)
         ) {
-            OutlinedTextField(
-                value = title,
-                onValueChange = { title = it },
-                modifier = Modifier.fillMaxWidth(),
-                label = { Text("Title") }
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            OutlinedTextField(
-                value = description,
-                onValueChange = { description = it },
-                modifier = Modifier.fillMaxWidth(),
-                label = { Text("Description") }
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Tasks
-            Text("Tasks", style = MaterialTheme.typography.titleMedium)
-            tasks.forEachIndexed { index, task ->
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 4.dp)
-                ) {
-                    Checkbox(
-                        checked = task.isChecked,
-                        onCheckedChange = { isChecked ->
-                            tasks = tasks.toMutableList().apply {
-                                this[index] = task.copy(isChecked = isChecked)
-                            }
-                        }
-                    )
-                    Text(
-                        text = task.text,
-                        modifier = Modifier.weight(1f)
-                    )
-                    IconButton(onClick = {
-                        tasks = tasks.toMutableList().apply { removeAt(index) }
-                    }) {
-                        Icon(Icons.Default.Delete, contentDescription = "Delete Task")
-                    }
-                }
-            }
-
-            // Add Task
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp)
             ) {
                 OutlinedTextField(
-                    value = newTaskText,
-                    onValueChange = { newTaskText = it },
-                    modifier = Modifier.weight(1f),
-                    label = { Text("New Task") }
+                    value = title,
+                    onValueChange = { title = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Заголовок") },
+                    enabled = !isLoading
                 )
-                IconButton(
-                    onClick = {
-                        if (newTaskText.isNotBlank()) {
-                            tasks.add(Task(text = newTaskText))
-                            newTaskText = ""
+                Spacer(modifier = Modifier.height(16.dp))
+                OutlinedTextField(
+                    value = description,
+                    onValueChange = { description = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Описание") },
+                    enabled = !isLoading
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Tasks
+                Text("Задачи", style = MaterialTheme.typography.titleMedium)
+                tasks.forEachIndexed { index, task ->
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp)
+                    ) {
+                        Checkbox(
+                            checked = task.isChecked,
+                            onCheckedChange = { isChecked ->
+                                tasks = tasks.toMutableList().apply {
+                                    this[index] = task.copy(isChecked = isChecked)
+                                }
+                            },
+                            enabled = !isLoading,
+                            colors = CheckboxDefaults.colors(
+                                checkedColor = MaterialTheme.colorScheme.primary
+                            )
+                        )
+                        Text(
+                            text = task.text,
+                            modifier = Modifier.weight(1f)
+                        )
+                        IconButton(
+                            onClick = {
+                                tasks = tasks.toMutableList().apply { removeAt(index) }
+                            },
+                            enabled = !isLoading
+                        ) {
+                            Icon(Icons.Default.Delete, contentDescription = "Delete Task")
                         }
                     }
+                }
+
+                // Add Task
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(Icons.Default.Add, contentDescription = "Add Task")
+                    OutlinedTextField(
+                        value = newTaskText,
+                        onValueChange = { newTaskText = it },
+                        modifier = Modifier.weight(1f),
+                        label = { Text("Новая задача") },
+                        enabled = !isLoading
+                    )
+                    IconButton(
+                        onClick = {
+                            if (newTaskText.isNotBlank()) {
+                                tasks.add(Task(text = newTaskText))
+                                newTaskText = ""
+                            }
+                        },
+                        enabled = !isLoading
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = "Add Task")
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Color Picker
+                Text("Цвет заметки", style = MaterialTheme.typography.titleMedium)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState())
+                ) {
+                    colors.forEach { color ->
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .padding(4.dp)
+                                .clip(CircleShape)
+                                .background(Color(color))
+                                .border(
+                                    width = 2.dp,
+                                    color = if (selectedColor == color) MaterialTheme.colorScheme.primary else Color.Transparent,
+                                    shape = CircleShape
+                                )
+                                .clickable(enabled = !isLoading) { selectedColor = color }
+                        )
+                    }
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Color Picker
-            Text("Note Color", style = MaterialTheme.typography.titleMedium)
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState())
-            ) {
-                colors.forEach { color ->
-                    Box(
-                        modifier = Modifier
-                            .size(40.dp)
-                            .padding(4.dp)
-                            .clip(CircleShape)
-                            .background(Color(color))
-                            .border(
-                                width = 2.dp,
-                                color = if (selectedColor == color) MaterialTheme.colorScheme.primary else Color.Transparent,
-                                shape = CircleShape
-                            )
-                            .clickable { selectedColor = color }
-                    )
-                }
+            // Loading Dialog
+            if (isLoading) {
+                LoadingDialog()
             }
         }
     }

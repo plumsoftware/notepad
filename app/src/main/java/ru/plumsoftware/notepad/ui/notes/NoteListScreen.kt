@@ -40,17 +40,20 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import kotlinx.coroutines.launch
+import ru.plumsoftware.notepad.R
 import ru.plumsoftware.notepad.ui.NoteViewModel
 import ru.plumsoftware.notepad.ui.Screen
 import ru.plumsoftware.notepad.ui.dialog.LoadingDialog
 import ru.plumsoftware.notepad.ui.elements.NoteCard
 import ru.plumsoftware.notepad.ui.formatDate
+import ru.plumsoftware.notepad.ui.player.playSound
+import ru.plumsoftware.notepad.ui.player.rememberExoPlayer
 
-// Note List Screen
 @Composable
 fun NoteListScreen(navController: NavController, viewModel: NoteViewModel) {
     var searchQuery by remember { mutableStateOf("") }
@@ -75,6 +78,8 @@ fun NoteListScreen(navController: NavController, viewModel: NoteViewModel) {
         }
     )) { mutableStateMapOf<String, Boolean>() }
     val coroutineScope = rememberCoroutineScope()
+    val exoPlayer = rememberExoPlayer()
+    val context = LocalContext.current
 
     // Trigger animation for date change
     LaunchedEffect(currentDate) {
@@ -170,8 +175,9 @@ fun NoteListScreen(navController: NavController, viewModel: NoteViewModel) {
                                 isVisible = notesToDelete[note.id] != true,
                                 onDelete = {
                                     notesToDelete[note.id] = true
+                                    playSound(context, exoPlayer, R.raw.note_delete)
                                     coroutineScope.launch {
-                                        kotlinx.coroutines.delay(400)
+                                        kotlinx.coroutines.delay(200)
                                         viewModel.deleteNote(note)
                                         notesToDelete.remove(note.id)
                                     }
