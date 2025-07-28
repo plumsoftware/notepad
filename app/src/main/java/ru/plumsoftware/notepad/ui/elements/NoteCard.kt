@@ -38,8 +38,8 @@ import androidx.navigation.NavController
 import ru.plumsoftware.notepad.data.model.Note
 import ru.plumsoftware.notepad.ui.NoteViewModel
 import ru.plumsoftware.notepad.ui.Screen
+import ru.plumsoftware.notepad.ui.formatDate
 
-// Note Card
 @Composable
 fun NoteCard(
     note: Note,
@@ -51,8 +51,8 @@ fun NoteCard(
 ) {
     AnimatedVisibility(
         visible = isVisible,
-        enter = scaleIn(animationSpec = tween(durationMillis = 400)),
-        exit = scaleOut(animationSpec = tween(durationMillis = 400))
+        enter = scaleIn(animationSpec = tween(durationMillis = 200)),
+        exit = scaleOut(animationSpec = tween(durationMillis = 200))
     ) {
         Card(
             modifier = modifier
@@ -122,6 +122,15 @@ fun NoteCard(
                             )
                         )
                     }
+                }
+                // Display reminder date if set
+                note.reminderDate?.let { reminderDate ->
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Напоминание: ${formatDate(reminderDate)}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                    )
                 }
             }
         }

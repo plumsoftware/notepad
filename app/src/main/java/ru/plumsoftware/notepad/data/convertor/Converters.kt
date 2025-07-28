@@ -14,4 +14,14 @@ class Converters {
     fun toTaskList(tasksString: String): List<Task> {
         return Json.decodeFromString(tasksString)
     }
+
+    @TypeConverter
+    fun fromLong(value: Long?): String? {
+        return value?.toString()
+    }
+
+    @TypeConverter
+    fun toLong(value: String?): Long? {
+        return value?.toLongOrNull()
+    }
 }

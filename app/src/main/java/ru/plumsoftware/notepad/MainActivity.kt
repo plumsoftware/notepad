@@ -1,10 +1,15 @@
 package ru.plumsoftware.notepad
 
 import android.annotation.SuppressLint
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.content.Context
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.runtime.LaunchedEffect
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -23,15 +28,40 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        // Create notification channel
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                "note_reminder_channel",
+                "Note Reminders",
+                NotificationManager.IMPORTANCE_DEFAULT
+            ).apply {
+                description = "Channel for note reminder notifications"
+            }
+            val notificationManager: NotificationManager =
+                getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            notificationManager.createNotificationChannel(channel)
+        }
+
         setContent {
             NotepadTheme {
                 val navController = rememberNavController()
-                NavHost(navController = navController, startDestination = Screen.NoteList.route) {
+                val noteId = intent.getStringExtra("noteId")
+                NavHost(
+                    navController = navController,
+                    startDestination = Screen.NoteList.route
+                ) {
                     composable(Screen.NoteList.route) {
                         val viewModel: NoteViewModel = viewModel(
                             factory = NoteViewModelFactory(application)
                         )
                         NoteListScreen(navController, viewModel)
+                        // Handle notification click
+                        LaunchedEffect(noteId) {
+                            if (noteId != null) {
+                                navController.navigate(Screen.EditNote.createRoute(noteId))
+                            }
+                        }
                     }
                     composable(Screen.AddNote.route) {
                         val viewModel: NoteViewModel = viewModel(

@@ -20,17 +20,25 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TimePicker
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberDatePickerState
+import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -49,8 +57,10 @@ import ru.plumsoftware.notepad.data.model.Note
 import ru.plumsoftware.notepad.data.model.Task
 import ru.plumsoftware.notepad.ui.NoteViewModel
 import ru.plumsoftware.notepad.ui.dialog.LoadingDialog
+import ru.plumsoftware.notepad.ui.formatDate
 import ru.plumsoftware.notepad.ui.player.playSound
 import ru.plumsoftware.notepad.ui.player.rememberExoPlayer
+import java.util.Calendar
 import java.util.UUID
 
 @SuppressLint("MutableCollectionMutableState")
@@ -67,6 +77,11 @@ fun AddNoteScreen(
     var tasks by remember { mutableStateOf<MutableList<Task>>(note?.tasks?.toMutableList() ?: mutableListOf()) }
     var newTaskText by remember { mutableStateOf("") }
     var selectedColor by remember { mutableStateOf(note?.color?.toULong() ?: Color.White.value) }
+    var isReminder by remember { mutableStateOf(note?.reminderDate != null) }
+    var reminderDate by remember { mutableStateOf(note?.reminderDate) }
+    var showDatePicker by remember { mutableStateOf(false) }
+    var showTimePicker by remember { mutableStateOf(false) }
+    var tempSelectedDateMillis by remember { mutableStateOf<Long?>(null) }
     val isLoading by viewModel.isLoading.collectAsState()
     val exoPlayer = rememberExoPlayer()
     val context = LocalContext.current
@@ -78,6 +93,90 @@ fun AddNoteScreen(
         Color(0xFFBBDEFB).value,
         Color(0xFFFFF9C4).value
     )
+
+    // Date Picker Dialog
+    if (showDatePicker) {
+        val datePickerState = rememberDatePickerState(
+            initialSelectedDateMillis = reminderDate ?: System.currentTimeMillis(),
+            selectableDates = object : SelectableDates {
+                override fun isSelectableDate(utcTimeMillis: Long): Boolean {
+                    return utcTimeMillis >= System.currentTimeMillis()
+                }
+            }
+        )
+        DatePickerDialog(
+            onDismissRequest = { showDatePicker = false },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showDatePicker = false
+                        tempSelectedDateMillis = datePickerState.selectedDateMillis
+                        showTimePicker = true
+                    }
+                ) { Text("OK") }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showDatePicker = false
+                        isReminder = false
+                        reminderDate = null
+                    }
+                ) { Text("Отмена") }
+            }
+        ) {
+            DatePicker(
+                state = datePickerState,
+                modifier = Modifier.padding(16.dp),
+                title = { Text("Когда напомнить о событии") }
+            )
+        }
+    }
+
+    // Time Picker Dialog
+    if (showTimePicker) {
+        val timePickerState = rememberTimePickerState(
+            initialHour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY),
+            initialMinute = Calendar.getInstance().get(Calendar.MINUTE),
+            is24Hour = true
+        )
+        AlertDialog(
+            onDismissRequest = { showTimePicker = false },
+            title = { Text("Выберите время") },
+            text = {
+                TimePicker(
+                    state = timePickerState,
+                    modifier = Modifier.padding(16.dp)
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showTimePicker = false
+                        tempSelectedDateMillis?.let { dateMillis ->
+                            val calendar = Calendar.getInstance().apply {
+                                timeInMillis = dateMillis
+                                set(Calendar.HOUR_OF_DAY, timePickerState.hour)
+                                set(Calendar.MINUTE, timePickerState.minute)
+                                set(Calendar.SECOND, 0)
+                                set(Calendar.MILLISECOND, 0)
+                            }
+                            reminderDate = calendar.timeInMillis
+                        }
+                    }
+                ) { Text("OK") }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showTimePicker = false
+                        isReminder = false
+                        reminderDate = null
+                    }
+                ) { Text("Отмена") }
+            }
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -98,7 +197,8 @@ fun AddNoteScreen(
                                     description = description,
                                     color = selectedColor.toLong(),
                                     tasks = tasks,
-                                    createdAt = note?.createdAt ?: System.currentTimeMillis()
+                                    createdAt = note?.createdAt ?: System.currentTimeMillis(),
+                                    reminderDate = if (isReminder) reminderDate else null
                                 )
                                 if (isEditing) {
                                     playSound(context, exoPlayer, R.raw.note_create) //note_edit
@@ -145,6 +245,40 @@ fun AddNoteScreen(
                     enabled = !isLoading
                 )
                 Spacer(modifier = Modifier.height(16.dp))
+
+                // Reminder Checkbox
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp)
+                ) {
+                    Checkbox(
+                        checked = isReminder,
+                        onCheckedChange = { checked ->
+                            isReminder = checked
+                            if (checked && reminderDate == null) {
+                                showDatePicker = true
+                            } else if (!checked) {
+                                reminderDate = null
+                            }
+                        },
+                        enabled = !isLoading,
+                        colors = CheckboxDefaults.colors(
+                            checkedColor = MaterialTheme.colorScheme.primary
+                        )
+                    )
+                    Text("Напомнить")
+                }
+                // Display selected reminder date
+                reminderDate?.let {
+                    Text(
+                        text = "Напоминание: ${formatDate(it)}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                        modifier = Modifier.padding(start = 16.dp, bottom = 8.dp)
+                    )
+                }
 
                 // Tasks
                 Text("Задачи", style = MaterialTheme.typography.titleMedium)
