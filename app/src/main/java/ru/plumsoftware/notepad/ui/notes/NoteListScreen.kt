@@ -30,8 +30,12 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
@@ -39,11 +43,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import kotlinx.coroutines.launch
 import ru.plumsoftware.notepad.ui.NoteViewModel
 import ru.plumsoftware.notepad.ui.Screen
 import ru.plumsoftware.notepad.ui.elements.NoteCard
 import ru.plumsoftware.notepad.ui.formatDate
 
+// Note List Screen
 @Composable
 fun NoteListScreen(navController: NavController, viewModel: NoteViewModel) {
     var searchQuery by remember { mutableStateOf("") }
@@ -56,7 +62,19 @@ fun NoteListScreen(navController: NavController, viewModel: NoteViewModel) {
         }
     }
     val scale = remember { Animatable(1f) }
+    val notesToDelete = rememberSaveable(saver = Saver(
+        save = { map ->
+            map.mapValues { if (it.value) 1 else 0 }.toList().toTypedArray()
+        },
+        restore = { array ->
+            mutableStateMapOf<String, Boolean>().apply {
+                array.toMap().forEach { (key, value) -> put(key, value == 1) }
+            }
+        }
+    )) { mutableStateMapOf<String, Boolean>() }
+    val coroutineScope = rememberCoroutineScope()
 
+    // Trigger animation for date change
     LaunchedEffect(currentDate) {
         if (currentDate.isNotEmpty()) {
             scale.animateTo(
@@ -136,13 +154,22 @@ fun NoteListScreen(navController: NavController, viewModel: NoteViewModel) {
                     state = lazyListState,
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(top = 28.dp) // Offset to avoid overlapping with date
+                        .padding(top = 28.dp)
                 ) {
-                    items(notes) { note ->
+                    items(notes, key = { it.id }) { note ->
                         NoteCard(
                             note = note,
                             viewModel = viewModel,
                             navController = navController,
+                            isVisible = notesToDelete[note.id] != true,
+                            onDelete = {
+                                notesToDelete[note.id] = true
+                                coroutineScope.launch {
+                                    kotlinx.coroutines.delay(400)
+                                    viewModel.deleteNote(note)
+                                    notesToDelete.remove(note.id)
+                                }
+                            },
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                         )
                     }
@@ -151,3 +178,4 @@ fun NoteListScreen(navController: NavController, viewModel: NoteViewModel) {
         }
     }
 }
+

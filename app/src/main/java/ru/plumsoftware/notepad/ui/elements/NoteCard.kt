@@ -1,5 +1,9 @@
 package ru.plumsoftware.notepad.ui.elements
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -35,80 +39,89 @@ import ru.plumsoftware.notepad.data.model.Note
 import ru.plumsoftware.notepad.ui.NoteViewModel
 import ru.plumsoftware.notepad.ui.Screen
 
+// Note Card
 @Composable
 fun NoteCard(
     note: Note,
     viewModel: NoteViewModel,
     navController: NavController,
+    isVisible: Boolean,
+    onDelete: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .border(1.dp, MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f), RoundedCornerShape(16.dp))
-            .clickable { navController.navigate(Screen.EditNote.createRoute(note.id)) },
-        colors = CardDefaults.cardColors(containerColor = Color(note.color.toULong()))
+    AnimatedVisibility(
+        visible = isVisible,
+        enter = scaleIn(animationSpec = tween(durationMillis = 400)),
+        exit = scaleOut(animationSpec = tween(durationMillis = 400))
     ) {
-        Column(
-            modifier = Modifier
+        Card(
+            modifier = modifier
                 .fillMaxWidth()
-                .padding(16.dp)
+                .clip(RoundedCornerShape(16.dp))
+                .border(1.dp, MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f), RoundedCornerShape(16.dp))
+                .clickable { navController.navigate(Screen.EditNote.createRoute(note.id)) },
+            colors = CardDefaults.cardColors(containerColor = Color(note.color.toULong()))
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
             ) {
-                Text(
-                    text = note.title,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.weight(1f)
-                )
-                IconButton(onClick = { viewModel.deleteNote(note) }) {
-                    Icon(
-                        Icons.Default.Delete,
-                        contentDescription = "Delete Note",
-                        tint = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = note.description,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            note.tasks.forEachIndexed { index, task ->
                 Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(vertical = 4.dp)
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Checkbox(
-                        checked = task.isChecked,
-                        onCheckedChange = { isChecked ->
-                            val updatedTasks = note.tasks.toMutableList().apply {
-                                this[index] = task.copy(isChecked = isChecked)
-                            }
-                            viewModel.updateNote(note.copy(tasks = updatedTasks))
-                        },
-                        colors = CheckboxDefaults.colors(
-                            checkedColor = MaterialTheme.colorScheme.primary
-                        )
-                    )
                     Text(
-                        text = task.text,
-                        style = TextStyle(
-                            fontSize = 14.sp,
-                            textDecoration = if (task.isChecked) TextDecoration.LineThrough else null,
-                            color = MaterialTheme.colorScheme.onSurface.copy(
-                                alpha = if (task.isChecked) 0.5f else 1f
+                        text = note.title,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.weight(1f)
+                    )
+                    IconButton(onClick = onDelete) {
+                        Icon(
+                            Icons.Default.Delete,
+                            contentDescription = "Delete Note",
+                            tint = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = note.description,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                note.tasks.forEachIndexed { index, task ->
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(vertical = 4.dp)
+                    ) {
+                        Checkbox(
+                            checked = task.isChecked,
+                            onCheckedChange = { isChecked ->
+                                val updatedTasks = note.tasks.toMutableList().apply {
+                                    this[index] = task.copy(isChecked = isChecked)
+                                }
+                                viewModel.updateNote(note.copy(tasks = updatedTasks))
+                            },
+                            colors = CheckboxDefaults.colors(
+                                checkedColor = MaterialTheme.colorScheme.primary
                             )
                         )
-                    )
+                        Text(
+                            text = task.text,
+                            style = TextStyle(
+                                fontSize = 14.sp,
+                                textDecoration = if (task.isChecked) TextDecoration.LineThrough else null,
+                                color = MaterialTheme.colorScheme.onSurface.copy(
+                                    alpha = if (task.isChecked) 0.5f else 1f
+                                )
+                            )
+                        )
+                    }
                 }
             }
         }
