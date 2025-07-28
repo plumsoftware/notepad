@@ -46,6 +46,7 @@ import androidx.navigation.NavController
 import kotlinx.coroutines.launch
 import ru.plumsoftware.notepad.ui.NoteViewModel
 import ru.plumsoftware.notepad.ui.Screen
+import ru.plumsoftware.notepad.ui.dialog.LoadingDialog
 import ru.plumsoftware.notepad.ui.elements.NoteCard
 import ru.plumsoftware.notepad.ui.formatDate
 
@@ -54,6 +55,7 @@ import ru.plumsoftware.notepad.ui.formatDate
 fun NoteListScreen(navController: NavController, viewModel: NoteViewModel) {
     var searchQuery by remember { mutableStateOf("") }
     val notes by viewModel.notes.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
     val lazyListState = rememberLazyListState()
     val firstVisibleItemIndex by remember { derivedStateOf { lazyListState.firstVisibleItemIndex } }
     val currentDate by remember {
@@ -99,81 +101,91 @@ fun NoteListScreen(navController: NavController, viewModel: NoteViewModel) {
             }
         }
     ) { padding ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.background)
                 .padding(padding)
         ) {
-            // Search Bar
-            OutlinedTextField(
-                value = searchQuery,
-                onValueChange = { query ->
-                    searchQuery = query
-                    viewModel.searchNotes(query)
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                placeholder = { Text("Search notes...") },
-                trailingIcon = {
-                    Icon(
-                        Icons.Default.Search,
-                        contentDescription = "Search",
-                        modifier = Modifier.clickable { viewModel.searchNotes(searchQuery) }
-                    )
-                },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = MaterialTheme.colorScheme.primary,
-                    unfocusedBorderColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
-                )
-            )
-
-            // Fixed Date Label and Notes List
-            Box(
+            Column(
                 modifier = Modifier.fillMaxSize()
             ) {
-                // Fixed Date Label
-                Text(
-                    text = currentDate,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+                // Search Bar
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { query ->
+                        searchQuery = query
+                        viewModel.searchNotes(query)
+                    },
                     modifier = Modifier
-                        .padding(start = 16.dp, top = 4.dp)
-                        .background(
-                            MaterialTheme.colorScheme.background.copy(alpha = 0.9f),
-                            RoundedCornerShape(4.dp)
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    placeholder = { Text("Поиск заметок...") },
+                    trailingIcon = {
+                        Icon(
+                            Icons.Default.Search,
+                            contentDescription = "Search",
+                            modifier = Modifier.clickable { viewModel.searchNotes(searchQuery) }
                         )
-                        .padding(horizontal = 8.dp, vertical = 4.dp)
-                        .scale(scale.value)
+                    },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
+                    ),
+                    enabled = !isLoading
                 )
 
-                // Notes List
-                LazyColumn(
-                    state = lazyListState,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(top = 28.dp)
+                // Fixed Date Label and Notes List
+                Box(
+                    modifier = Modifier.fillMaxSize()
                 ) {
-                    items(notes, key = { it.id }) { note ->
-                        NoteCard(
-                            note = note,
-                            viewModel = viewModel,
-                            navController = navController,
-                            isVisible = notesToDelete[note.id] != true,
-                            onDelete = {
-                                notesToDelete[note.id] = true
-                                coroutineScope.launch {
-                                    kotlinx.coroutines.delay(400)
-                                    viewModel.deleteNote(note)
-                                    notesToDelete.remove(note.id)
-                                }
-                            },
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                        )
+                    // Fixed Date Label
+                    Text(
+                        text = currentDate,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+                        modifier = Modifier
+                            .padding(start = 16.dp, top = 4.dp)
+                            .background(
+                                MaterialTheme.colorScheme.background.copy(alpha = 0.9f),
+                                RoundedCornerShape(4.dp)
+                            )
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                            .scale(scale.value)
+                    )
+
+                    // Notes List
+                    LazyColumn(
+                        state = lazyListState,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(top = 28.dp)
+                    ) {
+                        items(notes, key = { it.id }) { note ->
+                            NoteCard(
+                                note = note,
+                                viewModel = viewModel,
+                                navController = navController,
+                                isVisible = notesToDelete[note.id] != true,
+                                onDelete = {
+                                    notesToDelete[note.id] = true
+                                    coroutineScope.launch {
+                                        kotlinx.coroutines.delay(400)
+                                        viewModel.deleteNote(note)
+                                        notesToDelete.remove(note.id)
+                                    }
+                                },
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                            )
+                        }
                     }
                 }
+            }
+
+            // Loading Dialog
+            if (isLoading) {
+                LoadingDialog()
             }
         }
     }
