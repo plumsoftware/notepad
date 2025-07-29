@@ -12,5 +12,6 @@ data class Note(
     val color: Long,
     val createdAt: Long = System.currentTimeMillis(),
     val tasks: List<Task> = emptyList(),
-    val reminderDate: Long? = null
+    val reminderDate: Long? = null,
+    val photos: List<String> = emptyList()
 )

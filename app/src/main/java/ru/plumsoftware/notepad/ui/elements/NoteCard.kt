@@ -6,6 +6,7 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -13,6 +14,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
@@ -29,12 +32,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import coil.compose.AsyncImage
 import ru.plumsoftware.notepad.data.model.Note
 import ru.plumsoftware.notepad.ui.NoteViewModel
 import ru.plumsoftware.notepad.ui.Screen
@@ -47,8 +53,10 @@ fun NoteCard(
     navController: NavController,
     isVisible: Boolean,
     onDelete: () -> Unit,
+    onImageClick: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
     AnimatedVisibility(
         visible = isVisible,
         enter = scaleIn(animationSpec = tween(durationMillis = 200)),
@@ -105,7 +113,7 @@ fun NoteCard(
                                 val updatedTasks = note.tasks.toMutableList().apply {
                                     this[index] = task.copy(isChecked = isChecked)
                                 }
-                                viewModel.updateNote(note.copy(tasks = updatedTasks))
+                                viewModel.updateNote(note.copy(tasks = updatedTasks), context)
                             },
                             colors = CheckboxDefaults.colors(
                                 checkedColor = MaterialTheme.colorScheme.primary
@@ -123,7 +131,6 @@ fun NoteCard(
                         )
                     }
                 }
-                // Display reminder date if set
                 note.reminderDate?.let { reminderDate ->
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
@@ -131,6 +138,28 @@ fun NoteCard(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                     )
+                }
+                // Photos
+                if (note.photos.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState())
+                    ) {
+                        note.photos.forEach { photoPath ->
+                            AsyncImage(
+                                model = photoPath,
+                                contentDescription = "Note Photo",
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier
+                                    .size(80.dp)
+                                    .padding(end = 8.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .clickable { onImageClick(photoPath) }
+                            )
+                        }
+                    }
                 }
             }
         }

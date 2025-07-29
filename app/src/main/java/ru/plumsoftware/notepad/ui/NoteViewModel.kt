@@ -1,6 +1,7 @@
 package ru.plumsoftware.notepad.ui
 
 import android.app.Application
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.work.OneTimeWorkRequestBuilder
@@ -11,6 +12,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import ru.plumsoftware.notepad.data.database.NoteDatabase
+import ru.plumsoftware.notepad.data.filesaver.deleteImagesFromStorage
 import ru.plumsoftware.notepad.data.model.Note
 import ru.plumsoftware.notepad.data.worker.ReminderWorker
 import java.util.concurrent.TimeUnit
@@ -57,12 +59,11 @@ class NoteViewModel(application: Application) : ViewModel() {
         }
     }
 
-    fun updateNote(note: Note) {
+    fun updateNote(note: Note, context: Context) {
         viewModelScope.launch {
             _isLoading.value = true
             try {
                 db.noteDao().update(note)
-                // Cancel existing worker if it exists
                 workManager.cancelUniqueWork("reminder_${note.id}")
                 if (note.reminderDate != null) {
                     scheduleReminder(note)
@@ -73,13 +74,13 @@ class NoteViewModel(application: Application) : ViewModel() {
         }
     }
 
-    fun deleteNote(note: Note) {
+    fun deleteNote(note: Note, context: Context) {
         viewModelScope.launch {
             _isLoading.value = true
             try {
                 db.noteDao().delete(note)
-                // Cancel worker if it exists
                 workManager.cancelUniqueWork("reminder_${note.id}")
+                deleteImagesFromStorage(context, note.photos)
             } finally {
                 _isLoading.value = false
             }

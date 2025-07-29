@@ -48,6 +48,7 @@ import kotlinx.coroutines.launch
 import ru.plumsoftware.notepad.R
 import ru.plumsoftware.notepad.ui.NoteViewModel
 import ru.plumsoftware.notepad.ui.Screen
+import ru.plumsoftware.notepad.ui.dialog.FullscreenImageDialog
 import ru.plumsoftware.notepad.ui.dialog.LoadingDialog
 import ru.plumsoftware.notepad.ui.elements.NoteCard
 import ru.plumsoftware.notepad.ui.formatDate
@@ -80,6 +81,7 @@ fun NoteListScreen(navController: NavController, viewModel: NoteViewModel, scrol
     val coroutineScope = rememberCoroutineScope()
     val exoPlayer = rememberExoPlayer()
     val context = LocalContext.current
+    var fullscreenImagePath by remember { mutableStateOf<String?>(null) }
 
     // Trigger animation for date change
     LaunchedEffect(currentDate) {
@@ -95,6 +97,7 @@ fun NoteListScreen(navController: NavController, viewModel: NoteViewModel, scrol
         }
     }
 
+    // Scroll to note if noteId is provided
     LaunchedEffect(scrollToNoteId, notes) {
         if (scrollToNoteId != null && notes.isNotEmpty()) {
             val index = notes.indexOfFirst { it.id == scrollToNoteId }
@@ -187,10 +190,11 @@ fun NoteListScreen(navController: NavController, viewModel: NoteViewModel, scrol
                                     playSound(context, exoPlayer, R.raw.note_delete)
                                     coroutineScope.launch {
                                         kotlinx.coroutines.delay(200)
-                                        viewModel.deleteNote(note)
+                                        viewModel.deleteNote(note, context)
                                         notesToDelete.remove(note.id)
                                     }
                                 },
+                                onImageClick = { path -> fullscreenImagePath = path },
                                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                             )
                         }
@@ -201,6 +205,14 @@ fun NoteListScreen(navController: NavController, viewModel: NoteViewModel, scrol
             // Loading Dialog
             if (isLoading) {
                 LoadingDialog()
+            }
+
+            // Fullscreen Image Dialog
+            fullscreenImagePath?.let { path ->
+                FullscreenImageDialog(
+                    imagePath = path,
+                    onDismiss = { fullscreenImagePath = null }
+                )
             }
         }
     }

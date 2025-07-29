@@ -1,6 +1,8 @@
 package ru.plumsoftware.notepad.ui.addnote
 
 import android.annotation.SuppressLint
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -16,6 +18,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
@@ -49,13 +53,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import coil.compose.AsyncImage
 import ru.plumsoftware.notepad.R
+import ru.plumsoftware.notepad.data.filesaver.deleteImagesFromStorage
+import ru.plumsoftware.notepad.data.filesaver.saveImageToInternalStorage
 import ru.plumsoftware.notepad.data.model.Note
 import ru.plumsoftware.notepad.data.model.Task
 import ru.plumsoftware.notepad.ui.NoteViewModel
+import ru.plumsoftware.notepad.ui.dialog.FullscreenImageDialog
 import ru.plumsoftware.notepad.ui.dialog.LoadingDialog
 import ru.plumsoftware.notepad.ui.formatDate
 import ru.plumsoftware.notepad.ui.player.playSound
@@ -82,9 +91,21 @@ fun AddNoteScreen(
     var showDatePicker by remember { mutableStateOf(false) }
     var showTimePicker by remember { mutableStateOf(false) }
     var tempSelectedDateMillis by remember { mutableStateOf<Long?>(null) }
+    var photos by remember { mutableStateOf<List<String>>(note?.photos ?: emptyList()) }
+    var fullscreenImagePath by remember { mutableStateOf<String?>(null) }
     val isLoading by viewModel.isLoading.collectAsState()
     val exoPlayer = rememberExoPlayer()
     val context = LocalContext.current
+
+    val pickImages = rememberLauncherForActivityResult(ActivityResultContracts.GetMultipleContents()) { uris ->
+        if (uris.size + photos.size <= 3) {
+            photos = photos.toMutableList().apply {
+                uris.forEach { uri ->
+                    saveImageToInternalStorage(context, uri)?.let { path -> add(path) }
+                }
+            }
+        }
+    }
 
     val colors = listOf(
         Color.White.value,
@@ -178,6 +199,14 @@ fun AddNoteScreen(
         )
     }
 
+    // Fullscreen Image Dialog
+    fullscreenImagePath?.let { path ->
+        FullscreenImageDialog(
+            imagePath = path,
+            onDismiss = { fullscreenImagePath = null }
+        )
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -198,11 +227,15 @@ fun AddNoteScreen(
                                     color = selectedColor.toLong(),
                                     tasks = tasks,
                                     createdAt = note?.createdAt ?: System.currentTimeMillis(),
-                                    reminderDate = if (isReminder) reminderDate else null
+                                    reminderDate = if (isReminder) reminderDate else null,
+                                    photos = photos
                                 )
                                 if (isEditing) {
+                                    if (note.photos != photos) {
+                                        deleteImagesFromStorage(context, note.photos.filterNot { photos.contains(it) })
+                                    }
                                     playSound(context, exoPlayer, R.raw.note_create) //note_edit
-                                    viewModel.updateNote(updatedNote)
+                                    viewModel.updateNote(updatedNote, context)
                                 } else {
                                     playSound(context, exoPlayer, R.raw.note_create)
                                     viewModel.addNote(updatedNote)
@@ -226,6 +259,7 @@ fun AddNoteScreen(
         ) {
             Column(
                 modifier = Modifier
+                    .verticalScroll(rememberScrollState())
                     .fillMaxSize()
                     .padding(16.dp)
             ) {
@@ -279,6 +313,63 @@ fun AddNoteScreen(
                         modifier = Modifier.padding(start = 16.dp, bottom = 8.dp)
                     )
                 }
+
+                // Photos
+                Text("Фотографии", style = MaterialTheme.typography.titleMedium)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState())
+                ) {
+                    photos.forEach { photoPath ->
+                        Box(
+                            modifier = Modifier
+                                .size(80.dp)
+                                .padding(end = 8.dp)
+                        ) {
+                            AsyncImage(
+                                model = photoPath,
+                                contentDescription = "Note Photo",
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .clickable { fullscreenImagePath = photoPath }
+                            )
+                            IconButton(
+                                onClick = {
+                                    photos = photos.toMutableList().apply { remove(photoPath) }
+                                    deleteImagesFromStorage(context, listOf(photoPath))
+                                },
+                                enabled = !isLoading,
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
+                                    .size(24.dp)
+                                    .background(
+                                        MaterialTheme.colorScheme.background.copy(alpha = 0.7f),
+                                        CircleShape
+                                    )
+                            ) {
+                                Icon(
+                                    Icons.Default.Delete,
+                                    contentDescription = "Delete Photo",
+                                    tint = MaterialTheme.colorScheme.onBackground,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
+                    }
+                    if (photos.size < 3) {
+                        IconButton(
+                            onClick = { pickImages.launch("image/*") },
+                            enabled = !isLoading
+                        ) {
+                            Icon(Icons.Default.Add, contentDescription = "Add Photo")
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
 
                 // Tasks
                 Text("Задачи", style = MaterialTheme.typography.titleMedium)

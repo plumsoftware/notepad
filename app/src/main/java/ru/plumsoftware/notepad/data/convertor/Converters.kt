@@ -24,4 +24,14 @@ class Converters {
     fun toLong(value: String?): Long? {
         return value?.toLongOrNull()
     }
+
+    @TypeConverter
+    fun fromStringList(photos: List<String>): String {
+        return Json.encodeToString(photos)
+    }
+
+    @TypeConverter
+    fun toStringList(photosString: String): List<String> {
+        return Json.decodeFromString(photosString)
+    }
 }
