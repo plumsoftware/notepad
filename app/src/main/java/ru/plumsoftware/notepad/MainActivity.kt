@@ -3,13 +3,11 @@ package ru.plumsoftware.notepad
 import android.annotation.SuppressLint
 import android.app.NotificationChannel
 import android.app.NotificationManager
-import android.content.Context
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.runtime.LaunchedEffect
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -29,7 +27,6 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        // Create notification channel
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 "note_reminder_channel",
@@ -39,7 +36,7 @@ class MainActivity : ComponentActivity() {
                 description = "Channel for note reminder notifications"
             }
             val notificationManager: NotificationManager =
-                getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+                getSystemService(NOTIFICATION_SERVICE) as NotificationManager
             notificationManager.createNotificationChannel(channel)
         }
 
@@ -55,13 +52,7 @@ class MainActivity : ComponentActivity() {
                         val viewModel: NoteViewModel = viewModel(
                             factory = NoteViewModelFactory(application)
                         )
-                        NoteListScreen(navController, viewModel)
-                        // Handle notification click
-                        LaunchedEffect(noteId) {
-                            if (noteId != null) {
-                                navController.navigate(Screen.EditNote.createRoute(noteId))
-                            }
-                        }
+                        NoteListScreen(navController, viewModel, scrollToNoteId = noteId)
                     }
                     composable(Screen.AddNote.route) {
                         val viewModel: NoteViewModel = viewModel(

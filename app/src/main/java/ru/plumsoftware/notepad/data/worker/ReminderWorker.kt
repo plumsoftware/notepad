@@ -23,6 +23,7 @@ class ReminderWorker(appContext: Context, workerParams: WorkerParameters) : Work
         // Create notification
         val intent = Intent(applicationContext, MainActivity::class.java).apply {
             putExtra("noteId", noteId)
+            putExtra("scrollToNote", true)
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
         }
         val pendingIntent = PendingIntent.getActivity(

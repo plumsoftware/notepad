@@ -55,7 +55,7 @@ import ru.plumsoftware.notepad.ui.player.playSound
 import ru.plumsoftware.notepad.ui.player.rememberExoPlayer
 
 @Composable
-fun NoteListScreen(navController: NavController, viewModel: NoteViewModel) {
+fun NoteListScreen(navController: NavController, viewModel: NoteViewModel, scrollToNoteId: String? = null) {
     var searchQuery by remember { mutableStateOf("") }
     val notes by viewModel.notes.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
@@ -92,6 +92,15 @@ fun NoteListScreen(navController: NavController, viewModel: NoteViewModel) {
                 targetValue = 1.0f,
                 animationSpec = tween(durationMillis = 200)
             )
+        }
+    }
+
+    LaunchedEffect(scrollToNoteId, notes) {
+        if (scrollToNoteId != null && notes.isNotEmpty()) {
+            val index = notes.indexOfFirst { it.id == scrollToNoteId }
+            if (index >= 0) {
+                lazyListState.animateScrollToItem(index)
+            }
         }
     }
 
