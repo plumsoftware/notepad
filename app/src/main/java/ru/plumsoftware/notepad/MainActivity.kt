@@ -6,8 +6,15 @@ import android.app.NotificationManager
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -18,6 +25,7 @@ import ru.plumsoftware.notepad.ui.NoteViewModel
 import ru.plumsoftware.notepad.ui.NoteViewModelFactory
 import ru.plumsoftware.notepad.ui.Screen
 import ru.plumsoftware.notepad.ui.addnote.AddNoteScreen
+import ru.plumsoftware.notepad.ui.dialog.PermissionRationaleDialog
 import ru.plumsoftware.notepad.ui.notes.NoteListScreen
 import ru.plumsoftware.notepad.ui.theme.NotepadTheme
 
@@ -44,6 +52,42 @@ class MainActivity : ComponentActivity() {
             NotepadTheme {
                 val navController = rememberNavController()
                 val noteId = intent.getStringExtra("noteId")
+                var showPermissionRationale by remember { mutableStateOf<String?>(null) }
+
+                // Request initial permissions
+                val requestPermissions = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
+                    permissions.entries.forEach { (permission, granted) ->
+                        if (!granted && shouldShowRequestPermissionRationale(permission)) {
+                            showPermissionRationale = permission
+                        }
+                    }
+                }
+
+                // Define permissions to request
+                val permissionsToRequest = remember {
+                    mutableListOf<String>().apply {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            add(android.Manifest.permission.POST_NOTIFICATIONS)
+                        }
+                        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.S_V2) {
+                            add(android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                        }
+                    }.toTypedArray()
+                }
+
+                // Request permissions on start
+                LaunchedEffect(Unit) {
+                    requestPermissions.launch(permissionsToRequest)
+                }
+
+                // Permission Rationale Dialog
+                showPermissionRationale?.let { permission ->
+                    PermissionRationaleDialog(
+                        permission = permission,
+                        onConfirm = { requestPermissions.launch(arrayOf(permission)) },
+                        onDismiss = { showPermissionRationale = null }
+                    )
+                }
                 NavHost(
                     navController = navController,
                     startDestination = Screen.NoteList.route
