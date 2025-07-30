@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -83,7 +82,11 @@ fun AddNoteScreen(
     val isEditing = note != null
     var title by remember { mutableStateOf(note?.title ?: "") }
     var description by remember { mutableStateOf(note?.description ?: "") }
-    var tasks by remember { mutableStateOf<MutableList<Task>>(note?.tasks?.toMutableList() ?: mutableListOf()) }
+    var tasks by remember {
+        mutableStateOf<MutableList<Task>>(
+            note?.tasks?.toMutableList() ?: mutableListOf()
+        )
+    }
     var newTaskText by remember { mutableStateOf("") }
     var selectedColor by remember { mutableStateOf(note?.color?.toULong() ?: Color.White.value) }
     var isReminder by remember { mutableStateOf(note?.reminderDate != null) }
@@ -97,15 +100,16 @@ fun AddNoteScreen(
     val exoPlayer = rememberExoPlayer()
     val context = LocalContext.current
 
-    val pickImages = rememberLauncherForActivityResult(ActivityResultContracts.GetMultipleContents()) { uris ->
-        if (uris.size + photos.size <= 3) {
-            photos = photos.toMutableList().apply {
-                uris.forEach { uri ->
-                    saveImageToInternalStorage(context, uri)?.let { path -> add(path) }
+    val pickImages =
+        rememberLauncherForActivityResult(ActivityResultContracts.GetMultipleContents()) { uris ->
+            if (uris.size + photos.size <= 3) {
+                photos = photos.toMutableList().apply {
+                    uris.forEach { uri ->
+                        saveImageToInternalStorage(context, uri)?.let { path -> add(path) }
+                    }
                 }
             }
         }
-    }
 
     val colors = listOf(
         Color.White.value,
@@ -134,7 +138,7 @@ fun AddNoteScreen(
                         tempSelectedDateMillis = datePickerState.selectedDateMillis
                         showTimePicker = true
                     }
-                ) { Text("OK") }
+                ) { Text("OK", style = MaterialTheme.typography.labelMedium) }
             },
             dismissButton = {
                 TextButton(
@@ -143,13 +147,18 @@ fun AddNoteScreen(
                         isReminder = false
                         reminderDate = null
                     }
-                ) { Text("Отмена") }
+                ) { Text("Отмена", style = MaterialTheme.typography.labelMedium) }
             }
         ) {
             DatePicker(
                 state = datePickerState,
                 modifier = Modifier.padding(16.dp),
-                title = { Text("Когда напомнить о событии") }
+                title = {
+                    Text(
+                        "Когда напомнить о событии",
+                        style = MaterialTheme.typography.titleSmall
+                    )
+                }
             )
         }
     }
@@ -163,7 +172,7 @@ fun AddNoteScreen(
         )
         AlertDialog(
             onDismissRequest = { showTimePicker = false },
-            title = { Text("Выберите время") },
+            title = { Text(text = "Выберите время", style = MaterialTheme.typography.titleSmall) },
             text = {
                 TimePicker(
                     state = timePickerState,
@@ -185,7 +194,7 @@ fun AddNoteScreen(
                             reminderDate = calendar.timeInMillis
                         }
                     }
-                ) { Text("OK") }
+                ) { Text("OK", style = MaterialTheme.typography.labelMedium) }
             },
             dismissButton = {
                 TextButton(
@@ -194,7 +203,7 @@ fun AddNoteScreen(
                         isReminder = false
                         reminderDate = null
                     }
-                ) { Text("Отмена") }
+                ) { Text("Отмена", style = MaterialTheme.typography.labelMedium) }
             }
         )
     }
@@ -210,7 +219,12 @@ fun AddNoteScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(if (isEditing) "Редактировать заметку" else "Добавить заметку") },
+                title = {
+                    Text(
+                        text = if (isEditing) "Редактировать заметку" else "Добавить заметку",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
@@ -218,6 +232,7 @@ fun AddNoteScreen(
                 },
                 actions = {
                     Button(
+                        shape = MaterialTheme.shapes.extraLarge,
                         onClick = {
                             if (title.isNotBlank()) {
                                 val updatedNote = Note(
@@ -232,7 +247,9 @@ fun AddNoteScreen(
                                 )
                                 if (isEditing) {
                                     if (note.photos != photos) {
-                                        deleteImagesFromStorage(context, note.photos.filterNot { photos.contains(it) })
+                                        deleteImagesFromStorage(
+                                            context,
+                                            note.photos.filterNot { photos.contains(it) })
                                     }
                                     playSound(context, exoPlayer, R.raw.note_create) //note_edit
                                     viewModel.updateNote(updatedNote, context)
@@ -245,7 +262,10 @@ fun AddNoteScreen(
                         },
                         enabled = title.isNotBlank() && !isLoading
                     ) {
-                        Text(if (isEditing) "Сохранить" else "Добавить")
+                        Text(
+                            text = if (isEditing) "Сохранить" else "Добавить",
+                            style = MaterialTheme.typography.labelLarge
+                        )
                     }
                 }
             )
@@ -267,7 +287,8 @@ fun AddNoteScreen(
                     value = title,
                     onValueChange = { title = it },
                     modifier = Modifier.fillMaxWidth(),
-                    label = { Text("Заголовок") },
+                    textStyle = MaterialTheme.typography.titleLarge,
+                    label = { Text(text = "Заголовок", style = MaterialTheme.typography.titleLarge) },
                     enabled = !isLoading
                 )
                 Spacer(modifier = Modifier.height(16.dp))
@@ -275,7 +296,8 @@ fun AddNoteScreen(
                     value = description,
                     onValueChange = { description = it },
                     modifier = Modifier.fillMaxWidth(),
-                    label = { Text("Описание") },
+                    textStyle = MaterialTheme.typography.bodyMedium,
+                    label = { Text(text = "Описание", style = MaterialTheme.typography.bodyMedium) },
                     enabled = !isLoading
                 )
                 Spacer(modifier = Modifier.height(16.dp))
@@ -302,20 +324,20 @@ fun AddNoteScreen(
                             checkedColor = MaterialTheme.colorScheme.primary
                         )
                     )
-                    Text("Напомнить")
+                    Text(text = "Напомнить", style = MaterialTheme.typography.bodyMedium)
                 }
                 // Display selected reminder date
                 reminderDate?.let {
                     Text(
                         text = "Напоминание: ${formatDate(it)}",
-                        style = MaterialTheme.typography.bodySmall,
+                        style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                         modifier = Modifier.padding(start = 16.dp, bottom = 8.dp)
                     )
                 }
 
                 // Photos
-                Text("Фотографии", style = MaterialTheme.typography.titleMedium)
+                Text("Фотографии", style = MaterialTheme.typography.bodyLarge)
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -333,7 +355,7 @@ fun AddNoteScreen(
                                 contentScale = ContentScale.Crop,
                                 modifier = Modifier
                                     .fillMaxSize()
-                                    .clip(RoundedCornerShape(8.dp))
+                                    .clip(MaterialTheme.shapes.medium)
                                     .clickable { fullscreenImagePath = photoPath }
                             )
                             IconButton(
@@ -372,7 +394,7 @@ fun AddNoteScreen(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 // Tasks
-                Text("Задачи", style = MaterialTheme.typography.titleMedium)
+                Text("Задачи", style = MaterialTheme.typography.bodyLarge)
                 tasks.forEachIndexed { index, task ->
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -416,7 +438,8 @@ fun AddNoteScreen(
                         value = newTaskText,
                         onValueChange = { newTaskText = it },
                         modifier = Modifier.weight(1f),
-                        label = { Text("Новая задача") },
+                        textStyle = MaterialTheme.typography.bodyMedium,
+                        label = { Text(text = "Новая задача", style = MaterialTheme.typography.bodyMedium) },
                         enabled = !isLoading
                     )
                     IconButton(
@@ -435,7 +458,7 @@ fun AddNoteScreen(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 // Color Picker
-                Text("Цвет заметки", style = MaterialTheme.typography.titleMedium)
+                Text("Цвет заметки", style = MaterialTheme.typography.bodyLarge)
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()

@@ -13,7 +13,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -56,7 +55,11 @@ import ru.plumsoftware.notepad.ui.player.playSound
 import ru.plumsoftware.notepad.ui.player.rememberExoPlayer
 
 @Composable
-fun NoteListScreen(navController: NavController, viewModel: NoteViewModel, scrollToNoteId: String? = null) {
+fun NoteListScreen(
+    navController: NavController,
+    viewModel: NoteViewModel,
+    scrollToNoteId: String? = null
+) {
     var searchQuery by remember { mutableStateOf("") }
     val notes by viewModel.notes.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
@@ -68,7 +71,8 @@ fun NoteListScreen(navController: NavController, viewModel: NoteViewModel, scrol
         }
     }
     val scale = remember { Animatable(1f) }
-    val notesToDelete = rememberSaveable(saver = Saver(
+    val notesToDelete = rememberSaveable(
+        saver = Saver(
         save = { map ->
             map.mapValues { if (it.value) 1 else 0 }.toList().toTypedArray()
         },
@@ -137,7 +141,10 @@ fun NoteListScreen(navController: NavController, viewModel: NoteViewModel, scrol
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 8.dp),
-                    placeholder = { Text("Поиск заметок...") },
+                    singleLine = true,
+                    textStyle = MaterialTheme.typography.bodyLarge,
+                    placeholder = { Text(text = "Поиск заметок...", style = MaterialTheme.typography.bodyLarge) },
+                    shape = MaterialTheme.shapes.extraLarge,
                     trailingIcon = {
                         Icon(
                             Icons.Default.Search,
@@ -148,7 +155,7 @@ fun NoteListScreen(navController: NavController, viewModel: NoteViewModel, scrol
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = MaterialTheme.colorScheme.primary,
-                        unfocusedBorderColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
+                        unfocusedBorderColor = Color.Transparent
                     ),
                     enabled = !isLoading
                 )
@@ -166,7 +173,7 @@ fun NoteListScreen(navController: NavController, viewModel: NoteViewModel, scrol
                             .padding(start = 16.dp, top = 4.dp)
                             .background(
                                 MaterialTheme.colorScheme.background.copy(alpha = 0.9f),
-                                RoundedCornerShape(4.dp)
+                                MaterialTheme.shapes.extraSmall
                             )
                             .padding(horizontal = 8.dp, vertical = 4.dp)
                             .scale(scale.value)

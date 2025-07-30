@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Card
@@ -25,6 +24,7 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -34,11 +34,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import ru.plumsoftware.notepad.data.model.Note
@@ -65,10 +63,15 @@ fun NoteCard(
         Card(
             modifier = modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(16.dp))
-                .border(1.dp, MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f), RoundedCornerShape(16.dp))
+                .clip(MaterialTheme.shapes.medium)
+                .border(
+                    0.dp,
+                    MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f),
+                    MaterialTheme.shapes.medium
+                )
                 .clickable { navController.navigate(Screen.EditNote.createRoute(note.id)) },
-            colors = CardDefaults.cardColors(containerColor = Color(note.color.toULong()))
+            colors = CardDefaults.cardColors(containerColor = Color(note.color.toULong())),
+            shape = MaterialTheme.shapes.medium
         ) {
             Column(
                 modifier = Modifier
@@ -87,7 +90,10 @@ fun NoteCard(
                         color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.weight(1f)
                     )
-                    IconButton(onClick = onDelete) {
+                    IconButton(
+                        onClick = onDelete,
+                        colors = IconButtonDefaults.iconButtonColors(containerColor = Color.Transparent)
+                    ) {
                         Icon(
                             Icons.Default.Delete,
                             contentDescription = "Delete Note",
@@ -98,7 +104,7 @@ fun NoteCard(
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = note.description,
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Spacer(modifier = Modifier.height(8.dp))
@@ -121,8 +127,7 @@ fun NoteCard(
                         )
                         Text(
                             text = task.text,
-                            style = TextStyle(
-                                fontSize = 14.sp,
+                            style = MaterialTheme.typography.bodyMedium.copy(
                                 textDecoration = if (task.isChecked) TextDecoration.LineThrough else null,
                                 color = MaterialTheme.colorScheme.onSurface.copy(
                                     alpha = if (task.isChecked) 0.5f else 1f
@@ -155,7 +160,7 @@ fun NoteCard(
                                 modifier = Modifier
                                     .size(80.dp)
                                     .padding(end = 8.dp)
-                                    .clip(RoundedCornerShape(8.dp))
+                                    .clip(MaterialTheme.shapes.small)
                                     .clickable { onImageClick(photoPath) }
                             )
                         }
