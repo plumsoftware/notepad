@@ -74,4 +74,6 @@ dependencies {
     implementation(libs.androidx.work.runtime.ktx)
 
     implementation(libs.coil.compose)
+
+    implementation(libs.androidx.ui.text.google.fonts)
 }
