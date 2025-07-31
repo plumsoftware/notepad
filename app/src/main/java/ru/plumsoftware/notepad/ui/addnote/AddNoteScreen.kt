@@ -296,7 +296,13 @@ fun AddNoteScreen(
                     onValueChange = { title = it },
                     modifier = Modifier.fillMaxWidth(),
                     textStyle = MaterialTheme.typography.titleLarge,
-                    label = { Text(text = "Заголовок", style = MaterialTheme.typography.titleLarge) },
+                    placeholder = {
+                        Text(
+                            text = "Заголовок",
+                            style = MaterialTheme.typography.titleLarge,
+                            modifier = Modifier.background(Color.Transparent)
+                        )
+                    },
                     enabled = !isLoading,
                     shape = MaterialTheme.shapes.extraLarge,
                     colors = OutlinedTextFieldDefaults.colors(
@@ -312,7 +318,13 @@ fun AddNoteScreen(
                     onValueChange = { description = it },
                     modifier = Modifier.fillMaxWidth(),
                     textStyle = MaterialTheme.typography.bodyMedium,
-                    label = { Text(text = "Описание", style = MaterialTheme.typography.bodyMedium) },
+                    placeholder = {
+                        Text(
+                            text = "Описание",
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.background(Color.Transparent)
+                        )
+                    },
                     enabled = !isLoading,
                     shape = MaterialTheme.shapes.extraLarge,
                     colors = OutlinedTextFieldDefaults.colors(
@@ -461,7 +473,12 @@ fun AddNoteScreen(
                         onValueChange = { newTaskText = it },
                         modifier = Modifier.weight(1f),
                         textStyle = MaterialTheme.typography.bodyMedium,
-                        label = { Text(text = "Новая задача", style = MaterialTheme.typography.bodyMedium) },
+                        label = {
+                            Text(
+                                text = "Новая задача",
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        },
                         enabled = !isLoading
                     )
                     IconButton(

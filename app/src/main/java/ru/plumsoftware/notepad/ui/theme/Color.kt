@@ -2,7 +2,7 @@ package ru.plumsoftware.notepad.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-val primaryLight = Color(0xFF39608F)
+val primaryLight = Color(0xFF1e73fc)
 val onPrimaryLight = Color(0xFFFFFFFF)
 val primaryContainerLight = Color(0xFFD3E4FF)
 val onPrimaryContainerLight = Color(0xFF1D4875)
