@@ -31,6 +31,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -63,20 +64,22 @@ fun NoteCard(
         Card(
             modifier = modifier
                 .fillMaxWidth()
-                .clip(MaterialTheme.shapes.medium)
+                .clip(MaterialTheme.shapes.large)
+                .shadow(4.dp, MaterialTheme.shapes.large)
                 .border(
-                    0.dp,
-                    MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f),
-                    MaterialTheme.shapes.medium
+                    1.dp,
+                    MaterialTheme.colorScheme.outline.copy(alpha = 0.15f),
+                    MaterialTheme.shapes.large
                 )
                 .clickable { navController.navigate(Screen.EditNote.createRoute(note.id)) },
-            colors = CardDefaults.cardColors(containerColor = Color(note.color.toULong())),
-            shape = MaterialTheme.shapes.medium
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+            shape = MaterialTheme.shapes.large
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp)
+                    .padding(20.dp)
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -97,14 +100,14 @@ fun NoteCard(
                         Icon(
                             Icons.Default.Delete,
                             contentDescription = "Delete Note",
-                            tint = MaterialTheme.colorScheme.onSurface
+                            tint = MaterialTheme.colorScheme.error
                         )
                     }
                 }
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(10.dp))
                 Text(
                     text = note.description,
-                    style = MaterialTheme.typography.titleSmall,
+                    style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Spacer(modifier = Modifier.height(8.dp))
