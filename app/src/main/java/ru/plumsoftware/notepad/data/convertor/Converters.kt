@@ -1,6 +1,7 @@
 package ru.plumsoftware.notepad.data.convertor
 
 import androidx.room.TypeConverter
+import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import ru.plumsoftware.notepad.data.model.Task
 

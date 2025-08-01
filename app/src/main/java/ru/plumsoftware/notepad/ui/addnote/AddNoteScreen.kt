@@ -1,8 +1,10 @@
 package ru.plumsoftware.notepad.ui.addnote
 
 import android.annotation.SuppressLint
+import android.app.Activity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -74,11 +76,21 @@ import ru.plumsoftware.notepad.ui.player.playSound
 import ru.plumsoftware.notepad.ui.player.rememberExoPlayer
 import java.util.Calendar
 import java.util.UUID
+import com.yandex.mobile.ads.interstitial.InterstitialAd
+import com.yandex.mobile.ads.interstitial.InterstitialAdEventListener
+import com.yandex.mobile.ads.interstitial.InterstitialAdLoadListener
+import com.yandex.mobile.ads.interstitial.InterstitialAdLoader
+import com.yandex.mobile.ads.common.AdError
+import com.yandex.mobile.ads.common.AdRequestConfiguration
+import com.yandex.mobile.ads.common.AdRequestError
+import com.yandex.mobile.ads.common.ImpressionData
+import ru.plumsoftware.notepad.data.model.AdsConfig
 
 @SuppressLint("MutableCollectionMutableState")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddNoteScreen(
+    activity: Activity,
     navController: NavController,
     viewModel: NoteViewModel,
     note: Note? = null
@@ -103,6 +115,21 @@ fun AddNoteScreen(
     val isLoading by viewModel.isLoading.collectAsState()
     val exoPlayer = rememberExoPlayer()
     val context = LocalContext.current
+    var myInterstitialAds: InterstitialAd? = null
+    val interstitialAdsLoader = InterstitialAdLoader(activity).apply {
+        setAdLoadListener(object : InterstitialAdLoadListener {
+            override fun onAdLoaded(interstitialAd: InterstitialAd) {
+                myInterstitialAds = interstitialAd
+            }
+
+            override fun onAdFailedToLoad(error: AdRequestError) {
+
+            }
+        })
+    }
+    val adRequestConfiguration =
+        AdRequestConfiguration.Builder(AdsConfig().interstitialAdsId).build()
+    interstitialAdsLoader.loadAd(adRequestConfiguration)
 
     val pickImages =
         rememberLauncherForActivityResult(ActivityResultContracts.GetMultipleContents()) { uris ->
@@ -236,7 +263,27 @@ fun AddNoteScreen(
                     )
                 },
                 navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
+                    IconButton(onClick = {
+                        myInterstitialAds?.apply {
+                            setAdEventListener(object : InterstitialAdEventListener {
+                                override fun onAdShown() {}
+                                override fun onAdFailedToShow(adError: AdError) {
+                                    navController.popBackStack()
+                                }
+
+                                override fun onAdDismissed() {
+                                    navController.popBackStack()
+                                }
+
+                                override fun onAdClicked() {
+                                    navController.popBackStack()
+                                }
+
+                                override fun onAdImpression(impressionData: ImpressionData?) {}
+                            })
+                            show(activity)
+                        }
+                    }) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
                     }
                 },
@@ -256,10 +303,12 @@ fun AddNoteScreen(
                                     photos = photos
                                 )
                                 if (isEditing) {
-                                    if (note.photos != photos) {
-                                        deleteImagesFromStorage(
-                                            context,
-                                            note.photos.filterNot { photos.contains(it) })
+                                    if (note != null) {
+                                        if (note.photos != photos) {
+                                            deleteImagesFromStorage(
+                                                context,
+                                                note.photos.filterNot { photos.contains(it) })
+                                        }
                                     }
                                     playSound(context, exoPlayer, R.raw.note_create) //note_edit
                                     viewModel.updateNote(updatedNote, context)
@@ -267,7 +316,25 @@ fun AddNoteScreen(
                                     playSound(context, exoPlayer, R.raw.note_create)
                                     viewModel.addNote(updatedNote)
                                 }
-                                navController.popBackStack()
+                                myInterstitialAds?.apply {
+                                    setAdEventListener(object : InterstitialAdEventListener {
+                                        override fun onAdShown() {}
+                                        override fun onAdFailedToShow(adError: AdError) {
+                                            navController.popBackStack()
+                                        }
+
+                                        override fun onAdDismissed() {
+                                            navController.popBackStack()
+                                        }
+
+                                        override fun onAdClicked() {
+                                            navController.popBackStack()
+                                        }
+
+                                        override fun onAdImpression(impressionData: ImpressionData?) {}
+                                    })
+                                    show(activity)
+                                }
                             }
                         },
                         enabled = title.isNotBlank() && !isLoading,
@@ -412,15 +479,14 @@ fun AddNoteScreen(
                                     .align(Alignment.TopEnd)
                                     .size(24.dp)
                                     .background(
-                                        MaterialTheme.colorScheme.background.copy(alpha = 0.7f),
+                                        Color.Transparent,
                                         CircleShape
                                     )
                             ) {
-                                Icon(
+                                Image(
                                     painter = painterResource(R.drawable.delete_icon),
                                     contentDescription = "Delete Photo",
-                                    tint = MaterialTheme.colorScheme.onBackground,
-                                    modifier = Modifier.size(16.dp)
+                                    modifier = Modifier.size(24.dp)
                                 )
                             }
                         }

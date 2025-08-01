@@ -30,6 +30,7 @@ import com.yandex.mobile.ads.common.AdRequestConfiguration
 import com.yandex.mobile.ads.common.AdRequestError
 import com.yandex.mobile.ads.common.ImpressionData
 import com.yandex.mobile.ads.common.MobileAds
+import ru.plumsoftware.notepad.data.model.AdsConfig
 import ru.plumsoftware.notepad.ui.NoteViewModel
 import ru.plumsoftware.notepad.ui.NoteViewModelFactory
 import ru.plumsoftware.notepad.ui.Screen
@@ -120,7 +121,7 @@ class MainActivity : ComponentActivity() {
                         val viewModel: NoteViewModel = viewModel(
                             factory = NoteViewModelFactory(application)
                         )
-                        AddNoteScreen(navController, viewModel)
+                        AddNoteScreen(this@MainActivity, navController, viewModel)
                     }
                     composable(
                         route = Screen.EditNote.route,
@@ -132,7 +133,7 @@ class MainActivity : ComponentActivity() {
                         val noteId = backStackEntry.arguments?.getString("noteId")
                         val note = viewModel.notes.value.find { it.id == noteId }
                         if (note != null) {
-                            AddNoteScreen(navController, viewModel, note)
+                            AddNoteScreen(this@MainActivity, navController, viewModel, note)
                         }
                     }
                 }
@@ -142,7 +143,7 @@ class MainActivity : ComponentActivity() {
 
     private fun showOpenAds() {
         val appOpenLoader = AppOpenAdLoader(baseContext)
-        val adRequestConfiguration = AdRequestConfiguration.Builder("TODO()").build()
+        val adRequestConfiguration = AdRequestConfiguration.Builder(AdsConfig().openAdsId).build()
 
         val appOpenAdEventListener: AppOpenAdEventListener = object : AppOpenAdEventListener {
             override fun onAdShown() {
