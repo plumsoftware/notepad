@@ -33,6 +33,7 @@ import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -56,6 +57,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
@@ -118,7 +120,12 @@ fun AddNoteScreen(
         Color(0xFFFFCDD2).value,
         Color(0xFFC8E6C9).value,
         Color(0xFFBBDEFB).value,
-        Color(0xFFFFF9C4).value
+        Color(0xFFFFF9C4).value,
+        Color(0xFFE1BEE7).value,
+        Color(0xFFD1C4E9).value,
+        Color(0xFFC5CAE9).value,
+        Color(0xFFB2DFDB).value,
+        Color(0xFFFFCCBC).value
     )
 
     // Date Picker Dialog
@@ -271,7 +278,7 @@ fun AddNoteScreen(
                         elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp)
                     ) {
                         Text(
-                            text = if (isEditing) "Сохранить" else "Добавить",
+                            text = if (isEditing) "Сохранить" else "Сохранить",
                             style = MaterialTheme.typography.labelLarge
                         )
                     }
@@ -295,11 +302,11 @@ fun AddNoteScreen(
                     value = title,
                     onValueChange = { title = it },
                     modifier = Modifier.fillMaxWidth(),
-                    textStyle = MaterialTheme.typography.titleLarge,
+                    textStyle = MaterialTheme.typography.bodyLarge,
                     placeholder = {
                         Text(
                             text = "Заголовок",
-                            style = MaterialTheme.typography.titleLarge,
+                            style = MaterialTheme.typography.bodyLarge,
                             modifier = Modifier.background(Color.Transparent)
                         )
                     },
@@ -398,6 +405,9 @@ fun AddNoteScreen(
                                     deleteImagesFromStorage(context, listOf(photoPath))
                                 },
                                 enabled = !isLoading,
+                                colors = IconButtonDefaults.iconButtonColors(
+                                    containerColor = Color.Transparent
+                                ),
                                 modifier = Modifier
                                     .align(Alignment.TopEnd)
                                     .size(24.dp)
@@ -407,7 +417,7 @@ fun AddNoteScreen(
                                     )
                             ) {
                                 Icon(
-                                    Icons.Default.Delete,
+                                    painter = painterResource(R.drawable.delete_icon),
                                     contentDescription = "Delete Photo",
                                     tint = MaterialTheme.colorScheme.onBackground,
                                     modifier = Modifier.size(16.dp)

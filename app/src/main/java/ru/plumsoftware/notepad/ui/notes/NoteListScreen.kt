@@ -201,7 +201,7 @@ fun NoteListScreen(
                                     notesToDelete[note.id] = true
                                     playSound(context, exoPlayer, R.raw.note_delete)
                                     coroutineScope.launch {
-                                        kotlinx.coroutines.delay(200)
+                                        kotlinx.coroutines.delay(400)
                                         viewModel.deleteNote(note, context)
                                         notesToDelete.remove(note.id)
                                     }

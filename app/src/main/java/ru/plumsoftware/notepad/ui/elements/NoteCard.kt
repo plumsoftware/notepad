@@ -31,7 +31,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -58,22 +57,21 @@ fun NoteCard(
     val context = LocalContext.current
     AnimatedVisibility(
         visible = isVisible,
-        enter = scaleIn(animationSpec = tween(durationMillis = 200)),
-        exit = scaleOut(animationSpec = tween(durationMillis = 200))
+        enter = scaleIn(animationSpec = tween(durationMillis = 400)),
+        exit = scaleOut(animationSpec = tween(durationMillis = 400))
     ) {
         Card(
             modifier = modifier
                 .fillMaxWidth()
                 .clip(MaterialTheme.shapes.large)
-                .shadow(4.dp, MaterialTheme.shapes.large)
                 .border(
                     1.dp,
-                    MaterialTheme.colorScheme.outline.copy(alpha = 0.15f),
+                    Color(note.color.toULong()).copy(alpha = 0.15f),
                     MaterialTheme.shapes.large
                 )
                 .clickable { navController.navigate(Screen.EditNote.createRoute(note.id)) },
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
-            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(note.color.toULong())),
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
             shape = MaterialTheme.shapes.large
         ) {
             Column(
@@ -100,7 +98,7 @@ fun NoteCard(
                         Icon(
                             Icons.Default.Delete,
                             contentDescription = "Delete Note",
-                            tint = MaterialTheme.colorScheme.error
+                            tint = Color.Black
                         )
                     }
                 }

@@ -1,10 +1,8 @@
 package ru.plumsoftware.notepad.ui.dialog
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -25,8 +23,7 @@ fun LoadingDialog() {
             modifier = Modifier
                 .size(80.dp)
                 .clip(MaterialTheme.shapes.medium)
-                .background(MaterialTheme.colorScheme.surface)
-                .border(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f), RoundedCornerShape(16.dp)),
+                .background(MaterialTheme.colorScheme.surface),
             contentAlignment = Alignment.Center
         ) {
             CircularProgressIndicator(
