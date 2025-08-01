@@ -76,4 +76,7 @@ dependencies {
     implementation(libs.coil.compose)
 
     implementation(libs.androidx.ui.text.google.fonts)
+
+    //noinspection MobileAdsSdkVersion
+    implementation(libs.mobileads)
 }

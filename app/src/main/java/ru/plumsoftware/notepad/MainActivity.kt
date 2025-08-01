@@ -21,6 +21,15 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.yandex.mobile.ads.appopenad.AppOpenAd
+import com.yandex.mobile.ads.appopenad.AppOpenAdEventListener
+import com.yandex.mobile.ads.appopenad.AppOpenAdLoadListener
+import com.yandex.mobile.ads.appopenad.AppOpenAdLoader
+import com.yandex.mobile.ads.common.AdError
+import com.yandex.mobile.ads.common.AdRequestConfiguration
+import com.yandex.mobile.ads.common.AdRequestError
+import com.yandex.mobile.ads.common.ImpressionData
+import com.yandex.mobile.ads.common.MobileAds
 import ru.plumsoftware.notepad.ui.NoteViewModel
 import ru.plumsoftware.notepad.ui.NoteViewModelFactory
 import ru.plumsoftware.notepad.ui.Screen
@@ -30,10 +39,13 @@ import ru.plumsoftware.notepad.ui.notes.NoteListScreen
 import ru.plumsoftware.notepad.ui.theme.NotepadTheme
 
 class MainActivity : ComponentActivity() {
+    private var showOpenAdsCounter = 0
     @SuppressLint("StateFlowValueCalledInComposition")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        MobileAds.initialize(baseContext) {}
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
@@ -55,13 +67,15 @@ class MainActivity : ComponentActivity() {
                 var showPermissionRationale by remember { mutableStateOf<String?>(null) }
 
                 // Request initial permissions
-                val requestPermissions = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
-                    permissions.entries.forEach { (permission, granted) ->
-                        if (!granted && shouldShowRequestPermissionRationale(permission)) {
-                            showPermissionRationale = permission
+                val requestPermissions =
+                    rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
+                        permissions.entries.forEach { (permission, granted) ->
+                            if (!granted && shouldShowRequestPermissionRationale(permission)) {
+                                showPermissionRationale = permission
+                                showOpenAdsCounter ++
+                            }
                         }
                     }
-                }
 
                 // Define permissions to request
                 val permissionsToRequest = remember {
@@ -78,6 +92,10 @@ class MainActivity : ComponentActivity() {
                 // Request permissions on start
                 LaunchedEffect(Unit) {
                     requestPermissions.launch(permissionsToRequest)
+
+                    if (showOpenAdsCounter == 0) {
+                        showOpenAds()
+                    }
                 }
 
                 // Permission Rationale Dialog
@@ -120,5 +138,43 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    private fun showOpenAds() {
+        val appOpenLoader = AppOpenAdLoader(baseContext)
+        val adRequestConfiguration = AdRequestConfiguration.Builder("TODO()").build()
+
+        val appOpenAdEventListener: AppOpenAdEventListener = object : AppOpenAdEventListener {
+            override fun onAdShown() {
+            }
+
+            override fun onAdDismissed() {
+
+            }
+
+            override fun onAdFailedToShow(adError: AdError) {
+
+            }
+
+            override fun onAdClicked() {
+
+            }
+
+            override fun onAdImpression(impressionData: ImpressionData?) {
+            }
+        }
+
+        val appOpenAdLoadListener: AppOpenAdLoadListener = object : AppOpenAdLoadListener {
+            override fun onAdFailedToLoad(error: AdRequestError) {
+            }
+
+            override fun onAdLoaded(appOpenAd: AppOpenAd) {
+                appOpenAd.setAdEventListener(appOpenAdEventListener)
+                appOpenAd.show(this@MainActivity)
+            }
+        }
+
+        appOpenLoader.setAdLoadListener(appOpenAdLoadListener)
+        appOpenLoader.loadAd(adRequestConfiguration)
     }
 }
