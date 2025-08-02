@@ -264,25 +264,7 @@ fun AddNoteScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = {
-                        myInterstitialAds?.apply {
-                            setAdEventListener(object : InterstitialAdEventListener {
-                                override fun onAdShown() {}
-                                override fun onAdFailedToShow(adError: AdError) {
-                                    navController.popBackStack()
-                                }
-
-                                override fun onAdDismissed() {
-                                    navController.popBackStack()
-                                }
-
-                                override fun onAdClicked() {
-                                    navController.popBackStack()
-                                }
-
-                                override fun onAdImpression(impressionData: ImpressionData?) {}
-                            })
-                            show(activity)
-                        }
+                        navController.popBackStack()
                     }) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
                     }
