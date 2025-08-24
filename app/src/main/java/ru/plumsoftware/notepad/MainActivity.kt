@@ -143,7 +143,7 @@ class MainActivity : ComponentActivity() {
 
     private fun showOpenAds() {
         val appOpenLoader = AppOpenAdLoader(baseContext)
-        val adRequestConfiguration = AdRequestConfiguration.Builder(AdsConfig().openAdsId).build()
+        val adRequestConfiguration = AdRequestConfiguration.Builder(AdsConfig.HuaweiAppGalleryAds().openAdsId).build()
 
         val appOpenAdEventListener: AppOpenAdEventListener = object : AppOpenAdEventListener {
             override fun onAdShown() {

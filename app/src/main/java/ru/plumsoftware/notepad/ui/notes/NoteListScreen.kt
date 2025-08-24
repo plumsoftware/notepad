@@ -40,6 +40,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
@@ -146,7 +147,7 @@ fun NoteListScreen(
                         .padding(horizontal = 20.dp, vertical = 12.dp),
                     singleLine = true,
                     textStyle = MaterialTheme.typography.bodyLarge,
-                    placeholder = { Text(text = "Поиск заметок...", style = MaterialTheme.typography.bodyLarge) },
+                    placeholder = { Text(text = stringResource(R.string.note_search), style = MaterialTheme.typography.bodyLarge) },
                     shape = MaterialTheme.shapes.extraLarge,
                     trailingIcon = {
                         Icon(

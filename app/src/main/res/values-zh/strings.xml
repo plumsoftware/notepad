@@ -1,22 +1,21 @@
 <resources>
-    <string name="app_name">Блокнот</string>
-
-    <string name="note_search">Поиск заметок...</string>
-    <string name="ok_">OK</string>
-    <string name="cansel_">Отмена</string>
-    <string name="when_to_remind_about_event">Когда напомнить о событии</string>
-    <string name="select_time">Выберите время</string>
-    <string name="note_editing">Редактирование заметки</string>
-    <string name="note_add">Добавить заметку</string>
-    <string name="save">Сохранить</string>
-    <string name="title">Заголовок</string>
-    <string name="desc">Описание</string>
-    <string name="remind">Напомнить</string>
-    <string name="reminder">Напоминание: %s</string>
-    <string name="photos">Фотографии</string>
-    <string name="tasks">Задачи</string>
-    <string name="new_task">Новая задача</string>
-    <string name="note_color">Цвет заметки</string>
+    <string name="app_name">笔记本</string>
+    <string name="note_search">搜索笔记...</string>
+    <string name="ok_">确定</string>
+    <string name="cansel_">取消</string>
+    <string name="when_to_remind_about_event">何时提醒事件</string>
+    <string name="select_time">选择时间</string>
+    <string name="note_editing">编辑笔记</string>
+    <string name="note_add">添加笔记</string>
+    <string name="save">保存</string>
+    <string name="title">标题</string>
+    <string name="desc">描述</string>
+    <string name="remind">提醒</string>
+    <string name="reminder">提醒：%s</string>
+    <string name="photos">照片</string>
+    <string name="tasks">任务</string>
+    <string name="new_task">新任务</string>
+    <string name="note_color">笔记颜色</string>
 
     <array name="com_google_android_gms_fonts_certs">
         <item>@array/com_google_android_gms_fonts_certs_dev</item>
