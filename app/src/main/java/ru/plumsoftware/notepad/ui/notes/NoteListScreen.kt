@@ -204,7 +204,7 @@ fun NoteListScreen(
                     // Fixed Date Label
                     Text(
                         text = currentDate,
-                        style = MaterialTheme.typography.bodySmall,
+                        style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
                         modifier = Modifier
                             .padding(start = 16.dp, top = 4.dp)

@@ -3,14 +3,21 @@ package ru.plumsoftware.notepad
 import android.annotation.SuppressLint
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.content.res.Configuration
+import android.content.res.Resources
 import android.os.Build
 import android.os.Bundle
+import android.view.View
+import android.view.Window
+import android.view.WindowInsetsController
+import androidx.core.view.WindowCompat
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -38,13 +45,19 @@ import ru.plumsoftware.notepad.ui.addnote.AddNoteScreen
 import ru.plumsoftware.notepad.ui.dialog.PermissionRationaleDialog
 import ru.plumsoftware.notepad.ui.notes.NoteListScreen
 import ru.plumsoftware.notepad.ui.theme.NotepadTheme
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalView
+import androidx.activity.compose.LocalActivity
+import androidx.appcompat.app.AppCompatDelegate
 
 class MainActivity : ComponentActivity() {
     private var showOpenAdsCounter = 0
     @SuppressLint("StateFlowValueCalledInComposition")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
+//        AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES)
 
         MobileAds.initialize(baseContext) {}
 
@@ -62,6 +75,20 @@ class MainActivity : ComponentActivity() {
         }
 
         setContent {
+            val window = LocalActivity.current?.window
+            val resources = LocalActivity.current?.resources
+            val view = LocalView.current
+            SideEffect {
+                setupEdgeToEdge(window = window, resources = resources)
+
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+//                    view.windowInsetsController?.hide(android.view.WindowInsets.Type.statusBars())
+                    view.windowInsetsController?.hide(android.view.WindowInsets.Type.navigationBars())
+                } else {
+                    @Suppress("DEPRECATION")
+                    view.systemUiVisibility = View.SYSTEM_UI_FLAG_FULLSCREEN
+                }
+            }
             NotepadTheme {
                 val navController = rememberNavController()
                 val noteId = intent.getStringExtra("noteId")
@@ -177,5 +204,83 @@ class MainActivity : ComponentActivity() {
 
         appOpenLoader.setAdLoadListener(appOpenAdLoadListener)
         appOpenLoader.loadAd(adRequestConfiguration)
+    }
+
+
+    private fun setupEdgeToEdge(window: Window?, resources: Resources?) {
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        val window = window
+
+        // Определяем текущую тему (светлая/темная)
+        val nightModeFlags = resources?.configuration?.uiMode?.and(Configuration.UI_MODE_NIGHT_MASK)
+        val isDarkTheme = (nightModeFlags?.and(Configuration.UI_MODE_NIGHT_MASK)) == Configuration.UI_MODE_NIGHT_YES
+
+        var systemUiVisibilityFlags = (
+                View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                        or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                        or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                )
+
+        // Делаем статус бар и нав бар прозрачными
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            // Настройка цвета иконок для Android 5–10
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                if (!isDarkTheme) {
+                    // СВЕТЛАЯ ТЕМА — ТЁМНЫЕ ИКОНКИ
+                    systemUiVisibilityFlags = systemUiVisibilityFlags or View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
+                }
+                // Для тёмной темы оставляем светлые иконки (по умолчанию)
+            }
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                if (!isDarkTheme) {
+                    // СВЕТЛАЯ ТЕМА — ТЁМНЫЕ ИКОНКИ НАВИГАЦИИ
+                    systemUiVisibilityFlags = systemUiVisibilityFlags or View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
+                }
+                // Для тёмной темы оставляем светлые иконки (по умолчанию)
+            }
+
+            @Suppress("DEPRECATION")
+            window?.decorView?.systemUiVisibility = systemUiVisibilityFlags
+            @Suppress("DEPRECATION")
+            window?.statusBarColor = android.graphics.Color.TRANSPARENT
+            @Suppress("DEPRECATION")
+            window?.navigationBarColor = android.graphics.Color.TRANSPARENT
+        }
+
+        // Для Android 10+ убираем затемнение под нав баром
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            @Suppress("DEPRECATION")
+            window?.isNavigationBarContrastEnforced = false
+        }
+
+        // Для Android 11+ используем новый API
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            window?.setDecorFitsSystemWindows(false)
+
+            val controller = window?.insetsController
+            controller?.let {
+                // Убеждаемся, что нав бар остаётся видимым
+                it.systemBarsBehavior = WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+
+                // Настройка цвета иконок для Android 11+
+                if (!isDarkTheme) {
+                    // СВЕТЛАЯ ТЕМА — ТЁМНЫЕ ИКОНКИ
+                    it.setSystemBarsAppearance(
+                        WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS or
+                                WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS,
+                        WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS or
+                                WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS
+                    )
+                } else {
+                    // ТЁМНАЯ ТЕМА — СВЕТЛЫЕ ИКОНКИ (убираем флаги светлых иконок)
+                    it.setSystemBarsAppearance(
+                        0,
+                        WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS or
+                                WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS
+                    )
+                }
+            }
+        }
     }
 }

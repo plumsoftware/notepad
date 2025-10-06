@@ -59,6 +59,7 @@ dependencies {
     implementation(libs.androidx.material3)
     implementation(libs.firebase.inappmessaging.display)
     implementation(libs.firebase.messaging)
+    implementation(libs.androidx.appcompat)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

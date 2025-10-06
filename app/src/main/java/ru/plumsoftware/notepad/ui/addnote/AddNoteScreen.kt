@@ -17,8 +17,10 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -99,6 +101,7 @@ import com.yandex.mobile.ads.common.AdRequestConfiguration
 import com.yandex.mobile.ads.common.AdRequestError
 import com.yandex.mobile.ads.common.ImpressionData
 import ru.plumsoftware.notepad.data.model.AdsConfig
+import ru.plumsoftware.notepad.ui.elements.DeleteButton
 import ru.plumsoftware.notepad.ui.theme.shapes
 
 @SuppressLint("MutableCollectionMutableState")
@@ -361,6 +364,7 @@ fun AddNoteScreen(
                                         })
                                         show(activity)
                                     }
+                                    navController.navigateUp()
                                 }
                             },
                             enabled = title.isNotBlank() && !isLoading,
@@ -455,7 +459,7 @@ fun AddNoteScreen(
                 OutlinedTextField(
                     value = description,
                     onValueChange = { description = it },
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().defaultMinSize(minHeight = 120.dp),
                     textStyle = MaterialTheme.typography.bodyMedium,
                     placeholder = {
                         Text(
@@ -619,14 +623,9 @@ fun AddNoteScreen(
                             text = task.text,
                             modifier = Modifier.weight(1f)
                         )
-                        IconButton(
-                            onClick = {
-                                tasks = tasks.toMutableList().apply { removeAt(index) }
-                            },
-                            enabled = !isLoading
-                        ) {
-                            Icon(Icons.Default.Delete, contentDescription = "Delete Task")
-                        }
+                        DeleteButton(onDelete =  {
+                            tasks = tasks.toMutableList().apply { removeAt(index) }
+                        }, enabled = !isLoading)
                     }
                 }
 
@@ -676,10 +675,9 @@ fun AddNoteScreen(
                     stringResource(R.string.note_color),
                     style = MaterialTheme.typography.bodyLarge
                 )
-                Row(
+                FlowRow (
                     modifier = Modifier
                         .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState())
                 ) {
                     colors.forEach { color ->
                         Box(

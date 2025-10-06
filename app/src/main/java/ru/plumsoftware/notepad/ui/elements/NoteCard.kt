@@ -91,16 +91,10 @@ fun NoteCard(
                         color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.weight(1f)
                     )
-                    IconButton(
-                        onClick = onDelete,
-                        colors = IconButtonDefaults.iconButtonColors(containerColor = Color.Transparent)
-                    ) {
-                        Icon(
-                            Icons.Default.Delete,
-                            contentDescription = "Delete Note",
-                            tint = Color.Black
-                        )
-                    }
+                    DeleteButton(
+                        onDelete = onDelete,
+                        enabled = true
+                    )
                 }
                 Spacer(modifier = Modifier.height(10.dp))
                 Text(
