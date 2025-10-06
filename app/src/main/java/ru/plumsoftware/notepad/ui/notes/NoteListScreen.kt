@@ -1,7 +1,14 @@
 package ru.plumsoftware.notepad.ui.notes
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandHorizontally
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkHorizontally
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -37,10 +44,13 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
@@ -74,15 +84,15 @@ fun NoteListScreen(
     val scale = remember { Animatable(1f) }
     val notesToDelete = rememberSaveable(
         saver = Saver(
-        save = { map ->
-            map.mapValues { if (it.value) 1 else 0 }.toList().toTypedArray()
-        },
-        restore = { array ->
-            mutableStateMapOf<String, Boolean>().apply {
-                array.toMap().forEach { (key, value) -> put(key, value == 1) }
+            save = { map ->
+                map.mapValues { if (it.value) 1 else 0 }.toList().toTypedArray()
+            },
+            restore = { array ->
+                mutableStateMapOf<String, Boolean>().apply {
+                    array.toMap().forEach { (key, value) -> put(key, value == 1) }
+                }
             }
-        }
-    )) { mutableStateMapOf<String, Boolean>() }
+        )) { mutableStateMapOf<String, Boolean>() }
     val coroutineScope = rememberCoroutineScope()
     val exoPlayer = rememberExoPlayer()
     val context = LocalContext.current
@@ -120,7 +130,7 @@ fun NoteListScreen(
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary,
                 shape = CircleShape,
-                elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 8.dp)
+                elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 0.dp)
             ) {
                 Icon(Icons.Default.Add, contentDescription = "Add Note")
             }
@@ -147,19 +157,40 @@ fun NoteListScreen(
                         .padding(horizontal = 20.dp, vertical = 12.dp),
                     singleLine = true,
                     textStyle = MaterialTheme.typography.bodyLarge,
-                    placeholder = { Text(text = stringResource(R.string.note_search), style = MaterialTheme.typography.bodyLarge) },
+                    placeholder = {
+                        Text(
+                            text = stringResource(R.string.note_search),
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                    },
                     shape = MaterialTheme.shapes.extraLarge,
                     trailingIcon = {
-                        Icon(
-                            Icons.Default.Search,
-                            contentDescription = "Search",
-                            modifier = Modifier.clickable { viewModel.searchNotes(searchQuery) }
-                        )
+                        AnimatedVisibility(
+                            visible = searchQuery.isNotEmpty(),
+                            enter = slideInHorizontally(
+                                initialOffsetX = { fullWidth -> fullWidth }
+                            ) + fadeIn(),
+                            exit = slideOutHorizontally(
+                                targetOffsetX = { fullWidth -> fullWidth }
+                            ) + fadeOut()
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Search,
+                                contentDescription = "Search",
+                                modifier = Modifier
+                                    .clip(CircleShape)
+                                    .clickable(
+                                        role = Role.Button
+                                    ) {
+                                        viewModel.searchNotes(searchQuery)
+                                    }
+                            )
+                        }
                     },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = MaterialTheme.colorScheme.primary,
-                        unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                        focusedBorderColor = MaterialTheme.colorScheme.surfaceContainer,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.surfaceContainer,
                         focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
                         unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer
                     ),

@@ -4,11 +4,17 @@ import android.annotation.SuppressLint
 import android.app.Activity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -18,6 +24,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
@@ -25,6 +32,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.rounded.Clear
+import androidx.compose.material.icons.rounded.Done
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -36,6 +46,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -61,6 +72,8 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
@@ -86,6 +99,7 @@ import com.yandex.mobile.ads.common.AdRequestConfiguration
 import com.yandex.mobile.ads.common.AdRequestError
 import com.yandex.mobile.ads.common.ImpressionData
 import ru.plumsoftware.notepad.data.model.AdsConfig
+import ru.plumsoftware.notepad.ui.theme.shapes
 
 @SuppressLint("MutableCollectionMutableState")
 @OptIn(ExperimentalMaterial3Api::class)
@@ -175,7 +189,12 @@ fun AddNoteScreen(
                         tempSelectedDateMillis = datePickerState.selectedDateMillis
                         showTimePicker = true
                     }
-                ) { Text(text = stringResource(R.string.ok_), style = MaterialTheme.typography.labelMedium) }
+                ) {
+                    Text(
+                        text = stringResource(R.string.ok_),
+                        style = MaterialTheme.typography.labelMedium
+                    )
+                }
             },
             dismissButton = {
                 TextButton(
@@ -184,7 +203,12 @@ fun AddNoteScreen(
                         isReminder = false
                         reminderDate = null
                     }
-                ) { Text(text = stringResource(R.string.cansel_), style = MaterialTheme.typography.labelMedium) }
+                ) {
+                    Text(
+                        text = stringResource(R.string.cansel_),
+                        style = MaterialTheme.typography.labelMedium
+                    )
+                }
             }
         ) {
             DatePicker(
@@ -209,7 +233,12 @@ fun AddNoteScreen(
         )
         AlertDialog(
             onDismissRequest = { showTimePicker = false },
-            title = { Text(text = stringResource(R.string.select_time), style = MaterialTheme.typography.titleSmall) },
+            title = {
+                Text(
+                    text = stringResource(R.string.select_time),
+                    style = MaterialTheme.typography.titleSmall
+                )
+            },
             text = {
                 TimePicker(
                     state = timePickerState,
@@ -231,7 +260,12 @@ fun AddNoteScreen(
                             reminderDate = calendar.timeInMillis
                         }
                     }
-                ) { Text(stringResource(R.string.ok_), style = MaterialTheme.typography.labelMedium) }
+                ) {
+                    Text(
+                        stringResource(R.string.ok_),
+                        style = MaterialTheme.typography.labelMedium
+                    )
+                }
             },
             dismissButton = {
                 TextButton(
@@ -240,7 +274,12 @@ fun AddNoteScreen(
                         isReminder = false
                         reminderDate = null
                     }
-                ) { Text(stringResource(R.string.cansel_), style = MaterialTheme.typography.labelMedium) }
+                ) {
+                    Text(
+                        stringResource(R.string.cansel_),
+                        style = MaterialTheme.typography.labelMedium
+                    )
+                }
             }
         )
     }
@@ -259,78 +298,98 @@ fun AddNoteScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = if (isEditing) stringResource(R.string.note_editing) else stringResource(R.string.note_add),
-                        style = MaterialTheme.typography.titleMedium
+                        modifier = Modifier.fillMaxWidth(),
+                        text = if (isEditing) stringResource(R.string.note_editing) else stringResource(
+                            R.string.note_add
+                        ),
+                        style = MaterialTheme.typography.titleMedium,
+                        textAlign = TextAlign.Start
                     )
                 },
                 navigationIcon = {
-                    IconButton(onClick = {
-                        navController.popBackStack()
-                    }) {
+                    IconButton(
+                        onClick = {
+                            navController.popBackStack()
+                        }) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
                     }
                 },
                 actions = {
-                    Button(
-                        shape = MaterialTheme.shapes.extraLarge,
-                        onClick = {
-                            if (title.isNotBlank()) {
-                                val updatedNote = Note(
-                                    id = note?.id ?: UUID.randomUUID().toString(),
-                                    title = title,
-                                    description = description,
-                                    color = selectedColor.toLong(),
-                                    tasks = tasks,
-                                    createdAt = note?.createdAt ?: System.currentTimeMillis(),
-                                    reminderDate = if (isReminder) reminderDate else null,
-                                    photos = photos
-                                )
-                                if (isEditing) {
-                                    if (note != null) {
+                    Box(modifier = Modifier.padding(end = 18.dp)) {
+                        Button(
+                            shape = MaterialTheme.shapes.extraLarge,
+                            onClick = {
+                                if (title.isNotBlank()) {
+                                    val updatedNote = Note(
+                                        id = note?.id ?: UUID.randomUUID().toString(),
+                                        title = title,
+                                        description = description,
+                                        color = selectedColor.toLong(),
+                                        tasks = tasks,
+                                        createdAt = note?.createdAt ?: System.currentTimeMillis(),
+                                        reminderDate = if (isReminder) reminderDate else null,
+                                        photos = photos
+                                    )
+                                    if (isEditing) {
                                         if (note.photos != photos) {
                                             deleteImagesFromStorage(
                                                 context,
                                                 note.photos.filterNot { photos.contains(it) })
                                         }
+                                        playSound(context, exoPlayer, R.raw.note_create)
+                                        viewModel.updateNote(updatedNote, context)
+                                    } else {
+                                        playSound(context, exoPlayer, R.raw.note_create)
+                                        viewModel.addNote(updatedNote)
                                     }
-                                    playSound(context, exoPlayer, R.raw.note_create) //note_edit
-                                    viewModel.updateNote(updatedNote, context)
-                                } else {
-                                    playSound(context, exoPlayer, R.raw.note_create)
-                                    viewModel.addNote(updatedNote)
+                                    myInterstitialAds?.apply {
+                                        setAdEventListener(object : InterstitialAdEventListener {
+                                            override fun onAdShown() {}
+                                            override fun onAdFailedToShow(adError: AdError) {
+                                                navController.popBackStack()
+                                            }
+
+                                            override fun onAdDismissed() {
+                                                navController.popBackStack()
+                                            }
+
+                                            override fun onAdClicked() {
+                                                navController.popBackStack()
+                                            }
+
+                                            override fun onAdImpression(impressionData: ImpressionData?) {}
+                                        })
+                                        show(activity)
+                                    }
                                 }
-                                myInterstitialAds?.apply {
-                                    setAdEventListener(object : InterstitialAdEventListener {
-                                        override fun onAdShown() {}
-                                        override fun onAdFailedToShow(adError: AdError) {
-                                            navController.popBackStack()
-                                        }
+                            },
+                            enabled = title.isNotBlank() && !isLoading,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primary,
+                                contentColor = MaterialTheme.colorScheme.onPrimary
+                            ),
+                            elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.wrapContentSize(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(
+                                    12.dp,
+                                    Alignment.CenterHorizontally
+                                )
+                            ) {
+                                Text(
+                                    text = stringResource(R.string.save),
+                                    style = MaterialTheme.typography.labelLarge
+                                )
 
-                                        override fun onAdDismissed() {
-                                            navController.popBackStack()
-                                        }
-
-                                        override fun onAdClicked() {
-                                            navController.popBackStack()
-                                        }
-
-                                        override fun onAdImpression(impressionData: ImpressionData?) {}
-                                    })
-                                    show(activity)
-                                }
+                                Icon(
+                                    imageVector = Icons.Rounded.Done,
+                                    contentDescription = null,
+                                    tint = LocalContentColor.current
+                                )
                             }
-                        },
-                        enabled = title.isNotBlank() && !isLoading,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary,
-                            contentColor = MaterialTheme.colorScheme.onPrimary
-                        ),
-                        elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp)
-                    ) {
-                        Text(
-                            text = if (isEditing) stringResource(R.string.save) else stringResource(R.string.save),
-                            style = MaterialTheme.typography.labelLarge
-                        )
+                        }
                     }
                 }
             )
@@ -363,11 +422,34 @@ fun AddNoteScreen(
                     enabled = !isLoading,
                     shape = MaterialTheme.shapes.extraLarge,
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = MaterialTheme.colorScheme.primary,
-                        unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                        focusedBorderColor = MaterialTheme.colorScheme.surfaceContainer,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.surfaceContainer,
                         focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
                         unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer
-                    )
+                    ),
+                    trailingIcon = {
+                        AnimatedVisibility(
+                            visible = title.isNotEmpty(),
+                            enter = slideInHorizontally(
+                                initialOffsetX = { fullWidth -> fullWidth }
+                            ) + fadeIn(),
+                            exit = slideOutHorizontally(
+                                targetOffsetX = { fullWidth -> fullWidth }
+                            ) + fadeOut()
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.Clear,
+                                contentDescription = "Clear",
+                                modifier = Modifier
+                                    .clip(CircleShape)
+                                    .clickable(
+                                        role = Role.Button
+                                    ) {
+                                        title = ""
+                                    }
+                            )
+                        }
+                    }
                 )
                 Spacer(modifier = Modifier.height(16.dp))
                 OutlinedTextField(
@@ -385,11 +467,34 @@ fun AddNoteScreen(
                     enabled = !isLoading,
                     shape = MaterialTheme.shapes.extraLarge,
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = MaterialTheme.colorScheme.primary,
-                        unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                        focusedBorderColor = MaterialTheme.colorScheme.surfaceContainer,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.surfaceContainer,
                         focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
                         unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer
-                    )
+                    ),
+                    trailingIcon = {
+                        AnimatedVisibility(
+                            visible = description.isNotEmpty(),
+                            enter = slideInHorizontally(
+                                initialOffsetX = { fullWidth -> fullWidth }
+                            ) + fadeIn(),
+                            exit = slideOutHorizontally(
+                                targetOffsetX = { fullWidth -> fullWidth }
+                            ) + fadeOut()
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.Clear,
+                                contentDescription = "Clear",
+                                modifier = Modifier
+                                    .clip(CircleShape)
+                                    .clickable(
+                                        role = Role.Button
+                                    ) {
+                                        description = ""
+                                    }
+                            )
+                        }
+                    }
                 )
                 Spacer(modifier = Modifier.height(16.dp))
 
@@ -415,12 +520,15 @@ fun AddNoteScreen(
                             checkedColor = MaterialTheme.colorScheme.primary
                         )
                     )
-                    Text(text = stringResource(R.string.remind), style = MaterialTheme.typography.bodyMedium)
+                    Text(
+                        text = stringResource(R.string.remind),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
                 }
                 // Display selected reminder date
                 reminderDate?.let {
                     Text(
-                        text = String.format(stringResource(R.string.reminder),formatDate(it)),
+                        text = String.format(stringResource(R.string.reminder), formatDate(it)),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                         modifier = Modifier.padding(start = 16.dp, bottom = 8.dp)
@@ -532,8 +640,16 @@ fun AddNoteScreen(
                         onValueChange = { newTaskText = it },
                         modifier = Modifier.weight(1f),
                         textStyle = MaterialTheme.typography.bodyMedium,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer
+                        ),
+                        shape = MaterialTheme.shapes.extraLarge,
                         label = {
                             Text(
+                                modifier = Modifier.clip(MaterialTheme.shapes.extraLarge),
                                 text = stringResource(R.string.new_task),
                                 style = MaterialTheme.typography.bodyMedium
                             )
@@ -556,7 +672,10 @@ fun AddNoteScreen(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 // Color Picker
-                Text(stringResource(R.string.note_color), style = MaterialTheme.typography.bodyLarge)
+                Text(
+                    stringResource(R.string.note_color),
+                    style = MaterialTheme.typography.bodyLarge
+                )
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
