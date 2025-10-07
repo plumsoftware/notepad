@@ -35,6 +35,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
@@ -43,6 +44,9 @@ import ru.plumsoftware.notepad.data.model.Note
 import ru.plumsoftware.notepad.ui.NoteViewModel
 import ru.plumsoftware.notepad.ui.Screen
 import ru.plumsoftware.notepad.ui.formatDate
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @Composable
 fun NoteCard(
@@ -65,7 +69,7 @@ fun NoteCard(
                 .fillMaxWidth()
                 .clip(MaterialTheme.shapes.large)
                 .border(
-                    1.dp,
+                    0.dp,
                     Color(note.color.toULong()).copy(alpha = 0.15f),
                     MaterialTheme.shapes.large
                 )
@@ -161,6 +165,17 @@ fun NoteCard(
                         }
                     }
                 }
+
+                Text(
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.End,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                    text = SimpleDateFormat(
+                        "dd EEE",
+                        Locale.getDefault()
+                    ).format(Date(note.createdAt))
+                )
             }
         }
     }
