@@ -11,11 +11,17 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -125,14 +131,41 @@ fun NoteListScreen(
     Scaffold(
         containerColor = MaterialTheme.colorScheme.surface,
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = { navController.navigate(Screen.AddNote.route) },
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary,
-                shape = CircleShape,
-                elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 0.dp)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center
             ) {
-                Icon(Icons.Default.Add, contentDescription = "Add Note")
+                FloatingActionButton(
+                    onClick = { navController.navigate(Screen.AddNote.route) },
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                    shape = CircleShape,
+                    elevation = FloatingActionButtonDefaults.elevation(
+                        defaultElevation = 0.dp,
+                        pressedElevation = 0.dp
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .wrapContentSize()
+                            .padding(horizontal = 18.dp),
+                        horizontalArrangement = Arrangement.spacedBy(
+                            space = 12.dp,
+                            alignment = Alignment.CenterHorizontally
+                        ),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            modifier = Modifier.size(18.dp),
+                            imageVector = Icons.Default.Add,
+                            contentDescription = "Add Note"
+                        )
+                        Text(
+                            text = stringResource(R.string.note_add),
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                }
             }
         }
     ) { padding ->
@@ -202,19 +235,19 @@ fun NoteListScreen(
                     modifier = Modifier.fillMaxSize()
                 ) {
                     // Fixed Date Label
-                    Text(
-                        text = currentDate,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
-                        modifier = Modifier
-                            .padding(start = 16.dp, top = 4.dp)
-                            .background(
-                                MaterialTheme.colorScheme.background.copy(alpha = 0.9f),
-                                MaterialTheme.shapes.extraSmall
-                            )
-                            .padding(horizontal = 8.dp, vertical = 4.dp)
-                            .scale(scale.value)
-                    )
+//                    Text(
+//                        text = currentDate,
+//                        style = MaterialTheme.typography.bodyMedium,
+//                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+//                        modifier = Modifier
+//                            .padding(start = 16.dp, top = 4.dp)
+//                            .background(
+//                                MaterialTheme.colorScheme.background.copy(alpha = 0.9f),
+//                                MaterialTheme.shapes.extraSmall
+//                            )
+//                            .padding(horizontal = 8.dp, vertical = 4.dp)
+//                            .scale(scale.value)
+//                    )
 
                     // Notes List
                     LazyColumn(
@@ -241,6 +274,10 @@ fun NoteListScreen(
                                 onImageClick = { path -> fullscreenImagePath = path },
                                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                             )
+
+                            if (note.id == notes.last().id) {
+                                Spacer(modifier = Modifier.height(74.dp))
+                            }
                         }
                     }
                 }

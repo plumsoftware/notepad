@@ -1,5 +1,6 @@
 package ru.plumsoftware.notepad.ui.elements
 
+import android.annotation.SuppressLint
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.scaleIn
@@ -7,6 +8,7 @@ import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -18,6 +20,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
@@ -48,6 +51,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+@SuppressLint("UnrememberedMutableInteractionSource")
 @Composable
 fun NoteCard(
     note: Note,
@@ -90,15 +94,15 @@ fun NoteCard(
                 ) {
                     Text(
                         text = note.title,
-                        style = MaterialTheme.typography.titleMedium,
+                        style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.weight(1f)
                     )
-                    DeleteButton(
-                        onDelete = onDelete,
-                        enabled = true
-                    )
+//                    DeleteButton(
+//                        onDelete = onDelete,
+//                        enabled = true
+//                    )
                 }
                 Spacer(modifier = Modifier.height(10.dp))
                 Text(
@@ -106,11 +110,17 @@ fun NoteCard(
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurface
                 )
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(6.dp))
                 note.tasks.forEachIndexed { index, task ->
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(vertical = 4.dp)
+                        horizontalArrangement = Arrangement.spacedBy(
+                            space = 12.dp,
+                            alignment = Alignment.Start
+                        ),
+                        modifier = Modifier
+                            .padding(vertical = 4.dp)
+                            .padding(start = 6.dp)
                     ) {
                         Checkbox(
                             checked = task.isChecked,
@@ -122,7 +132,9 @@ fun NoteCard(
                             },
                             colors = CheckboxDefaults.colors(
                                 checkedColor = MaterialTheme.colorScheme.primary
-                            )
+                            ),
+                            modifier = Modifier.size(10.dp),
+                            interactionSource = MutableInteractionSource()
                         )
                         Text(
                             text = task.text,
@@ -137,11 +149,27 @@ fun NoteCard(
                 }
                 note.reminderDate?.let { reminderDate ->
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "Напоминание: ${formatDate(reminderDate)}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(space = 8.dp, alignment = Alignment.Start),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            modifier = Modifier.size(18.dp),
+                            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                            imageVector = Icons.Rounded.Notifications,
+                            contentDescription = "Напоминание"
+                        )
+                        Text(
+                            text = formatDate(reminderDate),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                        )
+                    }
+                }
+                note.reminderDate?.let {
+                    if (it > 0 && note.tasks.isNotEmpty())
+                        Spacer(modifier = Modifier.height(6.dp))
                 }
                 // Photos
                 if (note.photos.isNotEmpty()) {
@@ -166,6 +194,7 @@ fun NoteCard(
                     }
                 }
 
+                Spacer(modifier = Modifier.height(6.dp))
                 Text(
                     modifier = Modifier.fillMaxWidth(),
                     textAlign = TextAlign.End,
