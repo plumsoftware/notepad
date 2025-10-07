@@ -35,6 +35,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
@@ -43,6 +44,9 @@ import ru.plumsoftware.notepad.data.model.Note
 import ru.plumsoftware.notepad.ui.NoteViewModel
 import ru.plumsoftware.notepad.ui.Screen
 import ru.plumsoftware.notepad.ui.formatDate
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @Composable
 fun NoteCard(
@@ -65,7 +69,7 @@ fun NoteCard(
                 .fillMaxWidth()
                 .clip(MaterialTheme.shapes.large)
                 .border(
-                    1.dp,
+                    0.dp,
                     Color(note.color.toULong()).copy(alpha = 0.15f),
                     MaterialTheme.shapes.large
                 )
@@ -87,26 +91,26 @@ fun NoteCard(
                     Text(
                         text = note.title,
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onBackground,
                         modifier = Modifier.weight(1f)
                     )
-                    IconButton(
-                        onClick = onDelete,
-                        colors = IconButtonDefaults.iconButtonColors(containerColor = Color.Transparent)
-                    ) {
-                        Icon(
-                            Icons.Default.Delete,
-                            contentDescription = "Delete Note",
-                            tint = Color.Black
-                        )
-                    }
+//                    IconButton(
+//                        onClick = onDelete,
+//                        colors = IconButtonDefaults.iconButtonColors(containerColor = Color.Transparent)
+//                    ) {
+//                        Icon(
+//                            Icons.Default.Delete,
+//                            contentDescription = "Delete Note",
+//                            tint = Color.Black
+//                        )
+//                    }
                 }
                 Spacer(modifier = Modifier.height(10.dp))
                 Text(
                     text = note.description,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 note.tasks.forEachIndexed { index, task ->
@@ -131,7 +135,7 @@ fun NoteCard(
                             style = MaterialTheme.typography.bodyMedium.copy(
                                 textDecoration = if (task.isChecked) TextDecoration.LineThrough else null,
                                 color = MaterialTheme.colorScheme.onSurface.copy(
-                                    alpha = if (task.isChecked) 0.5f else 1f
+                                    alpha = if (task.isChecked) 0.7f else 0.7f
                                 )
                             )
                         )
@@ -142,7 +146,7 @@ fun NoteCard(
                     Text(
                         text = "Напоминание: ${formatDate(reminderDate)}",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                     )
                 }
                 // Photos
@@ -167,6 +171,17 @@ fun NoteCard(
                         }
                     }
                 }
+
+                Text(
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.End,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                    text = SimpleDateFormat(
+                        "dd EEE",
+                        Locale.getDefault()
+                    ).format(Date(note.createdAt))
+                )
             }
         }
     }
