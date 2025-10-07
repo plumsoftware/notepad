@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
@@ -29,11 +30,13 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.rounded.Clear
 import androidx.compose.material.icons.rounded.Done
@@ -56,8 +59,11 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TimePicker
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
@@ -70,11 +76,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
@@ -122,7 +130,6 @@ fun AddNoteScreen(
         )
     }
     var newTaskText by remember { mutableStateOf("") }
-    var selectedColor by remember { mutableStateOf(note?.color?.toULong() ?: Color.White.value) }
     var isReminder by remember { mutableStateOf(note?.reminderDate != null) }
     var reminderDate by remember { mutableStateOf(note?.reminderDate) }
     var showDatePicker by remember { mutableStateOf(false) }
@@ -161,17 +168,35 @@ fun AddNoteScreen(
         }
 
     val colors = listOf(
-        Color.White.value,
-        Color(0xFFFFCDD2).value,
-        Color(0xFFC8E6C9).value,
-        Color(0xFFBBDEFB).value,
-        Color(0xFFFFF9C4).value,
-        Color(0xFFE1BEE7).value,
-        Color(0xFFD1C4E9).value,
-        Color(0xFFC5CAE9).value,
-        Color(0xFFB2DFDB).value,
-        Color(0xFFFFCCBC).value
+        // Мягкий зелёный → чуть глубже
+        Color(0xFFA5D6A7).value,  // было 0xFFC8E6C9 → теперь сочнее, но не кислотный
+
+        // Розовый → чуть насыщеннее и темнее
+        Color(0xFFF8BBD0).value,  // было 0xFFFFCDD2 → теперь мягкий розовый с контрастом ~7:1 для белого
+
+        // Голубой → чуть темнее
+        Color(0xFF90CAF9).value,  // было 0xFFBBDEFB → теперь лучше контраст
+
+        // Жёлтый → заменим на тёплый янтарь (чистый жёлтый плохо сочетается с белым)
+        Color(0xFFFFE082).value,  // вместо почти белого жёлтого — мягкий янтарь, контраст ~10:1
+
+        // Фиолетовый → чуть насыщеннее
+        Color(0xFFCE93D8).value,  // было 0xFFE1BEE7 → теперь лучше читается
+
+        // Лавандовый → чуть глубже
+        Color(0xFFB39DDB).value,  // было 0xFFD1C4E9
+
+        // Сине-лавандовый → чуть темнее
+        Color(0xFF9FA8DA).value,  // было 0xFFC5CAE9
+
+        // Бирюзовый → чуть насыщеннее
+        Color(0xFF80CBC4).value,  // было 0xFFB2DFDB → классический мягкий бирюзовый
+
+        // Персиковый → заменим на тёплый коралл
+        Color(0xFFFFAB91).value   // было 0xFFFFCCBC → теперь контрастный и тёплый
     )
+
+    var selectedColor by remember { mutableStateOf(note?.color?.toULong() ?: colors.first()) }
 
     // Date Picker Dialog
     if (showDatePicker) {
@@ -296,31 +321,35 @@ fun AddNoteScreen(
     }
 
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.surface,
+        containerColor = Color(selectedColor),
         topBar = {
             TopAppBar(
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.Transparent
+                ),
                 title = {
-                    Text(
-                        modifier = Modifier.fillMaxWidth(),
-                        text = if (isEditing) stringResource(R.string.note_editing) else stringResource(
-                            R.string.note_add
-                        ),
-                        style = MaterialTheme.typography.titleMedium,
-                        textAlign = TextAlign.Start
-                    )
+//                    Text(
+//                        modifier = Modifier.fillMaxWidth(),
+//                        text = if (isEditing) stringResource(R.string.note_editing) else stringResource(
+//                            R.string.note_add
+//                        ),
+//                        style = MaterialTheme.typography.titleMedium,
+//                        textAlign = TextAlign.Start
+//                    )
                 },
                 navigationIcon = {
                     IconButton(
                         onClick = {
                             navController.popBackStack()
                         }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.Default.KeyboardArrowLeft, contentDescription = "Back", tint = Color.White)
                     }
                 },
                 actions = {
                     Box(modifier = Modifier.padding(end = 18.dp)) {
                         Button(
                             shape = MaterialTheme.shapes.extraLarge,
+                            contentPadding = PaddingValues(horizontal = 30.dp, vertical = 6.dp),
                             onClick = {
                                 if (title.isNotBlank()) {
                                     val updatedNote = Note(
@@ -369,30 +398,17 @@ fun AddNoteScreen(
                             },
                             enabled = title.isNotBlank() && !isLoading,
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.primary,
-                                contentColor = MaterialTheme.colorScheme.onPrimary
+                                containerColor = Color.White,
+                                contentColor = Color(selectedColor),
+                                disabledContentColor = Color(selectedColor).copy(alpha = 0.7f),
+                                disabledContainerColor = Color.White.copy(alpha = 0.7f)
                             ),
                             elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp)
                         ) {
-                            Row(
-                                modifier = Modifier.wrapContentSize(),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(
-                                    12.dp,
-                                    Alignment.CenterHorizontally
-                                )
-                            ) {
-                                Text(
-                                    text = stringResource(R.string.save),
-                                    style = MaterialTheme.typography.labelLarge
-                                )
-
-                                Icon(
-                                    imageVector = Icons.Rounded.Done,
-                                    contentDescription = null,
-                                    tint = LocalContentColor.current
-                                )
-                            }
+                            Text(
+                                text = stringResource(R.string.save),
+                                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Black)
+                            )
                         }
                     }
                 }
@@ -402,7 +418,7 @@ fun AddNoteScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(MaterialTheme.colorScheme.surface)
+                .background(Color.Transparent)
                 .padding(padding)
         ) {
             Column(
@@ -411,95 +427,125 @@ fun AddNoteScreen(
                     .fillMaxSize()
                     .padding(20.dp)
             ) {
-                OutlinedTextField(
-                    value = title,
-                    onValueChange = { title = it },
-                    modifier = Modifier.fillMaxWidth(),
-                    textStyle = MaterialTheme.typography.bodyLarge,
-                    placeholder = {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color.Transparent)
+                ) {
+                    // Placeholder
+                    if (title.isEmpty()) {
                         Text(
                             text = stringResource(R.string.title),
-                            style = MaterialTheme.typography.bodyLarge,
-                            modifier = Modifier.background(Color.Transparent)
+                            style = MaterialTheme.typography.headlineLarge.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White.copy(alpha = 0.6f)
+                            ),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(
+                                    start = 0.dp,
+                                    end = if (title.isNotEmpty()) 48.dp else 0.dp
+                                )
                         )
-                    },
-                    enabled = !isLoading,
-                    shape = MaterialTheme.shapes.extraLarge,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = MaterialTheme.colorScheme.surfaceContainer,
-                        unfocusedBorderColor = MaterialTheme.colorScheme.surfaceContainer,
-                        focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
-                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer
-                    ),
-                    trailingIcon = {
+                    }
+
+                    BasicTextField(
+                        value = title,
+                        onValueChange = { title = it },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(
+                                start = 0.dp,
+                                end = if (title.isNotEmpty()) 48.dp else 0.dp
+                            ),
+                        textStyle = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.Bold, color = Color.White),
+                        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                        decorationBox = { innerTextField ->
+                            innerTextField()
+                        }
+                    )
+
+                    // ✅ Правильно: выравниваем через внешний Box
+                    Column(
+                        modifier = Modifier.align(Alignment.CenterEnd)
+                    ) {
                         AnimatedVisibility(
                             visible = title.isNotEmpty(),
-                            enter = slideInHorizontally(
-                                initialOffsetX = { fullWidth -> fullWidth }
-                            ) + fadeIn(),
-                            exit = slideOutHorizontally(
-                                targetOffsetX = { fullWidth -> fullWidth }
-                            ) + fadeOut()
+                            enter = slideInHorizontally { fullWidth -> fullWidth } + fadeIn(),
+                            exit = slideOutHorizontally { fullWidth -> fullWidth } + fadeOut()
                         ) {
                             Icon(
                                 imageVector = Icons.Rounded.Clear,
                                 contentDescription = "Clear",
+                                tint = Color.White,
                                 modifier = Modifier
                                     .clip(CircleShape)
-                                    .clickable(
-                                        role = Role.Button
-                                    ) {
-                                        title = ""
-                                    }
+                                    .clickable(role = Role.Button) { title = "" }
+                                    .padding(12.dp)
                             )
                         }
                     }
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                OutlinedTextField(
-                    value = description,
-                    onValueChange = { description = it },
-                    modifier = Modifier.fillMaxWidth().defaultMinSize(minHeight = 120.dp),
-                    textStyle = MaterialTheme.typography.bodyMedium,
-                    placeholder = {
+                }
+                Spacer(modifier = Modifier.height(30.dp))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color.Transparent)
+                ) {
+                    // Placeholder
+                    if (description.isEmpty()) {
                         Text(
                             text = stringResource(R.string.desc),
-                            style = MaterialTheme.typography.bodyMedium,
-                            modifier = Modifier.background(Color.Transparent)
+                            style = MaterialTheme.typography.headlineSmall.copy(
+                                fontWeight = FontWeight.Medium,
+                                color = Color.White.copy(alpha = 0.6f)
+                            ),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(
+                                    start = 0.dp,
+                                    end = if (description.isNotEmpty()) 48.dp else 0.dp
+                                )
                         )
-                    },
-                    enabled = !isLoading,
-                    shape = MaterialTheme.shapes.extraLarge,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = MaterialTheme.colorScheme.surfaceContainer,
-                        unfocusedBorderColor = MaterialTheme.colorScheme.surfaceContainer,
-                        focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
-                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer
-                    ),
-                    trailingIcon = {
+                    }
+
+                    BasicTextField(
+                        value = description,
+                        onValueChange = { description = it },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(
+                                start = 0.dp,
+                                end = if (description.isNotEmpty()) 48.dp else 0.dp
+                            ),
+                        textStyle = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Medium, color = Color.White),
+                        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                        decorationBox = { innerTextField ->
+                            innerTextField()
+                        }
+                    )
+
+                    // ✅ Правильно: выравниваем через внешний Box
+                    Column(
+                        modifier = Modifier.align(Alignment.CenterEnd)
+                    ) {
                         AnimatedVisibility(
                             visible = description.isNotEmpty(),
-                            enter = slideInHorizontally(
-                                initialOffsetX = { fullWidth -> fullWidth }
-                            ) + fadeIn(),
-                            exit = slideOutHorizontally(
-                                targetOffsetX = { fullWidth -> fullWidth }
-                            ) + fadeOut()
+                            enter = slideInHorizontally { fullWidth -> fullWidth } + fadeIn(),
+                            exit = slideOutHorizontally { fullWidth -> fullWidth } + fadeOut()
                         ) {
                             Icon(
                                 imageVector = Icons.Rounded.Clear,
                                 contentDescription = "Clear",
+                                tint = Color.White,
                                 modifier = Modifier
                                     .clip(CircleShape)
-                                    .clickable(
-                                        role = Role.Button
-                                    ) {
-                                        description = ""
-                                    }
+                                    .clickable(role = Role.Button) { description = "" }
+                                    .padding(12.dp)
                             )
                         }
                     }
-                )
+                }
                 Spacer(modifier = Modifier.height(16.dp))
 
                 // Reminder Checkbox
@@ -623,7 +669,7 @@ fun AddNoteScreen(
                             text = task.text,
                             modifier = Modifier.weight(1f)
                         )
-                        DeleteButton(onDelete =  {
+                        DeleteButton(onDelete = {
                             tasks = tasks.toMutableList().apply { removeAt(index) }
                         }, enabled = !isLoading)
                     }
@@ -675,7 +721,7 @@ fun AddNoteScreen(
                     stringResource(R.string.note_color),
                     style = MaterialTheme.typography.bodyLarge
                 )
-                FlowRow (
+                FlowRow(
                     modifier = Modifier
                         .fillMaxWidth()
                 ) {

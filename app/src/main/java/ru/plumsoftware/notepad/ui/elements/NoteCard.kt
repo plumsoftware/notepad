@@ -31,12 +31,17 @@ import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
@@ -95,8 +100,8 @@ fun NoteCard(
                     Text(
                         text = note.title,
                         style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface,
+                        fontWeight = FontWeight.Black,
+                        color = Color.White,
                         modifier = Modifier.weight(1f)
                     )
 //                    DeleteButton(
@@ -107,11 +112,13 @@ fun NoteCard(
                 Spacer(modifier = Modifier.height(10.dp))
                 Text(
                     text = note.description,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
                 )
                 Spacer(modifier = Modifier.height(6.dp))
                 note.tasks.forEachIndexed { index, task ->
+                    var checked by remember { mutableStateOf(task.isChecked) }
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(
@@ -123,27 +130,41 @@ fun NoteCard(
                             .padding(start = 6.dp)
                     ) {
                         Checkbox(
-                            checked = task.isChecked,
+                            checked = checked,
                             onCheckedChange = { isChecked ->
+                                checked = !checked
                                 val updatedTasks = note.tasks.toMutableList().apply {
                                     this[index] = task.copy(isChecked = isChecked)
                                 }
                                 viewModel.updateNote(note.copy(tasks = updatedTasks), context)
                             },
                             colors = CheckboxDefaults.colors(
-                                checkedColor = MaterialTheme.colorScheme.primary
+                                uncheckedColor = Color.White.copy(alpha = 0.7f),
+                                checkedColor = Color(note.color.toULong())
                             ),
                             modifier = Modifier.size(10.dp),
                             interactionSource = MutableInteractionSource()
                         )
                         Text(
+                            modifier = Modifier.clickable(
+                                enabled = true,
+                                indication = null,
+                                interactionSource = MutableInteractionSource(),
+                                onClick = {
+                                    checked = !checked
+                                    val updatedTasks = note.tasks.toMutableList().apply {
+                                        this[index] = task.copy(isChecked = checked)
+                                    }
+                                    viewModel.updateNote(note.copy(tasks = updatedTasks), context)
+                                }),
                             text = task.text,
-                            style = MaterialTheme.typography.bodyMedium.copy(
+                            style = MaterialTheme.typography.bodyLarge.copy(
                                 textDecoration = if (task.isChecked) TextDecoration.LineThrough else null,
-                                color = MaterialTheme.colorScheme.onSurface.copy(
+                                color = Color.White.copy(
                                     alpha = if (task.isChecked) 0.5f else 1f
                                 )
-                            )
+                            ),
+                            fontWeight = FontWeight.Medium
                         )
                     }
                 }
@@ -151,19 +172,23 @@ fun NoteCard(
                     Spacer(modifier = Modifier.height(8.dp))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(space = 8.dp, alignment = Alignment.Start),
+                        horizontalArrangement = Arrangement.spacedBy(
+                            space = 8.dp,
+                            alignment = Alignment.Start
+                        ),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(
                             modifier = Modifier.size(18.dp),
-                            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                            tint = Color.White.copy(alpha = 0.7f),
                             imageVector = Icons.Rounded.Notifications,
                             contentDescription = "Напоминание"
                         )
                         Text(
                             text = formatDate(reminderDate),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Color.White.copy(alpha = 0.7f),
+                            fontWeight = FontWeight.Normal
                         )
                     }
                 }
@@ -198,8 +223,9 @@ fun NoteCard(
                 Text(
                     modifier = Modifier.fillMaxWidth(),
                     textAlign = TextAlign.End,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color.White.copy(alpha = 0.7f),
+                    fontWeight = FontWeight.Normal,
                     text = SimpleDateFormat(
                         "dd EEE",
                         Locale.getDefault()

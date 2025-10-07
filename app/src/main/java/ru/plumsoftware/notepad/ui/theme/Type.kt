@@ -33,6 +33,7 @@ val bodyFontFamily = FontFamily(
     Font(R.font.sf_pro_display_regular, FontWeight.Normal),
     Font(R.font.sf_pro_display_medium, FontWeight.Medium),
     Font(R.font.sf_pro_display_bold, FontWeight.Bold),
+    Font(R.font.sf_pro_display_black, FontWeight.Black),
 )
 
 val baseline = Typography()
