@@ -45,6 +45,8 @@ import androidx.compose.material.icons.rounded.Done
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.DatePicker
@@ -495,7 +497,7 @@ fun AddNoteScreen(
                         }
                     }
                 }
-                Spacer(modifier = Modifier.height(30.dp))
+                Spacer(modifier = Modifier.height(20.dp))
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -558,7 +560,7 @@ fun AddNoteScreen(
                         }
                     }
                 }
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(40.dp))
 
                 // Reminder Checkbox
                 Row(
@@ -583,8 +585,8 @@ fun AddNoteScreen(
                         enabled = !isLoading,
                         interactionSource = MutableInteractionSource(),
                         colors = CheckboxDefaults.colors(
-                            uncheckedColor = Color.White,
-                            checkedColor = Color.Transparent
+                            checkedColor = Color.Transparent,
+                            uncheckedColor = Color.White.copy(alpha = 0.7f)
                         ),
                     )
                     Spacer(modifier = Modifier.width(10.dp))
@@ -593,23 +595,24 @@ fun AddNoteScreen(
                         Text(
                             text = String.format(stringResource(R.string.reminder), formatDate(it)),
                             style = MaterialTheme.typography.bodyMedium,
-                            color = Color.White,
-                            modifier = Modifier.padding(start = 16.dp)
+                            color = Color.White
                         )
                     }
                     if (reminderDate == null)
                         Text(
                             text = stringResource(R.string.remind),
-                            style = MaterialTheme.typography.bodyMedium.copy(color = Color.White)
+                            style = MaterialTheme.typography.bodyLarge.copy(color = Color.White)
                         )
                 }
 
                 // Photos
                 Text(
                     stringResource(R.string.photos),
-                    style = MaterialTheme.typography.bodyLarge,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Bold,
                     color = Color.White.copy(alpha = 0.7f)
                 )
+                Spacer(modifier = Modifier.height(4.dp))
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -656,35 +659,49 @@ fun AddNoteScreen(
                         }
                     }
                     if (photos.size < 3) {
-                        IconButton(
-                            onClick = { pickImages.launch("image/*") },
-                            enabled = !isLoading
+                        Card(
+                            modifier = Modifier
+                                .size(80.dp)
+                                .padding(end = 8.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = Color.White.copy(alpha = 0.4f),
+                                contentColor = Color(selectedColor)
+                            ),
+                            enabled = !isLoading,
+                            onClick = { pickImages.launch("image/*") }
                         ) {
-                            Icon(
-                                Icons.Default.Add,
-                                contentDescription = "Add Photo",
-                                tint = Color.White
-                            )
+                            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                Icon(
+                                    Icons.Default.Add,
+                                    contentDescription = "Add Photo",
+                                    tint = Color(selectedColor)
+                                )
+                            }
                         }
                     }
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(18.dp))
 
                 // Tasks
                 Text(
                     stringResource(R.string.tasks),
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = Color.White.copy(alpha = 0.7f)
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color.White.copy(alpha = 0.7f),
+                    fontWeight = FontWeight.Bold
                 )
                 tasks.forEachIndexed { index, task ->
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Start,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 4.dp)
+                            .padding(vertical = 8.dp)
                     ) {
                         Checkbox(
+                            modifier = Modifier
+                                .size(14.dp)
+                                .padding(start = 4.dp),
                             checked = task.isChecked,
                             onCheckedChange = { isChecked ->
                                 tasks = tasks.toMutableList().apply {
@@ -693,16 +710,26 @@ fun AddNoteScreen(
                             },
                             enabled = !isLoading,
                             colors = CheckboxDefaults.colors(
-                                checkedColor = MaterialTheme.colorScheme.primary
+                                checkedColor = Color.Transparent,
+                                uncheckedColor = Color.White.copy(alpha = 0.7f)
                             )
                         )
+                        Spacer(modifier = Modifier.width(10.dp))
                         Text(
                             text = task.text,
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.weight(1f),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Color.White
                         )
-                        DeleteButton(onDelete = {
-                            tasks = tasks.toMutableList().apply { removeAt(index) }
-                        }, enabled = !isLoading)
+                        Image(
+                            painter = painterResource(R.drawable.delete_icon),
+                            contentDescription = "Delete Photo",
+                            modifier = Modifier
+                                .size(24.dp)
+                                .clickable(enabled = !isLoading, onClick = {
+                                    tasks = tasks.toMutableList().apply { removeAt(index) }
+                                })
+                        )
                     }
                 }
 
@@ -710,7 +737,7 @@ fun AddNoteScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 10.dp),
+                        .padding(vertical = 4.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     OutlinedTextField(
@@ -748,13 +775,16 @@ fun AddNoteScreen(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(18.dp))
 
                 // Color Picker
                 Text(
                     stringResource(R.string.note_color),
-                    style = MaterialTheme.typography.bodyLarge
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color.White.copy(alpha = 0.7f),
+                    fontWeight = FontWeight.Bold
                 )
+                Spacer(modifier = Modifier.height(4.dp))
                 FlowRow(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -763,12 +793,12 @@ fun AddNoteScreen(
                         Box(
                             modifier = Modifier
                                 .size(40.dp)
-                                .padding(4.dp)
+                                .padding(end = 4.dp, bottom = 4.dp)
                                 .clip(CircleShape)
                                 .background(Color(color))
                                 .border(
                                     width = 2.dp,
-                                    color = if (selectedColor == color) MaterialTheme.colorScheme.primary else Color.Transparent,
+                                    color = if (selectedColor == color) Color.White else Color.Transparent,
                                     shape = CircleShape
                                 )
                                 .clickable(enabled = !isLoading) { selectedColor = color }
