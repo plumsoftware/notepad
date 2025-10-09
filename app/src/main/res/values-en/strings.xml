@@ -17,6 +17,8 @@
     <string name="tasks">Tasks</string>
     <string name="new_task">New task</string>
     <string name="note_color">Note color</string>
+    <string name="go">Go</string>
+    <string name="delete">Delete</string>
 
     <array name="com_google_android_gms_fonts_certs">
         <item>@array/com_google_android_gms_fonts_certs_dev</item>

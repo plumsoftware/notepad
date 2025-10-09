@@ -17,6 +17,8 @@
     <string name="tasks">Задачи</string>
     <string name="new_task">Новая задача</string>
     <string name="note_color">Цвет заметки</string>
+    <string name="go">Перейти</string>
+    <string name="delete">Удалить</string>
 
     <array name="com_google_android_gms_fonts_certs">
         <item>@array/com_google_android_gms_fonts_certs_dev</item>
