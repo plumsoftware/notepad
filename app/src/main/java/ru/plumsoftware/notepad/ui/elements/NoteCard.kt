@@ -219,7 +219,7 @@ fun NoteCard(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(6.dp))
+                Spacer(modifier = Modifier.height(10.dp))
                 Text(
                     modifier = Modifier.fillMaxWidth(),
                     textAlign = TextAlign.End,
@@ -227,7 +227,7 @@ fun NoteCard(
                     color = Color.White.copy(alpha = 0.7f),
                     fontWeight = FontWeight.Normal,
                     text = SimpleDateFormat(
-                        "dd EEE",
+                        "EEE, dd MMM yyyy",
                         Locale.getDefault()
                     ).format(Date(note.createdAt))
                 )

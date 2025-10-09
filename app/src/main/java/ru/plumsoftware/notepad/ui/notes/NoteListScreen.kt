@@ -26,13 +26,17 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -54,9 +58,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
@@ -129,45 +136,7 @@ fun NoteListScreen(
     }
 
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.surface,
-        floatingActionButton = {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Center
-            ) {
-                FloatingActionButton(
-                    onClick = { navController.navigate(Screen.AddNote.route) },
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary,
-                    shape = CircleShape,
-                    elevation = FloatingActionButtonDefaults.elevation(
-                        defaultElevation = 0.dp,
-                        pressedElevation = 0.dp
-                    )
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .wrapContentSize()
-                            .padding(horizontal = 18.dp),
-                        horizontalArrangement = Arrangement.spacedBy(
-                            space = 12.dp,
-                            alignment = Alignment.CenterHorizontally
-                        ),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            modifier = Modifier.size(18.dp),
-                            imageVector = Icons.Default.Add,
-                            contentDescription = "Add Note"
-                        )
-                        Text(
-                            text = stringResource(R.string.note_add),
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                    }
-                }
-            }
-        }
+        containerColor = MaterialTheme.colorScheme.surface
     ) { padding ->
         Box(
             modifier = Modifier
@@ -183,47 +152,51 @@ fun NoteListScreen(
                     value = searchQuery,
                     onValueChange = { query ->
                         searchQuery = query
-                        viewModel.searchNotes(query)
                     },
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 20.dp, vertical = 12.dp),
                     singleLine = true,
-                    textStyle = MaterialTheme.typography.bodyLarge,
+                    textStyle = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
                     placeholder = {
                         Text(
                             text = stringResource(R.string.note_search),
-                            style = MaterialTheme.typography.bodyLarge
+                            style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium)
                         )
                     },
                     shape = MaterialTheme.shapes.extraLarge,
                     trailingIcon = {
                         AnimatedVisibility(
                             visible = searchQuery.isNotEmpty(),
-                            enter = slideInHorizontally(
-                                initialOffsetX = { fullWidth -> fullWidth }
-                            ) + fadeIn(),
-                            exit = slideOutHorizontally(
-                                targetOffsetX = { fullWidth -> fullWidth }
-                            ) + fadeOut()
+                            enter = slideInHorizontally { it } + fadeIn(),
+                            exit = slideOutHorizontally { it } + fadeOut()
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.Search,
-                                contentDescription = "Search",
-                                modifier = Modifier
-                                    .clip(CircleShape)
-                                    .clickable(
-                                        role = Role.Button
-                                    ) {
-                                        viewModel.searchNotes(searchQuery)
-                                    }
-                            )
+                            IconButton(
+                                onClick = {
+                                    viewModel.searchNotes(searchQuery)
+                                }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Search,
+                                    contentDescription = "Search"
+                                )
+                            }
                         }
                     },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Text,
+                        imeAction = ImeAction.Search
+                    ),
+                    keyboardActions = KeyboardActions(
+                        onSearch = {
+                            if (searchQuery.isNotBlank()) {
+                                viewModel.searchNotes(searchQuery)
+                            }
+                        }
+                    ),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = MaterialTheme.colorScheme.surfaceContainer,
-                        unfocusedBorderColor = MaterialTheme.colorScheme.surfaceContainer,
+                        focusedBorderColor = Color.Transparent,
+                        unfocusedBorderColor = Color.Transparent,
                         focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
                         unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer
                     ),
@@ -234,21 +207,6 @@ fun NoteListScreen(
                 Box(
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    // Fixed Date Label
-//                    Text(
-//                        text = currentDate,
-//                        style = MaterialTheme.typography.bodyMedium,
-//                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
-//                        modifier = Modifier
-//                            .padding(start = 16.dp, top = 4.dp)
-//                            .background(
-//                                MaterialTheme.colorScheme.background.copy(alpha = 0.9f),
-//                                MaterialTheme.shapes.extraSmall
-//                            )
-//                            .padding(horizontal = 8.dp, vertical = 4.dp)
-//                            .scale(scale.value)
-//                    )
-
                     // Notes List
                     LazyColumn(
                         state = lazyListState,
@@ -276,9 +234,53 @@ fun NoteListScreen(
                             )
 
                             if (note.id == notes.last().id) {
-                                Spacer(modifier = Modifier.height(74.dp))
+                                Spacer(modifier = Modifier.height(94.dp))
                             }
                         }
+                    }
+                }
+            }
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.BottomCenter)
+                    .padding(vertical = 44.dp),
+                horizontalArrangement = Arrangement.Center
+            ) {
+                Button(
+                    onClick = { navController.navigate(Screen.AddNote.route) },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary,
+                    ),
+                    shape = CircleShape,
+                    elevation = ButtonDefaults.elevatedButtonElevation(
+                        defaultElevation = 0.dp,
+                        pressedElevation = 0.dp
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .wrapContentSize()
+                            .padding(vertical = 6.dp),
+                        horizontalArrangement = Arrangement.spacedBy(
+                            space = 12.dp,
+                            alignment = Alignment.CenterHorizontally
+                        ),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            modifier = Modifier.size(18.dp),
+                            imageVector = Icons.Default.Add,
+                            contentDescription = "Add Note"
+                        )
+                        Text(
+                            text = stringResource(R.string.note_add),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Color.White,
+                            fontWeight = FontWeight.Medium
+                        )
                     }
                 }
             }
