@@ -51,6 +51,9 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.activity.compose.LocalActivity
 import androidx.appcompat.app.AppCompatDelegate
+import com.google.firebase.Firebase
+import com.google.firebase.analytics.FirebaseAnalytics
+import com.google.firebase.analytics.analytics
 
 class MainActivity : ComponentActivity() {
     private var showOpenAdsCounter = 0
@@ -60,6 +63,7 @@ class MainActivity : ComponentActivity() {
 //        AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES)
 
         MobileAds.initialize(baseContext) {}
+        val analytics: FirebaseAnalytics = Firebase.analytics
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(

@@ -38,9 +38,16 @@ class NoteViewModel(application: Application) : ViewModel() {
     fun searchNotes(query: String) {
         viewModelScope.launch {
             _isLoading.value = true
-            db.noteDao().searchNotes(query).collectLatest { notes ->
-                _notes.value = notes
-                _isLoading.value = false
+            if(query.isNotEmpty()) {
+                db.noteDao().searchNotes(query).collectLatest { notes ->
+                    _notes.value = notes
+                    _isLoading.value = false
+                }
+            } else {
+                db.noteDao().getAllNotes().collectLatest { notes ->
+                    _notes.value = notes
+                    _isLoading.value = false
+                }
             }
         }
     }

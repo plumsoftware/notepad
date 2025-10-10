@@ -1,5 +1,6 @@
 package ru.plumsoftware.notepad.ui.notes
 
+import android.content.Context
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
@@ -18,6 +19,8 @@ import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
@@ -26,10 +29,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
+import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
+import androidx.compose.foundation.lazy.staggeredgrid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -42,6 +49,7 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -52,6 +60,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -74,6 +83,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.core.content.edit
 import androidx.navigation.NavController
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
@@ -121,6 +131,7 @@ fun NoteListScreen(
     val exoPlayer = rememberExoPlayer()
     val context = LocalContext.current
     var fullscreenImagePath by remember { mutableStateOf<String?>(null) }
+    var listType by remember { mutableIntStateOf(getListTypeFromPreferences(context)) }
 
     // Trigger animation for date change
     LaunchedEffect(currentDate) {
@@ -163,6 +174,10 @@ fun NoteListScreen(
                     value = searchQuery,
                     onValueChange = { query ->
                         searchQuery = query
+
+                        if (searchQuery.isEmpty()) {
+                            viewModel.searchNotes(searchQuery)
+                        }
                     },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -200,9 +215,7 @@ fun NoteListScreen(
                     ),
                     keyboardActions = KeyboardActions(
                         onSearch = {
-                            if (searchQuery.isNotBlank()) {
-                                viewModel.searchNotes(searchQuery)
-                            }
+                            viewModel.searchNotes(searchQuery)
                         }
                     ),
                     colors = OutlinedTextFieldDefaults.colors(
@@ -214,38 +227,150 @@ fun NoteListScreen(
                     enabled = !isLoading
                 )
 
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    IconButton(
+                        modifier = Modifier.wrapContentSize(),
+                        onClick = {
+                            listType = if (listType == 0) {
+                                1
+                            } else {
+                                0
+                            }
+
+                            saveListTypeToPreferences(listType, context)
+                        },
+                        colors = IconButtonDefaults.iconButtonColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceContainer
+                        )
+                    ) {
+                        if (listType == 1) {
+                            FlowRow(
+                                modifier = Modifier
+                                    .wrapContentSize(),
+                                maxLines = 2,
+                                maxItemsInEachRow = 2,
+                                verticalArrangement = Arrangement.spacedBy(
+                                    space = 4.dp,
+                                    alignment = Alignment.CenterVertically
+                                ),
+                                horizontalArrangement = Arrangement.spacedBy(
+                                    space = 4.dp,
+                                    alignment = Alignment.CenterHorizontally
+                                )
+                            ) {
+                                Box(
+                                    modifier = Modifier.width(8.dp).height(8.dp).background(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f))
+                                )
+                                Box(
+                                    modifier = Modifier.width(8.dp).height(8.dp).background(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f))
+                                )
+                                Box(
+                                    modifier = Modifier.width(8.dp).height(8.dp).background(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f))
+                                )
+                                Box(
+                                    modifier = Modifier.width(8.dp).height(8.dp).background(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f))
+                                )
+                            }
+                        } else {
+                            FlowRow(
+                                modifier = Modifier
+                                    .wrapContentSize(),
+                                maxLines = 2,
+                                maxItemsInEachRow = 1,
+                                verticalArrangement = Arrangement.spacedBy(
+                                    space = 4.dp,
+                                    alignment = Alignment.CenterVertically
+                                ),
+                                horizontalArrangement = Arrangement.spacedBy(
+                                    space = 4.dp,
+                                    alignment = Alignment.CenterHorizontally
+                                )
+                            ) {
+                                Box(
+                                    modifier = Modifier.width(20.dp).height(6.dp).background(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f))
+                                )
+                                Box(
+                                    modifier = Modifier.width(20.dp).height(6.dp).background(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f))
+                                )
+                            }
+                        }
+                    }
+                }
+
                 // Fixed Date Label and Notes List
                 Box(
                     modifier = Modifier.fillMaxSize()
                 ) {
                     // Notes List
-                    LazyColumn(
-                        state = lazyListState,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(top = 28.dp)
-                    ) {
-                        items(notes, key = { it.id }) { note ->
-                            NoteCard(
-                                note = note,
-                                viewModel = viewModel,
-                                navController = navController,
-                                isVisible = notesToDelete[note.id] != true,
-                                onDelete = {
-                                    notesToDelete[note.id] = true
-                                    playSound(context, exoPlayer, R.raw.note_delete)
-                                    coroutineScope.launch {
-                                        kotlinx.coroutines.delay(400)
-                                        viewModel.deleteNote(note, context)
-                                        notesToDelete.remove(note.id)
-                                    }
-                                },
-                                onImageClick = { path -> fullscreenImagePath = path },
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                            )
+                    if (listType == 1) {
+                        // Две колонки
+                        LazyVerticalStaggeredGrid(
+                            columns = StaggeredGridCells.Fixed(2),
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(top = 10.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalItemSpacing = 8.dp,
+                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+                        ) {
+                            items(notes, key = { it.id }) { note ->
+                                NoteCard(
+                                    note = note,
+                                    viewModel = viewModel,
+                                    navController = navController,
+                                    isVisible = notesToDelete[note.id] != true,
+                                    onDelete = {
+                                        notesToDelete[note.id] = true
+                                        playSound(context, exoPlayer, R.raw.note_delete)
+                                        coroutineScope.launch {
+                                            delay(400)
+                                            viewModel.deleteNote(note, context)
+                                            notesToDelete.remove(note.id)
+                                        }
+                                    },
+                                    onImageClick = { path -> fullscreenImagePath = path },
+                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp)
+                                )
+                            }
 
-                            if (note.id == notes.last().id) {
+                            item {
                                 Spacer(modifier = Modifier.height(94.dp))
+                            }
+                        }
+                    } else {
+                        // Одна колонка
+                        LazyColumn(
+                            state = lazyListState,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(top = 10.dp)
+                        ) {
+                            items(notes, key = { it.id }) { note ->
+                                NoteCard(
+                                    note = note,
+                                    viewModel = viewModel,
+                                    navController = navController,
+                                    isVisible = notesToDelete[note.id] != true,
+                                    onDelete = {
+                                        notesToDelete[note.id] = true
+                                        playSound(context, exoPlayer, R.raw.note_delete)
+                                        coroutineScope.launch {
+                                            delay(400)
+                                            viewModel.deleteNote(note, context)
+                                            notesToDelete.remove(note.id)
+                                        }
+                                    },
+                                    onImageClick = { path -> fullscreenImagePath = path },
+                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                                )
+
+                                if (note.id == notes.last().id) {
+                                    Spacer(modifier = Modifier.height(94.dp))
+                                }
                             }
                         }
                     }
@@ -309,6 +434,18 @@ fun NoteListScreen(
                 )
             }
         }
+    }
+}
+
+fun getListTypeFromPreferences(context: Context): Int {
+    val sharedPreferences = context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
+    return sharedPreferences.getInt("list_type", 0)
+}
+
+fun saveListTypeToPreferences(type: Int, context: Context) {
+    val sharedPreferences = context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
+    sharedPreferences.edit {
+        putInt("list_type", type)
     }
 }
 
