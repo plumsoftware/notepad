@@ -9,6 +9,7 @@ import androidx.core.content.ContextCompat
 import androidx.work.Worker
 import androidx.work.WorkerParameters
 import ru.plumsoftware.notepad.MainActivity
+import ru.plumsoftware.notepad.R
 
 class ReminderWorker(appContext: Context, workerParams: WorkerParameters) : Worker(appContext, workerParams) {
     override fun doWork(): Result {
@@ -34,7 +35,7 @@ class ReminderWorker(appContext: Context, workerParams: WorkerParameters) : Work
         )
 
         val notification = NotificationCompat.Builder(applicationContext, "note_reminder_channel")
-            .setSmallIcon(android.R.drawable.ic_dialog_info)
+            .setSmallIcon(R.drawable.ic_stat_name)
             .setContentTitle(noteTitle)
             .setContentText("Напоминание о заметке")
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)

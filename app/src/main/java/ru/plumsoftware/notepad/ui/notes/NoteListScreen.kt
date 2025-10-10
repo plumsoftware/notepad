@@ -329,7 +329,7 @@ fun NoteListScreen(
                                         coroutineScope.launch {
                                             delay(400)
                                             viewModel.deleteNote(note, context)
-                                            notesToDelete.remove(note.id)
+//                                            notesToDelete.remove(note.id)
                                         }
                                     },
                                     onImageClick = { path -> fullscreenImagePath = path },
@@ -361,7 +361,7 @@ fun NoteListScreen(
                                         coroutineScope.launch {
                                             delay(400)
                                             viewModel.deleteNote(note, context)
-                                            notesToDelete.remove(note.id)
+//                                            notesToDelete.remove(note.id)
                                         }
                                     },
                                     onImageClick = { path -> fullscreenImagePath = path },
