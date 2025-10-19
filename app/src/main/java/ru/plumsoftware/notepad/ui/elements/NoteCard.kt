@@ -151,7 +151,8 @@ fun NoteCard(
                                 },
                                 colors = CheckboxDefaults.colors(
                                     uncheckedColor = Color.White.copy(alpha = 0.7f),
-                                    checkedColor = Color(note.color.toULong())
+                                    checkedColor = Color(note.color.toULong()),
+                                    checkmarkColor = Color.White
                                 ),
                                 modifier = Modifier.size(10.dp),
                                 interactionSource = MutableInteractionSource()

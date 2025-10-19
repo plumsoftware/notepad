@@ -1,5 +1,6 @@
 package ru.plumsoftware.notepad.ui.theme
 
+import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
@@ -84,7 +85,7 @@ private val darkScheme = darkColorScheme(
 
 @Composable
 fun NotepadTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
+    darkTheme: Boolean = AppCompatDelegate.getDefaultNightMode() == AppCompatDelegate.MODE_NIGHT_YES,
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {

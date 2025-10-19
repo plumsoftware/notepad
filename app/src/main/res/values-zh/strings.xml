@@ -1,6 +1,6 @@
 <resources>
     <string name="app_name">笔记本</string>
-    <string name="note_search">搜索笔记...</string>
+    <string name="note_search">搜索笔记</string>
     <string name="ok_">确定</string>
     <string name="cansel_">取消</string>
     <string name="when_to_remind_about_event">何时提醒事件</string>
@@ -16,8 +16,32 @@
     <string name="tasks">任务</string>
     <string name="new_task">新任务</string>
     <string name="note_color">笔记颜色</string>
+    <string name="photo_add_ads_promo_title">要添加，请观看广告</string>
+    <string name="photo_add_ads_promo_description">要添加另一张照片，请观看短视频广告</string>
+    <string name="watch_ad">观看</string>
+    <string name="cancel">取消</string>
     <string name="go">前往</string>
     <string name="delete">删除</string>
+
+<!--    Filter dialog-->
+    <string name="filter_dialog_title">优先显示</string>
+    <string name="filter_option_new">新的</string>
+    <string name="filter_option_old">旧的</string>
+    <string name="filter_option_with_reminders">带提醒的</string>
+    <string name="filter_option_with_photos">带照片的</string>
+    <string name="filter_option_with_tasks">带任务的</string>
+
+<!--    Menu-->
+    <string name="menu">菜单</string>
+    <string name="about_app">关于应用</string>
+    <string name="settings">设置</string>
+    <string name="rate_app">评价应用</string>
+
+<!--    Settings-->
+    <string name="dark_theme">深色主题</string>
+
+<!--    About app-->
+    <string name="app_version_">版本 %s</string>
 
     <array name="com_google_android_gms_fonts_certs">
         <item>@array/com_google_android_gms_fonts_certs_dev</item>
