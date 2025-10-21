@@ -54,13 +54,20 @@ import androidx.appcompat.app.AppCompatDelegate
 import com.google.firebase.Firebase
 import com.google.firebase.analytics.FirebaseAnalytics
 import com.google.firebase.analytics.analytics
+import ru.plumsoftware.notepad.data.theme_saver.ThemeState
+import ru.plumsoftware.notepad.data.theme_saver.getDarkThemePreference
+import ru.plumsoftware.notepad.ui.about_app.AboutAppScreen
+import ru.plumsoftware.notepad.ui.settings.Settings
 
 class MainActivity : ComponentActivity() {
     private var showOpenAdsCounter = 0
+
     @SuppressLint("StateFlowValueCalledInComposition")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-//        AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES)
+
+        // Загружаем настройку темы при запуске
+        val isDarkTheme = getDarkThemePreference(this)
 
         MobileAds.initialize(baseContext) {}
         val analytics: FirebaseAnalytics = Firebase.analytics
@@ -82,18 +89,24 @@ class MainActivity : ComponentActivity() {
             val window = LocalActivity.current?.window
             val resources = LocalActivity.current?.resources
             val view = LocalView.current
+
+            // Создаем состояние темы, которое можно передавать между компонентами
+            val themeState = remember { ThemeState(isDarkTheme) }
+
             SideEffect {
                 setupEdgeToEdge(window = window, resources = resources)
 
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-//                    view.windowInsetsController?.hide(android.view.WindowInsets.Type.statusBars())
                     view.windowInsetsController?.hide(android.view.WindowInsets.Type.navigationBars())
                 } else {
                     @Suppress("DEPRECATION")
                     view.systemUiVisibility = View.SYSTEM_UI_FLAG_FULLSCREEN
                 }
             }
-            NotepadTheme {
+
+            NotepadTheme(
+                darkTheme = themeState.isDarkTheme
+            ) {
                 val navController = rememberNavController()
                 val noteId = intent.getStringExtra("noteId")
                 var showPermissionRationale by remember { mutableStateOf<String?>(null) }
@@ -104,7 +117,7 @@ class MainActivity : ComponentActivity() {
                         permissions.entries.forEach { (permission, granted) ->
                             if (!granted && shouldShowRequestPermissionRationale(permission)) {
                                 showPermissionRationale = permission
-                                showOpenAdsCounter ++
+                                showOpenAdsCounter++
                             }
                         }
                     }
@@ -154,6 +167,16 @@ class MainActivity : ComponentActivity() {
                         )
                         AddNoteScreen(this@MainActivity, navController, viewModel)
                     }
+                    composable(Screen.Settings.route) {
+                        Settings(
+                            activity = this@MainActivity,
+                            navController = navController,
+                            themeState = themeState
+                        )
+                    }
+                    composable(Screen.AboutApp.route) {
+                        AboutAppScreen(navController)
+                    }
                     composable(
                         route = Screen.EditNote.route,
                         arguments = listOf(navArgument("noteId") { type = NavType.StringType })
@@ -174,7 +197,8 @@ class MainActivity : ComponentActivity() {
 
     private fun showOpenAds() {
         val appOpenLoader = AppOpenAdLoader(baseContext)
-        val adRequestConfiguration = AdRequestConfiguration.Builder(AdsConfig.HuaweiAppGalleryAds().openAdsId).build()
+        val adRequestConfiguration =
+            AdRequestConfiguration.Builder(App.adsConfig.openAdsId).build()
 
         val appOpenAdEventListener: AppOpenAdEventListener = object : AppOpenAdEventListener {
             override fun onAdShown() {
@@ -217,7 +241,8 @@ class MainActivity : ComponentActivity() {
 
         // Определяем текущую тему (светлая/темная)
         val nightModeFlags = resources?.configuration?.uiMode?.and(Configuration.UI_MODE_NIGHT_MASK)
-        val isDarkTheme = (nightModeFlags?.and(Configuration.UI_MODE_NIGHT_MASK)) == Configuration.UI_MODE_NIGHT_YES
+        val isDarkTheme =
+            (nightModeFlags?.and(Configuration.UI_MODE_NIGHT_MASK)) == Configuration.UI_MODE_NIGHT_YES
 
         var systemUiVisibilityFlags = (
                 View.SYSTEM_UI_FLAG_LAYOUT_STABLE
@@ -231,7 +256,8 @@ class MainActivity : ComponentActivity() {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 if (!isDarkTheme) {
                     // СВЕТЛАЯ ТЕМА — ТЁМНЫЕ ИКОНКИ
-                    systemUiVisibilityFlags = systemUiVisibilityFlags or View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
+                    systemUiVisibilityFlags =
+                        systemUiVisibilityFlags or View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
                 }
                 // Для тёмной темы оставляем светлые иконки (по умолчанию)
             }
@@ -239,7 +265,8 @@ class MainActivity : ComponentActivity() {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 if (!isDarkTheme) {
                     // СВЕТЛАЯ ТЕМА — ТЁМНЫЕ ИКОНКИ НАВИГАЦИИ
-                    systemUiVisibilityFlags = systemUiVisibilityFlags or View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
+                    systemUiVisibilityFlags =
+                        systemUiVisibilityFlags or View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
                 }
                 // Для тёмной темы оставляем светлые иконки (по умолчанию)
             }

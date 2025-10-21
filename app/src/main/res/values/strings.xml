@@ -1,7 +1,7 @@
 <resources>
     <string name="app_name">Блокнот</string>
 
-    <string name="note_search">Поиск заметок...</string>
+    <string name="note_search">Поиск заметок</string>
     <string name="ok_">OK</string>
     <string name="cansel_">Отмена</string>
     <string name="when_to_remind_about_event">Когда напомнить о событии</string>
@@ -17,8 +17,32 @@
     <string name="tasks">Задачи</string>
     <string name="new_task">Новая задача</string>
     <string name="note_color">Цвет заметки</string>
+    <string name="photo_add_ads_promo_title">Для добавления посмотрите рекламу</string>
+    <string name="photo_add_ads_promo_description">Чтобы добавить еще одно фото, посмотрите короткую рекламу</string>
+    <string name="watch_ad">Смотреть</string>
+    <string name="cancel">Отмена</string>
     <string name="go">Перейти</string>
     <string name="delete">Удалить</string>
+
+<!--    Filter dialog-->
+    <string name="filter_dialog_title">Показать сначала</string>
+    <string name="filter_option_new">Новые</string>
+    <string name="filter_option_old">Старые</string>
+    <string name="filter_option_with_reminders">С напоминаниями</string>
+    <string name="filter_option_with_photos">С фотографиями</string>
+    <string name="filter_option_with_tasks">С задачами</string>
+
+<!--    Menu-->
+    <string name="menu">Меню</string>
+    <string name="about_app">О приложении</string>
+    <string name="settings">Настройки</string>
+    <string name="rate_app">Оценить приложение</string>
+
+<!--    Settings-->
+    <string name="dark_theme">Тёмная тема</string>
+
+<!--    About app-->
+    <string name="app_version_">Версия %s</string>
 
     <array name="com_google_android_gms_fonts_certs">
         <item>@array/com_google_android_gms_fonts_certs_dev</item>

@@ -2,6 +2,8 @@ package ru.plumsoftware.notepad.ui.addnote
 
 import android.annotation.SuppressLint
 import android.app.Activity
+import android.content.Context
+import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
@@ -37,6 +39,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.Search
@@ -49,6 +52,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -71,14 +75,18 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
@@ -112,6 +120,16 @@ import com.yandex.mobile.ads.common.AdError
 import com.yandex.mobile.ads.common.AdRequestConfiguration
 import com.yandex.mobile.ads.common.AdRequestError
 import com.yandex.mobile.ads.common.ImpressionData
+import com.yandex.mobile.ads.rewarded.Reward
+import com.yandex.mobile.ads.rewarded.RewardedAd
+import com.yandex.mobile.ads.rewarded.RewardedAdEventListener
+import com.yandex.mobile.ads.rewarded.RewardedAdLoadListener
+import com.yandex.mobile.ads.rewarded.RewardedAdLoader
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import ru.plumsoftware.notepad.App
 import ru.plumsoftware.notepad.data.model.AdsConfig
 import ru.plumsoftware.notepad.ui.elements.DeleteButton
 import ru.plumsoftware.notepad.ui.theme.shapes
@@ -125,6 +143,21 @@ fun AddNoteScreen(
     viewModel: NoteViewModel,
     note: Note? = null
 ) {
+    var rewardedAd: RewardedAd? = null
+    var rewardedAdLoader: RewardedAdLoader? = null
+
+    rewardedAdLoader = RewardedAdLoader(LocalContext.current).apply {
+        setAdLoadListener(object : RewardedAdLoadListener {
+            override fun onAdLoaded(ad: RewardedAd) {
+                rewardedAd = ad
+            }
+
+            override fun onAdFailedToLoad(adRequestError: AdRequestError) {}
+        })
+    }
+    loadRewardedAd(rewardedAdLoader)
+    val scrollState = rememberScrollState()
+
     val isEditing = note != null
     var title by remember { mutableStateOf(note?.title ?: "") }
     var description by remember { mutableStateOf(note?.description ?: "") }
@@ -157,47 +190,53 @@ fun AddNoteScreen(
         })
     }
     val adRequestConfiguration =
-        AdRequestConfiguration.Builder(AdsConfig.HuaweiAppGalleryAds().interstitialAdsId).build()
+        AdRequestConfiguration.Builder(App.adsConfig.interstitialAdsId).build()
     interstitialAdsLoader.loadAd(adRequestConfiguration)
+    var isExpandedTasks by remember { mutableStateOf(false) }
+    var isAdsLoading by remember { mutableStateOf(false) }
+    var showAddPhotoDialog by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
 
     val pickImages =
-        rememberLauncherForActivityResult(ActivityResultContracts.GetMultipleContents()) { uris ->
-            if (uris.size + photos.size <= 3) {
-                photos = photos.toMutableList().apply {
-                    uris.forEach { uri ->
-                        saveImageToInternalStorage(context, uri)?.let { path -> add(path) }
+        rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+            uri?.let {
+                if (photos.size < 5) {
+                    photos = photos.toMutableList().apply {
+                        saveImageToInternalStorage(context, it)?.let { path -> add(path) }
                     }
                 }
             }
         }
 
     val colors = listOf(
-        // Зелёный → приглушённый мох/мягкий оливковый
-        Color(0xFF81C784).value,   // был 0xFFA5D6A7 → теперь глубже и спокойнее
+        // Зелёные оттенки
+        Color(0xFF81C784).value,      // Приглушённый мох
+        Color(0xFF4DB6AC).value,      // Бирюзовый
 
-        // Розовый → приглушённый пудрово-розовый, почти серо-розовый
-        Color(0xFFF48FB1).value,   // был 0xFFF8BBD0 → меньше насыщенности, больше серого
+        // Розовые/красные оттенки
+        Color(0xFFF48FB1).value,      // Пудрово-розовый
+        Color(0xFFFF8A65).value,      // Терракотовый
 
-        // Голубой → приглушённый сине-голубой (как утреннее небо)
-        Color(0xFF64B5F6).value,   // был 0xFF90CAF9 → темнее и спокойнее
+        // Синие/голубые оттенки
+        Color(0xFF64B5F6).value,      // Сине-голубой
+        Color(0xFF7986CB).value,      // Сине-лавандовый
 
-        // Янтарь → приглушённый тёплый янтарь, чуть темнее
-        Color(0xFFFFCA28).value,   // был 0xFFFFD54F → теперь глубже и сдержаннее
+        // Фиолетовые оттенки
+        Color(0xFFAB47BC).value,      // Лавандово-сиреневый
+        Color(0xFF9575CD).value,      // Серо-фиолетовый
 
-        // Фиолетовый → приглушённый лавандово-сиреневый
-        Color(0xFFAB47BC).value,   // был 0xFFCE93D8 → насыщеннее, но не яркий
+        // Жёлтые/оранжевые оттенки
+        Color(0xFFFFCA28).value,      // Тёплый янтарь
+        Color(0xFFF9A825).value,      // Горчичный
 
-        // Лавандовый → приглушённый серо-фиолетовый
-        Color(0xFF9575CD).value,   // был 0xFFB39DDB → глубже, ближе к пыльной лаванде
+        // Нейтральные оттенки
+        Color(0xFF90A4AE).value,      // Шалфейный серо-голубой
+        Color(0xFFD7CCC8).value,      // Песочный бежевый
 
-        // Сине-лавандовый → приглушённый мягкий индиго
-        Color(0xFF7986CB).value,   // был 0xFF9FA8DA → темнее, с серым подтоном
-
-        // Бирюзовый → приглушённый морской бирюзовый
-        Color(0xFF4DB6AC).value,   // был 0xFF80CBC4 → глубже, как вода в тени
-
-        // Коралл → приглушённый терракотово-персиковый
-        Color(0xFFFF8A65).value    // был 0xFFFFAB91 → теплее, но не "фруктовый"
+        // Тёмные оттенки
+        Color(0xFF283593).value,      // Тёмно-синий (ночной)
+        Color(0xFF37474F).value,      // Графитовый
+        Color(0xFF1A237E).value       // Глубокий индиго (самый тёмный)
     )
 
     var selectedColor by remember { mutableStateOf(note?.color?.toULong() ?: colors.first()) }
@@ -324,6 +363,14 @@ fun AddNoteScreen(
         )
     }
 
+    LaunchedEffect(photos) {
+        if (photos.isNotEmpty()) {
+            // Небольшая задержка чтобы дать время на обновление UI
+            delay(100L)
+            scrollState.animateScrollTo(scrollState.maxValue)
+        }
+    }
+
     Scaffold(
         containerColor = Color(selectedColor),
         topBar = {
@@ -382,26 +429,30 @@ fun AddNoteScreen(
                                         playSound(context, exoPlayer, R.raw.note_create)
                                         viewModel.addNote(updatedNote)
                                     }
-                                    myInterstitialAds?.apply {
-                                        setAdEventListener(object : InterstitialAdEventListener {
-                                            override fun onAdShown() {}
-                                            override fun onAdFailedToShow(adError: AdError) {
-                                                navController.popBackStack()
-                                            }
+                                    if (myInterstitialAds != null) {
+                                        myInterstitialAds.apply {
+                                            setAdEventListener(object :
+                                                InterstitialAdEventListener {
+                                                override fun onAdShown() {}
+                                                override fun onAdFailedToShow(adError: AdError) {
+                                                    navController.navigateUp()
+                                                }
 
-                                            override fun onAdDismissed() {
-                                                navController.popBackStack()
-                                            }
+                                                override fun onAdDismissed() {
+                                                    navController.navigateUp()
+                                                }
 
-                                            override fun onAdClicked() {
-                                                navController.popBackStack()
-                                            }
+                                                override fun onAdClicked() {
+                                                    navController.navigateUp()
+                                                }
 
-                                            override fun onAdImpression(impressionData: ImpressionData?) {}
-                                        })
-                                        show(activity)
+                                                override fun onAdImpression(impressionData: ImpressionData?) {}
+                                            })
+                                            show(activity)
+                                        }
+                                    } else {
+                                        navController.navigateUp()
                                     }
-                                    navController.navigateUp()
                                 }
                             },
                             enabled = title.isNotBlank() && !isLoading,
@@ -435,6 +486,7 @@ fun AddNoteScreen(
                     .fillMaxSize()
                     .padding(20.dp)
             ) {
+                // Часть 1: Заголовок и описание
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -476,7 +528,6 @@ fun AddNoteScreen(
                         }
                     )
 
-                    // ✅ Правильно: выравниваем через внешний Box
                     Column(
                         modifier = Modifier.align(Alignment.CenterEnd)
                     ) {
@@ -497,7 +548,9 @@ fun AddNoteScreen(
                         }
                     }
                 }
-                Spacer(modifier = Modifier.height(20.dp))
+
+                Spacer(modifier = Modifier.height(16.dp))
+
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -539,7 +592,6 @@ fun AddNoteScreen(
                         }
                     )
 
-                    // ✅ Правильно: выравниваем через внешний Box
                     Column(
                         modifier = Modifier.align(Alignment.CenterEnd)
                     ) {
@@ -560,15 +612,15 @@ fun AddNoteScreen(
                         }
                     }
                 }
-                Spacer(modifier = Modifier.height(40.dp))
 
-                // Reminder Checkbox
+                Spacer(modifier = Modifier.height(30.dp))
+
+                // Часть 2: Напоминание
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 4.dp, horizontal = 4.dp)
-                        .padding(bottom = 18.dp)
                 ) {
                     Checkbox(
                         checked = isReminder,
@@ -589,7 +641,7 @@ fun AddNoteScreen(
                             uncheckedColor = Color.White.copy(alpha = 0.7f)
                         ),
                     )
-                    Spacer(modifier = Modifier.width(10.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
                     // Display selected reminder date
                     reminderDate?.let {
                         Text(
@@ -605,18 +657,20 @@ fun AddNoteScreen(
                         )
                 }
 
-                // Photos
+                Spacer(modifier = Modifier.height(30.dp))
+
+                // Часть 3: Фото
                 Text(
                     stringResource(R.string.photos),
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Bold,
                     color = Color.White.copy(alpha = 0.7f)
                 )
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(8.dp))
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState())
+                        .horizontalScroll(scrollState)
                 ) {
                     photos.forEach { photoPath ->
                         Box(
@@ -658,7 +712,7 @@ fun AddNoteScreen(
                             }
                         }
                     }
-                    if (photos.size < 3) {
+                    if (photos.size < 5) {
                         Card(
                             modifier = Modifier
                                 .size(80.dp)
@@ -668,123 +722,169 @@ fun AddNoteScreen(
                                 contentColor = Color(selectedColor)
                             ),
                             enabled = !isLoading,
-                            onClick = { pickImages.launch("image/*") }
+                            onClick = {
+                                if (photos.size == 4) {
+                                    showAddPhotoDialog = true
+                                } else {
+                                    pickImages.launch("image/*")
+                                }
+                            }
                         ) {
-                            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                Icon(
-                                    Icons.Default.Add,
-                                    contentDescription = "Add Photo",
-                                    tint = Color(selectedColor)
-                                )
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (isAdsLoading) {
+                                    CircularProgressIndicator(modifier = Modifier.size(34.dp))
+                                } else {
+                                    Icon(
+                                        Icons.Default.Add,
+                                        contentDescription = "Add Photo",
+                                        tint = Color(selectedColor)
+                                    )
+                                }
                             }
                         }
                     }
                 }
 
-                Spacer(modifier = Modifier.height(18.dp))
+                Spacer(modifier = Modifier.height(30.dp))
 
-                // Tasks
-                Text(
-                    stringResource(R.string.tasks),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Color.White.copy(alpha = 0.7f),
-                    fontWeight = FontWeight.Bold
-                )
-                tasks.forEachIndexed { index, task ->
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Start,
+                // Часть 4: Задачи
+                Row(
+                    modifier = Modifier.wrapContentSize(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(
+                        space = 8.dp,
+                        alignment = Alignment.Start
+                    )
+                ) {
+                    Text(
+                        stringResource(R.string.tasks),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.White.copy(alpha = 0.7f),
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    Icon(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 8.dp)
-                    ) {
-                        Checkbox(
+                            .rotate(if (!isExpandedTasks) 180f else 0f)
+                            .clickable(
+                                enabled = true,
+                                role = Role.Button,
+                                interactionSource = MutableInteractionSource(),
+                                indication = null,
+                                onClick = {
+                                    isExpandedTasks = !isExpandedTasks
+                                }
+                            ),
+                        tint = Color.White.copy(alpha = 0.7f),
+                        imageVector = Icons.Default.ArrowDropDown,
+                        contentDescription = null
+                    )
+                }
+
+                if (!isExpandedTasks) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    tasks.forEachIndexed { index, task ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Start,
                             modifier = Modifier
-                                .size(14.dp)
-                                .padding(start = 4.dp),
-                            checked = task.isChecked,
-                            onCheckedChange = { isChecked ->
-                                tasks = tasks.toMutableList().apply {
-                                    this[index] = task.copy(isChecked = isChecked)
+                                .fillMaxWidth()
+                                .padding(vertical = 8.dp)
+                        ) {
+                            Checkbox(
+                                modifier = Modifier
+                                    .size(14.dp)
+                                    .padding(start = 4.dp),
+                                checked = task.isChecked,
+                                onCheckedChange = { isChecked ->
+                                    tasks = tasks.toMutableList().apply {
+                                        this[index] = task.copy(isChecked = isChecked)
+                                    }
+                                },
+                                enabled = !isLoading,
+                                colors = CheckboxDefaults.colors(
+                                    checkedColor = Color.Transparent,
+                                    uncheckedColor = Color.White.copy(alpha = 0.7f),
+                                    checkmarkColor = Color.White
+                                )
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = task.text,
+                                modifier = Modifier.weight(1f),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = Color.White
+                            )
+                            Image(
+                                painter = painterResource(R.drawable.delete_icon),
+                                contentDescription = "Delete Photo",
+                                modifier = Modifier
+                                    .size(24.dp)
+                                    .clickable(enabled = !isLoading, onClick = {
+                                        tasks = tasks.toMutableList().apply { removeAt(index) }
+                                    })
+                            )
+                        }
+                    }
+
+                    // Add Task
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        OutlinedTextField(
+                            value = newTaskText,
+                            onValueChange = { newTaskText = it },
+                            modifier = Modifier.weight(1f),
+                            textStyle = MaterialTheme.typography.bodyMedium.copy(color = Color.White),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = Color.White,
+                                unfocusedBorderColor = Color.White.copy(alpha = 0.7f),
+                                focusedContainerColor = Color.White.copy(alpha = 0.1f),
+                                unfocusedContainerColor = Color.White.copy(alpha = 0.06f)
+                            ),
+                            shape = MaterialTheme.shapes.extraLarge,
+                            label = {
+                                Text(
+                                    modifier = Modifier.clip(MaterialTheme.shapes.extraLarge),
+                                    text = stringResource(R.string.new_task),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = Color.White.copy(alpha = 0.7f)
+                                )
+                            },
+                            enabled = !isLoading
+                        )
+                        IconButton(
+                            onClick = {
+                                if (newTaskText.isNotBlank()) {
+                                    tasks.add(Task(text = newTaskText))
+                                    newTaskText = ""
                                 }
                             },
-                            enabled = !isLoading,
-                            colors = CheckboxDefaults.colors(
-                                checkedColor = Color.Transparent,
-                                uncheckedColor = Color.White.copy(alpha = 0.7f)
+                            enabled = !isLoading
+                        ) {
+                            Icon(
+                                Icons.Default.Add,
+                                contentDescription = "Add Task",
+                                tint = Color.White
                             )
-                        )
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Text(
-                            text = task.text,
-                            modifier = Modifier.weight(1f),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = Color.White
-                        )
-                        Image(
-                            painter = painterResource(R.drawable.delete_icon),
-                            contentDescription = "Delete Photo",
-                            modifier = Modifier
-                                .size(24.dp)
-                                .clickable(enabled = !isLoading, onClick = {
-                                    tasks = tasks.toMutableList().apply { removeAt(index) }
-                                })
-                        )
+                        }
                     }
                 }
+                Spacer(modifier = Modifier.height(30.dp))
 
-                // Add Task
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    OutlinedTextField(
-                        value = newTaskText,
-                        onValueChange = { newTaskText = it },
-                        modifier = Modifier.weight(1f),
-                        textStyle = MaterialTheme.typography.bodyMedium.copy(color = Color.White),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = Color.White,
-                            unfocusedBorderColor = Color.White.copy(alpha = 0.7f),
-                            focusedContainerColor = Color.White.copy(alpha = 0.1f),
-                            unfocusedContainerColor = Color.White.copy(alpha = 0.06f)
-                        ),
-                        shape = MaterialTheme.shapes.extraLarge,
-                        label = {
-                            Text(
-                                modifier = Modifier.clip(MaterialTheme.shapes.extraLarge),
-                                text = stringResource(R.string.new_task),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = Color.White.copy(alpha = 0.7f)
-                            )
-                        },
-                        enabled = !isLoading
-                    )
-                    IconButton(
-                        onClick = {
-                            if (newTaskText.isNotBlank()) {
-                                tasks.add(Task(text = newTaskText))
-                                newTaskText = ""
-                            }
-                        },
-                        enabled = !isLoading
-                    ) {
-                        Icon(Icons.Default.Add, contentDescription = "Add Task", tint = Color.White)
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(18.dp))
-
-                // Color Picker
+                // Часть 5: Цвет заметки
                 Text(
                     stringResource(R.string.note_color),
                     style = MaterialTheme.typography.bodyMedium,
                     color = Color.White.copy(alpha = 0.7f),
                     fontWeight = FontWeight.Bold
                 )
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(8.dp))
                 FlowRow(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -805,12 +905,132 @@ fun AddNoteScreen(
                         )
                     }
                 }
+
+                Spacer(modifier = Modifier.height(70.dp))
             }
 
             // Loading Dialog
             if (isLoading) {
                 LoadingDialog()
             }
+
+            if (showAddPhotoDialog) {
+                AlertDialog(
+                    onDismissRequest = { showAddPhotoDialog = false },
+                    title = {
+                        Text(
+                            text = stringResource(R.string.photo_add_ads_promo_title),
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    },
+                    text = {
+                        Text(
+                            text = stringResource(R.string.photo_add_ads_promo_description), // Добавьте этот string resource
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    },
+                    confirmButton = {
+                        TextButton(
+                            onClick = {
+                                showAddPhotoDialog = false
+                                isAdsLoading = true
+
+                                showAd(
+                                    rewardedAd = rewardedAd,
+                                    rewardedAdLoader = rewardedAdLoader,
+                                    activity = activity,
+                                    onRewarded = {
+                                        scope.launch {
+                                            withContext(Dispatchers.IO) {
+                                                delay(500L)
+                                            }
+                                            isAdsLoading = false
+                                            pickImages.launch("image/*")
+                                        }
+                                    }
+                                )
+                            }
+                        ) {
+                            Text(
+                                text = stringResource(R.string.watch_ad), // "Смотреть"
+                                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(
+                            onClick = { showAddPhotoDialog = false }
+                        ) {
+                            Text(
+                                text = stringResource(R.string.cancel), // "Отмена"
+                                style = MaterialTheme.typography.labelLarge,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                )
+            }
         }
+    }
+}
+
+private fun loadRewardedAd(rewardedAdLoader: RewardedAdLoader?) {
+    val adRequestConfiguration = AdRequestConfiguration.Builder(App.adsConfig.rewardedAdsId).build()
+    rewardedAdLoader?.loadAd(adRequestConfiguration)
+}
+
+private fun showAd(
+    rewardedAd: RewardedAd?,
+    rewardedAdLoader: RewardedAdLoader?,
+    activity: Activity?,
+    onRewarded: () -> Unit
+) {
+    var isRewarded = false
+    rewardedAd?.apply {
+        setAdEventListener(object : RewardedAdEventListener {
+            override fun onAdShown() {
+                // Called when ad is shown.
+            }
+
+            override fun onRewarded(reward: Reward) {
+                isRewarded = true
+                // ВЫЗЫВАЕМ onRewarded СРАЗУ ПОСЛЕ НАГРАДЫ
+//                 onRewarded()
+            }
+
+            override fun onAdFailedToShow(adError: AdError) {
+                // Called when an RewardedAd failed to show
+                rewardedAd.setAdEventListener(null)
+                loadRewardedAd(rewardedAdLoader = rewardedAdLoader)
+            }
+
+            override fun onAdDismissed() {
+                // Called when ad is dismissed.
+                rewardedAd.setAdEventListener(null)
+                loadRewardedAd(rewardedAdLoader = rewardedAdLoader)
+
+                // ЕСЛИ НАГРАДА НЕ БЫЛА ВРУЧЕНА, НО РЕКЛАМА БЫЛА ПОЛНОСТЬЮ ПРОСМОТРЕНА
+                if (isRewarded) {
+                    // Можно также вызвать onRewarded() здесь, если хотите давать награду за любой просмотр
+                    onRewarded()
+                }
+            }
+
+            override fun onAdClicked() {
+                // Called when a click is recorded for an ad.
+            }
+
+            override fun onAdImpression(impressionData: ImpressionData?) {
+                // Called when an impression is recorded for an ad.
+            }
+        })
+        if (activity != null)
+            show(activity = activity)
+    } ?: run {
+        // Если реклама не загружена, всё равно разрешаем добавить фото
+        onRewarded()
     }
 }
