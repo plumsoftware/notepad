@@ -8,12 +8,14 @@ import androidx.room.TypeConverters
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import ru.plumsoftware.notepad.data.convertor.Converters
+import ru.plumsoftware.notepad.data.model.Group
 import ru.plumsoftware.notepad.data.model.Note
 
-@Database(entities = [Note::class], version = 4)
+@Database(entities = [Note::class, Group::class], version = 4)
 @TypeConverters(Converters::class)
 abstract class NoteDatabase : RoomDatabase() {
     abstract fun noteDao(): NoteDao
+    abstract fun groupDao(): GroupDao
 
     companion object {
         @Volatile
