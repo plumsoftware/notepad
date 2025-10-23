@@ -41,6 +41,15 @@
 <!--    Settings-->
     <string name="dark_theme">Dark theme</string>
 
+<!--    Group-->
+    <string name="add_group">Create folder</string>
+    <string name="all">All notes</string>
+    <string name="create_group">Create folder</string>
+    <string name="enter_group_name">Enter name</string>
+    <string name="group_color">Group color</string>
+    <string name="create">Create</string>
+    <string name="clear">Clear</string>
+
 <!--    About app-->
     <string name="app_version_">Version %s</string>
 

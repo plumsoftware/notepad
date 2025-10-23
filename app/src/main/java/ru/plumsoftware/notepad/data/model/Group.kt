@@ -2,6 +2,7 @@ package ru.plumsoftware.notepad.data.model
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import java.util.UUID
 
 @Entity(tableName = "groups")
 class Group(

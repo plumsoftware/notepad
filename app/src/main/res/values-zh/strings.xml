@@ -40,6 +40,15 @@
 <!--    Settings-->
     <string name="dark_theme">深色主题</string>
 
+<!--    Group-->
+    <string name="add_group">创建文件夹</string>
+    <string name="all">所有笔记</string>
+    <string name="create_group">创建文件夹</string>
+    <string name="group_color">分组颜色</string>
+    <string name="enter_group_name">输入名称</string>
+    <string name="create">创建</string>
+    <string name="clear">清除</string>
+
 <!--    About app-->
     <string name="app_version_">版本 %s</string>
 

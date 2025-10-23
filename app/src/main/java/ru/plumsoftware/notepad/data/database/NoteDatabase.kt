@@ -11,7 +11,7 @@ import ru.plumsoftware.notepad.data.convertor.Converters
 import ru.plumsoftware.notepad.data.model.Group
 import ru.plumsoftware.notepad.data.model.Note
 
-@Database(entities = [Note::class, Group::class], version = 4)
+@Database(entities = [Note::class, Group::class], version = 5)
 @TypeConverters(Converters::class)
 abstract class NoteDatabase : RoomDatabase() {
     abstract fun noteDao(): NoteDao
@@ -45,6 +45,19 @@ abstract class NoteDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("""
+            CREATE TABLE groups (
+                id TEXT PRIMARY KEY NOT NULL,
+                title TEXT NOT NULL,
+                color INTEGER NOT NULL,
+                createdAt INTEGER NOT NULL
+            )
+        """.trimIndent())
+            }
+        }
+
         fun getDatabase(application: Application): NoteDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -52,7 +65,7 @@ abstract class NoteDatabase : RoomDatabase() {
                     NoteDatabase::class.java,
                     "note_database"
                 )
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
                     .build()
                 INSTANCE = instance
                 instance

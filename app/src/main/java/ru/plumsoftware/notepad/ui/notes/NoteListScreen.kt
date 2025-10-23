@@ -110,6 +110,7 @@ import ru.plumsoftware.notepad.ui.NoteViewModel
 import ru.plumsoftware.notepad.ui.Screen
 import ru.plumsoftware.notepad.ui.dialog.FullscreenImageDialog
 import ru.plumsoftware.notepad.ui.dialog.LoadingDialog
+import ru.plumsoftware.notepad.ui.elements.GroupList
 import ru.plumsoftware.notepad.ui.elements.NoteCard
 import ru.plumsoftware.notepad.ui.formatDate
 import ru.plumsoftware.notepad.ui.player.playSound
@@ -124,6 +125,7 @@ fun NoteListScreen(
 ) {
     var searchQuery by remember { mutableStateOf("") }
     val notes by viewModel.notes.collectAsState()
+    val groups by viewModel.groups.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val lazyListState = rememberLazyListState()
     val firstVisibleItemIndex by remember { derivedStateOf { lazyListState.firstVisibleItemIndex } }
@@ -152,6 +154,7 @@ fun NoteListScreen(
     var showFilterDialog by remember { mutableStateOf(false) }
     var selectedFilter by remember { mutableStateOf(0) }
     val previousNotesCount = remember { mutableStateOf(0) }
+    var selectedGroupId by remember { mutableStateOf<String?>(null) } // null = "All"
 
     // Добавляем состояние для BottomSheet меню
     var showMenuBottomSheet by remember { mutableStateOf(false) }
@@ -548,6 +551,17 @@ fun NoteListScreen(
                         }
                     }
                 }
+                
+                Spacer(modifier = Modifier.height(12.dp))
+                GroupList(
+                    groups = groups,
+                    selectedGroupId = selectedGroupId,
+                    onGroupSelected = { id -> selectedGroupId = id },
+                    onCreateGroup = {name, color ->
+
+                    }
+                )
+                Spacer(modifier = Modifier.height(12.dp))
 
                 // Остальной код без изменений...
                 // Fixed Date Label and Notes List

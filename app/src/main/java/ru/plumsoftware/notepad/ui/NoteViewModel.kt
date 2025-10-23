@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import ru.plumsoftware.notepad.data.database.NoteDatabase
 import ru.plumsoftware.notepad.data.filesaver.deleteImagesFromStorage
+import ru.plumsoftware.notepad.data.model.Group
 import ru.plumsoftware.notepad.data.model.Note
 import ru.plumsoftware.notepad.data.worker.ReminderWorker
 import java.util.concurrent.TimeUnit
@@ -21,7 +22,9 @@ class NoteViewModel(application: Application) : ViewModel() {
     private val db = NoteDatabase.getDatabase(application)
     private val workManager = WorkManager.getInstance(application)
     private val _notes = MutableStateFlow<List<Note>>(emptyList())
+    private val _groups = MutableStateFlow<List<Group>>(emptyList())
     val notes: StateFlow<List<Note>> = _notes
+    val groups: StateFlow<List<Group>> = _groups
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
 
@@ -30,6 +33,10 @@ class NoteViewModel(application: Application) : ViewModel() {
             _isLoading.value = true
             db.noteDao().getAllNotes().collectLatest { notes ->
                 _notes.value = notes
+                _isLoading.value = false
+            }
+            db.groupDao().getAllGroups().collectLatest { groups ->
+                _groups.value = groups
                 _isLoading.value = false
             }
         }

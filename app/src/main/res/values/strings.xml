@@ -41,6 +41,15 @@
 <!--    Settings-->
     <string name="dark_theme">Тёмная тема</string>
 
+<!--    Group-->
+    <string name="add_group">Создать папку</string>
+    <string name="all">Все заметки</string>
+    <string name="create_group">Создать папку</string>
+    <string name="enter_group_name">Введите название</string>
+    <string name="group_color">Цвет папки</string>
+    <string name="create">Создать</string>
+    <string name="clear">Очистить</string>
+
 <!--    About app-->
     <string name="app_version_">Версия %s</string>
 

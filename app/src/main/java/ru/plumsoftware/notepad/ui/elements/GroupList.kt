@@ -1,29 +1,51 @@
 package ru.plumsoftware.notepad.ui.elements
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowColumn
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -33,8 +55,26 @@ import ru.plumsoftware.notepad.data.model.Group
 import ru.plumsoftware.notepad.ui.Screen
 
 @Composable
-fun GroupList(groups: List<Group>) {
+fun GroupList(
+    groups: List<Group>,
+    selectedGroupId: String?,
+    onGroupSelected: (String?) -> Unit,
+    onCreateGroup: (title: String, color: ULong) -> Unit
+) {
+    var showCreateDialog by remember { mutableStateOf(false) }
+
+    if (showCreateDialog) {
+        CreateGroupDialog(
+            onDismiss = { showCreateDialog = false },
+            onCreate = { title, color ->
+                showCreateDialog = false
+                onCreateGroup(title, color)
+            }
+        )
+    }
+
     FlowColumn(
+        modifier = Modifier.padding(horizontal = 20.dp),
         verticalArrangement = Arrangement.spacedBy(
             space = 8.dp,
             alignment = Alignment.CenterVertically
@@ -47,36 +87,73 @@ fun GroupList(groups: List<Group>) {
         GroupItem(
             isAdd = true,
             onClick = {
-
+                showCreateDialog = true // ← открываем диалог
             },
-            group = null
+            group = null,
+            isSelected = false
+        )
+
+        GroupItem(
+            isAll = true,
+            onClick = { onGroupSelected(null) },
+            group = null,
+            isSelected = selectedGroupId == null
         )
 
         groups.forEach { group ->
             GroupItem(
-                onClick = {
-
-                },
-                group = group
+                onClick = { onGroupSelected(group.id) },
+                group = group,
+                isSelected = selectedGroupId == group.id
             )
         }
     }
 }
 
 @Composable
-fun GroupItem(isAdd: Boolean = false, onClick: () -> Unit, group: Group?) {
-    Button(
-        modifier = Modifier.width(width = 44.dp),
-        onClick = {
-            onClick()
-        },
-        colors = ButtonDefaults.buttonColors(
-            containerColor = if (isAdd) MaterialTheme.colorScheme.primary else Color(
-                (group?.color ?: 0L).toULong()
-            ),
-            contentColor = Color.White,
+fun GroupItem(
+    isAdd: Boolean = false,
+    isAll: Boolean = false,
+    onClick: () -> Unit,
+    group: Group?,
+    isSelected: Boolean
+) {
+    val borderColor = when {
+        isAdd -> Color.Transparent // никакой обводки
+        isAll -> if (isSelected) {
+            MaterialTheme.colorScheme.primary
+        } else {
+            MaterialTheme.colorScheme.surfaceContainer
+        }
+        else -> if (isSelected) {
+            MaterialTheme.colorScheme.primary
+        } else {
+            Color.Transparent // или surfaceContainer, если хочешь
+        }
+    }
+
+    val borderWidth = if (isAdd) 0.dp else 1.dp
+
+    OutlinedButton(
+        modifier = Modifier.wrapContentSize(),
+        shape = MaterialTheme.shapes.large,
+        onClick = onClick,
+        colors = ButtonDefaults.outlinedButtonColors(
+            containerColor = when {
+                isAdd -> MaterialTheme.colorScheme.primary
+                isAll -> Color.Transparent
+                else -> Color((group?.color ?: 0L).toULong())
+            },
+            contentColor = when {
+                isAdd -> MaterialTheme.colorScheme.onPrimary
+                isAll -> if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                else -> Color.White
+            }
         ),
-        shape = RoundedCornerShape(4.dp),
+        border = BorderStroke(
+            width = borderWidth,
+            color = borderColor
+        ),
         elevation = ButtonDefaults.elevatedButtonElevation(
             defaultElevation = 0.dp,
             pressedElevation = 0.dp
@@ -92,12 +169,155 @@ fun GroupItem(isAdd: Boolean = false, onClick: () -> Unit, group: Group?) {
             ),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                modifier = Modifier.size(14.dp),
-                imageVector = Icons.Default.Add,
-                contentDescription = "Add Note",
-                tint = LocalContentColor.current
-            )
+            if (isAdd) {
+                Icon(
+                    modifier = Modifier.size(20.dp),
+                    imageVector = Icons.Default.Add,
+                    contentDescription = stringResource(R.string.add_group),
+                    tint = LocalContentColor.current
+                )
+                Text(
+                    text = stringResource(R.string.add_group),
+                    style = MaterialTheme.typography.labelMedium.copy(
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                )
+            } else if (isAll) {
+                Text(
+                    text = stringResource(R.string.all),
+                    style = MaterialTheme.typography.labelMedium.copy(
+                        color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                    )
+                )
+            } else {
+                // Отображение названия обычной группы
+                Text(
+                    text = group?.title ?: "",
+                    style = MaterialTheme.typography.labelMedium.copy(
+                        color = Color.White
+                    )
+                )
+            }
         }
     }
+}
+
+@Composable
+fun CreateGroupDialog(
+    onDismiss: () -> Unit,
+    onCreate: (title: String, color: ULong) -> Unit
+) {
+    val colors = listOf(
+        Color(0xFF81C784).value,
+        Color(0xFF4DB6AC).value,
+        Color(0xFFF48FB1).value,
+        Color(0xFFFF8A65).value,
+        Color(0xFF64B5F6).value,
+        Color(0xFF7986CB).value,
+        Color(0xFFAB47BC).value,
+        Color(0xFF9575CD).value,
+        Color(0xFFFFCA28).value,
+        Color(0xFFF9A825).value,
+        Color(0xFF90A4AE).value,
+        Color(0xFFD7CCC8).value,
+        Color(0xFF283593).value,
+        Color(0xFF37474F).value,
+        Color(0xFF1A237E).value
+    )
+
+    var title by remember { mutableStateOf("") }
+    var selectedColor by remember { mutableStateOf(colors.first()) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = stringResource(R.string.create_group),
+                style = MaterialTheme.typography.titleLarge
+            )
+        },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+            ) {
+                OutlinedTextField(
+                    value = title,
+                    onValueChange = { title = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = { Text(stringResource(R.string.enter_group_name)) },
+                    textStyle = MaterialTheme.typography.bodyMedium,
+                    trailingIcon = {
+                        if (title.isNotEmpty()) {
+                            IconButton(onClick = { title = "" }) {
+                                Icon(
+                                    imageVector = Icons.Default.Clear,
+                                    contentDescription = stringResource(R.string.clear),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    },
+                    shape = MaterialTheme.shapes.medium
+                )
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                Text(
+                    text = stringResource(R.string.group_color),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    colors.forEach { colorValue ->
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(CircleShape)
+                                .background(Color(colorValue))
+                                .border(
+                                    width = 2.dp,
+                                    color = if (selectedColor == colorValue) MaterialTheme.colorScheme.primary else Color.Transparent,
+                                    shape = CircleShape
+                                )
+                                .clickable { selectedColor = colorValue }
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    if (title.isNotBlank()) {
+                        onCreate(title.trim(), selectedColor.toULong())
+                    }
+                }
+            ) {
+                Text(
+                    text = stringResource(R.string.create),
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(
+                    text = stringResource(R.string.cancel),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+        }
+    )
 }
