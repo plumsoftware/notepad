@@ -23,6 +23,7 @@
     <string name="cancel">Cancel</string>
     <string name="go">Go</string>
     <string name="delete">Delete</string>
+    <string name="move_to_folder">Move to folder</string>
 
 <!--    Filter dialog-->
     <string name="filter_dialog_title">Show first</string>

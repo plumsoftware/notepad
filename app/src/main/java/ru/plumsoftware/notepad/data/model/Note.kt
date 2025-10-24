@@ -13,5 +13,6 @@ data class Note(
     val createdAt: Long = System.currentTimeMillis(),
     val tasks: List<Task> = emptyList(),
     val reminderDate: Long? = null,
-    val photos: List<String> = emptyList()
+    val photos: List<String> = emptyList(),
+    val groupId: String = "0"
 )

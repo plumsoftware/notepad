@@ -7,9 +7,11 @@ import androidx.lifecycle.viewModelScope
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.workDataOf
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.launch
 import ru.plumsoftware.notepad.data.database.NoteDatabase
 import ru.plumsoftware.notepad.data.filesaver.deleteImagesFromStorage
@@ -18,6 +20,7 @@ import ru.plumsoftware.notepad.data.model.Note
 import ru.plumsoftware.notepad.data.worker.ReminderWorker
 import java.util.concurrent.TimeUnit
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class NoteViewModel(application: Application) : ViewModel() {
     private val db = NoteDatabase.getDatabase(application)
     private val workManager = WorkManager.getInstance(application)
@@ -28,15 +31,46 @@ class NoteViewModel(application: Application) : ViewModel() {
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
 
+    private val _selectedGroupId = MutableStateFlow<String>("0")
+    val selectedGroupId: StateFlow<String> = _selectedGroupId
+
     init {
         viewModelScope.launch {
-            _isLoading.value = true
-            db.noteDao().getAllNotes().collectLatest { notes ->
-                _notes.value = notes
-                _isLoading.value = false
-            }
             db.groupDao().getAllGroups().collectLatest { groups ->
                 _groups.value = groups
+            }
+        }
+
+        viewModelScope.launch {
+            _selectedGroupId
+                .flatMapLatest { groupId ->
+                    if (groupId == "0") {
+                        db.noteDao().getAllNotes()
+                    } else {
+                        db.noteDao().getNotesByGroupId(groupId)
+                    }
+                }
+                .collect { notes ->
+                    _notes.value = notes
+                    _isLoading.value = false
+                }
+        }
+    }
+
+    fun selectGroup(groupId: String) {
+        if (_selectedGroupId.value != groupId) {
+            _selectedGroupId.value = groupId
+            _isLoading.value = true
+        }
+    }
+
+    fun moveNoteToGroup(note: Note, targetGroupId: String) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            try {
+                val updatedNote = note.copy(groupId = targetGroupId)
+                db.noteDao().update(updatedNote)
+            } finally {
                 _isLoading.value = false
             }
         }
@@ -45,16 +79,34 @@ class NoteViewModel(application: Application) : ViewModel() {
     fun searchNotes(query: String) {
         viewModelScope.launch {
             _isLoading.value = true
-            if(query.isNotEmpty()) {
-                db.noteDao().searchNotes(query).collectLatest { notes ->
-                    _notes.value = notes
-                    _isLoading.value = false
+            val currentGroupId = _selectedGroupId.value
+            val flow = if (query.isEmpty()) {
+                if (currentGroupId == "0") {
+                    db.noteDao().getAllNotes()
+                } else {
+                    db.noteDao().getNotesByGroupId(currentGroupId)
                 }
             } else {
-                db.noteDao().getAllNotes().collectLatest { notes ->
-                    _notes.value = notes
-                    _isLoading.value = false
+                if (currentGroupId == "0") {
+                    db.noteDao().searchNotes(query)
+                } else {
+                    db.noteDao().searchNotesInGroup(query, currentGroupId)
                 }
+            }
+            flow.collect { notes ->
+                _notes.value = notes
+                _isLoading.value = false
+            }
+        }
+    }
+
+    fun addFolder(group: Group) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            try {
+                db.groupDao().insert(group)
+            } finally {
+                _isLoading.value = false
             }
         }
     }

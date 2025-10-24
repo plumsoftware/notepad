@@ -23,6 +23,7 @@
     <string name="cancel">Отмена</string>
     <string name="go">Перейти</string>
     <string name="delete">Удалить</string>
+    <string name="move_to_folder">Переместить в папку</string>
 
 <!--    Filter dialog-->
     <string name="filter_dialog_title">Показать сначала</string>

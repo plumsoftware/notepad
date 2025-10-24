@@ -11,12 +11,18 @@ import androidx.compose.foundation.layout.FlowColumn
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -58,7 +64,7 @@ import ru.plumsoftware.notepad.ui.Screen
 fun GroupList(
     groups: List<Group>,
     selectedGroupId: String?,
-    onGroupSelected: (String?) -> Unit,
+    onGroupSelected: (String) -> Unit,
     onCreateGroup: (title: String, color: ULong) -> Unit
 ) {
     var showCreateDialog by remember { mutableStateOf(false) }
@@ -73,34 +79,34 @@ fun GroupList(
         )
     }
 
-    FlowColumn(
-        modifier = Modifier.padding(horizontal = 20.dp),
-        verticalArrangement = Arrangement.spacedBy(
-            space = 8.dp,
-            alignment = Alignment.CenterVertically
-        ),
-        horizontalArrangement = Arrangement.spacedBy(space = 8.dp, alignment = Alignment.Start),
-        maxLines = 2,
-        maxItemsInEachColumn = 1,
-        itemHorizontalAlignment = Alignment.Start
+    LazyRow(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        GroupItem(
-            isAdd = true,
-            onClick = {
-                showCreateDialog = true // ← открываем диалог
-            },
-            group = null,
-            isSelected = false
-        )
+        item {
+            GroupItem(
+                isAdd = true,
+                onClick = {
+                    showCreateDialog = true
+                },
+                group = null,
+                isSelected = false
+            )
+        }
 
-        GroupItem(
-            isAll = true,
-            onClick = { onGroupSelected(null) },
-            group = null,
-            isSelected = selectedGroupId == null
-        )
+        item {
+            GroupItem(
+                isAll = true,
+                onClick = { onGroupSelected("0") },
+                group = null,
+                isSelected = selectedGroupId == "0"
+            )
+        }
 
-        groups.forEach { group ->
+        items(groups) { group ->
             GroupItem(
                 onClick = { onGroupSelected(group.id) },
                 group = group,
@@ -298,7 +304,7 @@ fun CreateGroupDialog(
             TextButton(
                 onClick = {
                     if (title.isNotBlank()) {
-                        onCreate(title.trim(), selectedColor.toULong())
+                        onCreate(title.trim(), selectedColor)
                     }
                 }
             ) {

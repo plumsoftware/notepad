@@ -12,17 +12,21 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.rounded.Notifications
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
@@ -55,6 +59,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import ru.plumsoftware.notepad.R
+import ru.plumsoftware.notepad.data.model.Group
 import ru.plumsoftware.notepad.data.model.Note
 import ru.plumsoftware.notepad.ui.NoteViewModel
 import ru.plumsoftware.notepad.ui.Screen
@@ -72,11 +77,14 @@ fun NoteCard(
     isVisible: Boolean,
     onDelete: () -> Unit,
     onImageClick: (String) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    groups: List<Group>,
+    onGroupSelected: (Note, String) -> Unit
 ) {
     val context = LocalContext.current
     val expanded = remember { mutableStateOf(false) }
     val haptic = LocalHapticFeedback.current
+    val showMoveToFolderDialog = remember { mutableStateOf(false) }
 
     AnimatedVisibility(
         visible = isVisible,
@@ -295,6 +303,19 @@ fun NoteCard(
                         DropdownMenuItem(
                             text = {
                                 Text(
+                                    stringResource(R.string.move_to_folder),
+                                    style = MaterialTheme.typography.bodyLarge
+                                )
+                            },
+                            onClick = {
+                                expanded.value = false
+                                showMoveToFolderDialog.value = true
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = {
+                                Text(
                                     stringResource(R.string.delete),
                                     color = MaterialTheme.colorScheme.error,
                                     style = MaterialTheme.typography.bodyLarge
@@ -310,5 +331,51 @@ fun NoteCard(
                 }
             }
         }
+    }
+
+    if (showMoveToFolderDialog.value) {
+        AlertDialog(
+            onDismissRequest = { showMoveToFolderDialog.value = false },
+            title = {
+                Text(
+                    text = stringResource(R.string.move_to_folder),
+                    style = MaterialTheme.typography.titleLarge
+                )
+            },
+            text = {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState())
+                ) {
+                    FlowRow(
+                        modifier = Modifier.padding(horizontal = 12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        GroupItem(
+                            isAll = true,
+                            onClick = {
+                                showMoveToFolderDialog.value = false
+                                onGroupSelected(note, "0")
+                            },
+                            group = null,
+                            isSelected = true
+                        )
+                        groups.forEach { group ->
+                            GroupItem(
+                                onClick = {
+                                    showMoveToFolderDialog.value = false
+                                    onGroupSelected(note, group.id)
+                                },
+                                group = group,
+                                isSelected = false
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {}
+        )
     }
 }

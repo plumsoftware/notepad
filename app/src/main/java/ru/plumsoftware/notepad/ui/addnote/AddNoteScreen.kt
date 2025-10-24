@@ -424,7 +424,7 @@ fun AddNoteScreen(
                                                 note.photos.filterNot { photos.contains(it) })
                                         }
                                         playSound(context, exoPlayer, R.raw.note_create)
-                                        viewModel.updateNote(updatedNote, context)
+                                        viewModel.updateNote(updatedNote.copy(groupId = note.groupId ?: "0"), context)
                                     } else {
                                         playSound(context, exoPlayer, R.raw.note_create)
                                         viewModel.addNote(updatedNote)

@@ -105,6 +105,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import ru.plumsoftware.notepad.R
+import ru.plumsoftware.notepad.data.model.Group
 import ru.plumsoftware.notepad.data.model.Note
 import ru.plumsoftware.notepad.ui.NoteViewModel
 import ru.plumsoftware.notepad.ui.Screen
@@ -154,7 +155,7 @@ fun NoteListScreen(
     var showFilterDialog by remember { mutableStateOf(false) }
     var selectedFilter by remember { mutableStateOf(0) }
     val previousNotesCount = remember { mutableStateOf(0) }
-    var selectedGroupId by remember { mutableStateOf<String?>(null) } // null = "All"
+    val selectedGroupId by viewModel.selectedGroupId.collectAsState() // "0" = "All"
 
     // Добавляем состояние для BottomSheet меню
     var showMenuBottomSheet by remember { mutableStateOf(false) }
@@ -183,6 +184,21 @@ fun NoteListScreen(
                 targetValue = 1.0f,
                 animationSpec = tween(durationMillis = 200)
             )
+        }
+    }
+
+    LaunchedEffect(selectedGroupId) {
+        viewModel.searchNotes("")
+    }
+
+    val displayedNotes = remember(notes, selectedFilter) {
+        when (selectedFilter) {
+            0 -> notes.sortedByDescending { it.createdAt }
+            1 -> notes.sortedBy { it.createdAt }
+            2 -> notes.filter { it.reminderDate != null }
+            3 -> notes.filter { it.photos.isNotEmpty() }
+            4 -> notes.filter { it.tasks.isNotEmpty() }
+            else -> notes
         }
     }
 
@@ -556,9 +572,9 @@ fun NoteListScreen(
                 GroupList(
                     groups = groups,
                     selectedGroupId = selectedGroupId,
-                    onGroupSelected = { id -> selectedGroupId = id },
-                    onCreateGroup = {name, color ->
-
+                    onGroupSelected = { id -> viewModel.selectGroup(id) },
+                    onCreateGroup = { name, color ->
+                        viewModel.addFolder(Group(title = name, color = color.toLong()))
                     }
                 )
                 Spacer(modifier = Modifier.height(12.dp))
@@ -580,7 +596,7 @@ fun NoteListScreen(
                             verticalItemSpacing = 8.dp,
                             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
                         ) {
-                            items(filteredNotes, key = { it.id }) { note ->
+                            items(displayedNotes, key = { it.id }) { note ->
                                 NoteCard(
                                     note = note,
                                     viewModel = viewModel,
@@ -595,7 +611,11 @@ fun NoteListScreen(
                                         }
                                     },
                                     onImageClick = { path -> fullscreenImagePath = path },
-                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp)
+                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp),
+                                    groups = groups,
+                                    onGroupSelected = { note_, groupId ->
+                                        viewModel.moveNoteToGroup(note_, groupId)
+                                    }
                                 )
                             }
 
@@ -611,7 +631,7 @@ fun NoteListScreen(
                                 .fillMaxSize()
                                 .padding(top = 10.dp)
                         ) {
-                            items(filteredNotes, key = { it.id }) { note ->
+                            items(displayedNotes, key = { it.id }) { note ->
                                 NoteCard(
                                     note = note,
                                     viewModel = viewModel,
@@ -626,7 +646,11 @@ fun NoteListScreen(
                                         }
                                     },
                                     onImageClick = { path -> fullscreenImagePath = path },
-                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                                    groups = groups,
+                                    onGroupSelected = { note_, groupId ->
+                                        viewModel.moveNoteToGroup(note_, groupId)
+                                    }
                                 )
 
                                 if (note.id == filteredNotes.last().id) {

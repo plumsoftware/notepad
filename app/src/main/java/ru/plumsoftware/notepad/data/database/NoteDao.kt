@@ -16,6 +16,20 @@ interface NoteDao {
     @Query("SELECT * FROM notes ORDER BY createdAt DESC")
     fun getAllNotes(): Flow<List<Note>>
 
+    @Query("SELECT * FROM notes WHERE (:groupId IS NULL OR groupId = :groupId) ORDER BY createdAt DESC")
+    fun getNotesFilteredByGroup(groupId: String?): Flow<List<Note>>
+
+    @Query("SELECT * FROM notes WHERE groupId = :groupId ORDER BY createdAt DESC")
+    fun getNotesByGroupId(groupId: String): Flow<List<Note>>
+
+    @Query("""
+    SELECT * FROM notes 
+    WHERE groupId = :groupId 
+      AND (title LIKE '%' || :query || '%' OR description LIKE '%' || :query || '%')
+    ORDER BY createdAt DESC
+    """)
+    fun searchNotesInGroup(query: String, groupId: String): Flow<List<Note>>
+
     @Insert
     suspend fun insert(note: Note)
 
