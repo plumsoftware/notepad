@@ -111,6 +111,18 @@ class NoteViewModel(application: Application) : ViewModel() {
         }
     }
 
+    fun deleteFolder(group: Group?) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            try {
+                if (group != null)
+                    db.groupDao().delete(group)
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
     fun addNote(note: Note) {
         viewModelScope.launch {
             _isLoading.value = true

@@ -4,6 +4,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -28,6 +29,8 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalContentColor
@@ -46,6 +49,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -57,7 +62,8 @@ fun GroupList(
     groups: List<Group>,
     selectedGroupId: String?,
     onGroupSelected: (String) -> Unit,
-    onCreateGroup: (title: String, color: ULong) -> Unit
+    onCreateGroup: (title: String, color: ULong) -> Unit,
+    onDeleteGroup: (Group?) -> Unit
 ) {
     var showCreateDialog by remember { mutableStateOf(false) }
     val scrollState = rememberLazyListState()
@@ -110,7 +116,8 @@ fun GroupList(
                 GroupItem(
                     onClick = { onGroupSelected(group.id) },
                     group = group,
-                    isSelected = selectedGroupId == group.id
+                    isSelected = selectedGroupId == group.id,
+                    onDeleteGroup = onDeleteGroup
                 )
             }
 
@@ -163,10 +170,11 @@ fun GroupItem(
     isAll: Boolean = false,
     onClick: () -> Unit,
     group: Group?,
-    isSelected: Boolean
+    isSelected: Boolean,
+    onDeleteGroup: ((Group?) -> Unit)? = null
 ) {
     val borderColor = when {
-        isAdd -> Color.Transparent // никакой обводки
+        isAdd -> Color.Transparent
         isAll -> if (isSelected) {
             MaterialTheme.colorScheme.primary
         } else {
@@ -175,45 +183,52 @@ fun GroupItem(
         else -> if (isSelected) {
             MaterialTheme.colorScheme.primary
         } else {
-            Color.Transparent // или surfaceContainer, если хочешь
+            Color.Transparent
         }
     }
 
-    val borderWidth = if (isAdd) 0.dp else 2.dp
+    val backgroundColor = when {
+        isAdd -> MaterialTheme.colorScheme.primary
+        isAll -> Color.Transparent
+        else -> Color((group?.color ?: 0L).toULong())
+    }
 
-    OutlinedButton(
-        modifier = Modifier.wrapContentSize(),
-        shape = MaterialTheme.shapes.large,
-        onClick = onClick,
-        colors = ButtonDefaults.outlinedButtonColors(
-            containerColor = when {
-                isAdd -> MaterialTheme.colorScheme.primary
-                isAll -> Color.Transparent
-                else -> Color((group?.color ?: 0L).toULong())
-            },
-            contentColor = when {
-                isAdd -> MaterialTheme.colorScheme.onPrimary
-                isAll -> if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
-                else -> Color.White
+    val contentColor = when {
+        isAdd -> MaterialTheme.colorScheme.onPrimary
+        isAll -> if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+        else -> Color.White
+    }
+
+    var showContextMenu by remember { mutableStateOf(false) }
+
+    Box(
+        modifier = Modifier
+            .wrapContentSize()
+            .border(
+                width = if (isAdd) 0.dp else 1.dp,
+                color = borderColor,
+                shape = MaterialTheme.shapes.large
+            )
+            .background(
+                color = backgroundColor,
+                shape = MaterialTheme.shapes.large
+            )
+            .clickable { onClick() }
+            .pointerInput(Unit) {
+                detectTapGestures(
+                    onTap = { onClick() },
+                    onLongPress = {
+                        if (!isAdd && !isAll) {
+                            showContextMenu = true
+                        }
+                    }
+                )
             }
-        ),
-        border = BorderStroke(
-            width = borderWidth,
-            color = borderColor
-        ),
-        elevation = ButtonDefaults.elevatedButtonElevation(
-            defaultElevation = 0.dp,
-            pressedElevation = 0.dp
-        )
+            .padding(horizontal = 16.dp, vertical = 14.dp)
     ) {
         Row(
-            modifier = Modifier
-                .wrapContentSize()
-                .padding(vertical = 6.dp),
-            horizontalArrangement = Arrangement.spacedBy(
-                space = 12.dp,
-                alignment = Alignment.CenterHorizontally
-            ),
+            modifier = Modifier.wrapContentSize(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             if (isAdd) {
@@ -221,30 +236,49 @@ fun GroupItem(
                     modifier = Modifier.size(20.dp),
                     imageVector = Icons.Default.Add,
                     contentDescription = stringResource(R.string.add_group),
-                    tint = Color.White
+                    tint = contentColor
                 )
                 Text(
                     text = stringResource(R.string.add_group),
                     style = MaterialTheme.typography.labelMedium.copy(
-                        color = Color.White
+                        color = contentColor
                     )
                 )
             } else if (isAll) {
                 Text(
                     text = stringResource(R.string.all),
                     style = MaterialTheme.typography.labelMedium.copy(
-                        color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                        color = contentColor
                     )
                 )
             } else {
-                // Отображение названия обычной группы
                 Text(
                     text = group?.title ?: "",
                     style = MaterialTheme.typography.labelMedium.copy(
-                        color = Color.White
+                        color = contentColor
                     )
                 )
             }
+        }
+
+        // Контекстное меню
+        DropdownMenu(
+            expanded = showContextMenu,
+            onDismissRequest = { showContextMenu = false }
+        ) {
+            DropdownMenuItem(
+                text = {
+                    Text(
+                        text = stringResource(R.string.delete),
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                },
+                onClick = {
+                    showContextMenu = false
+                    onDeleteGroup?.invoke(group)
+                }
+            )
         }
     }
 }

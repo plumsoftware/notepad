@@ -584,6 +584,9 @@ fun NoteListScreen(
                     onGroupSelected = { id -> viewModel.selectGroup(id) },
                     onCreateGroup = { name, color ->
                         viewModel.addFolder(Group(title = name, color = color.toLong()))
+                    },
+                    onDeleteGroup = {
+                        viewModel.deleteFolder(it)
                     }
                 )
                 Spacer(modifier = Modifier.height(8.dp))
