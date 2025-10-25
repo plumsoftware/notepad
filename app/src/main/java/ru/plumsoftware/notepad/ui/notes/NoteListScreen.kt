@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -85,6 +86,7 @@ import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
@@ -315,7 +317,7 @@ fun NoteListScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 12.dp),
+                        .padding(horizontal = 14.dp, vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
@@ -567,7 +569,7 @@ fun NoteListScreen(
                         }
                     }
                 }
-                
+
                 Spacer(modifier = Modifier.height(12.dp))
                 GroupList(
                     groups = groups,
@@ -577,9 +579,8 @@ fun NoteListScreen(
                         viewModel.addFolder(Group(title = name, color = color.toLong()))
                     }
                 )
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
-                // Остальной код без изменений...
                 // Fixed Date Label and Notes List
                 Box(
                     modifier = Modifier.fillMaxSize()
@@ -646,7 +647,10 @@ fun NoteListScreen(
                                         }
                                     },
                                     onImageClick = { path -> fullscreenImagePath = path },
-                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                                    modifier = Modifier.padding(
+                                        horizontal = 16.dp,
+                                        vertical = 8.dp
+                                    ),
                                     groups = groups,
                                     onGroupSelected = { note_, groupId ->
                                         viewModel.moveNoteToGroup(note_, groupId)
@@ -654,7 +658,7 @@ fun NoteListScreen(
                                 )
 
                                 if (note.id == filteredNotes.last().id) {
-                                    Spacer(modifier = Modifier.height(94.dp))
+                                    Spacer(modifier = Modifier.height(100.dp))
                                 }
                             }
                         }
@@ -662,48 +666,71 @@ fun NoteListScreen(
                 }
             }
 
-            // Остальной код без изменений...
-            Row(
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .align(Alignment.BottomCenter)
-                    .padding(vertical = 44.dp),
-                horizontalArrangement = Arrangement.Center
+                    .height(110.dp)
+                    .align(Alignment.BottomCenter),
+                contentAlignment = Alignment.TopCenter
             ) {
-                Button(
-                    onClick = { navController.navigate(Screen.AddNote.route) },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = MaterialTheme.colorScheme.onPrimary,
-                    ),
-                    shape = CircleShape,
-                    elevation = ButtonDefaults.elevatedButtonElevation(
-                        defaultElevation = 0.dp,
-                        pressedElevation = 0.dp
-                    )
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.CenterStart)
+                        .fillMaxHeight()
+                        .fillMaxWidth()
+                        .background(
+                            brush = Brush.verticalGradient(
+                                colors = listOf(
+                                    Color.Transparent,
+                                    MaterialTheme.colorScheme.background.copy(alpha = 0.4f),
+                                    MaterialTheme.colorScheme.background.copy(alpha = 0.8f),
+                                    MaterialTheme.colorScheme.background,
+                                )
+                            )
+                        )
+                )
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .align(Alignment.BottomCenter)
+                        .padding(vertical = 28.dp),
+                    contentAlignment = Alignment.TopCenter
                 ) {
-                    Row(
-                        modifier = Modifier
-                            .wrapContentSize()
-                            .padding(vertical = 6.dp),
-                        horizontalArrangement = Arrangement.spacedBy(
-                            space = 12.dp,
-                            alignment = Alignment.CenterHorizontally
+                    Button(
+                        onClick = { navController.navigate(Screen.AddNote.route) },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary,
                         ),
-                        verticalAlignment = Alignment.CenterVertically
+                        shape = CircleShape,
+                        elevation = ButtonDefaults.elevatedButtonElevation(
+                            defaultElevation = 0.dp,
+                            pressedElevation = 0.dp
+                        )
                     ) {
-                        Icon(
-                            modifier = Modifier.size(18.dp),
-                            imageVector = Icons.Default.Add,
-                            contentDescription = "Add Note",
-                            tint = Color.White
-                        )
-                        Text(
-                            text = stringResource(R.string.note_add),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = Color.White,
-                            fontWeight = FontWeight.Medium
-                        )
+                        Row(
+                            modifier = Modifier
+                                .wrapContentSize()
+                                .padding(vertical = 6.dp),
+                            horizontalArrangement = Arrangement.spacedBy(
+                                space = 12.dp,
+                                alignment = Alignment.CenterHorizontally
+                            ),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                modifier = Modifier.size(18.dp),
+                                imageVector = Icons.Default.Add,
+                                contentDescription = "Add Note",
+                                tint = Color.White
+                            )
+                            Text(
+                                text = stringResource(R.string.note_add),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = Color.White,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
                     }
                 }
             }
