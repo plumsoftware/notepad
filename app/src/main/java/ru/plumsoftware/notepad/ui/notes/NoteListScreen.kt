@@ -9,7 +9,9 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
@@ -132,6 +134,13 @@ fun NoteListScreen(
     val isLoading by viewModel.isLoading.collectAsState()
     val lazyListState = rememberLazyListState()
     val firstVisibleItemIndex by remember { derivedStateOf { lazyListState.firstVisibleItemIndex } }
+
+    val isSearchBarVisible by remember {
+        derivedStateOf {
+            lazyListState.firstVisibleItemScrollOffset < 150 && lazyListState.firstVisibleItemIndex == 0
+        }
+    }
+
     val currentDate by remember {
         derivedStateOf {
             notes.getOrNull(firstVisibleItemIndex)?.createdAt?.let { formatDate(it) } ?: ""
@@ -268,25 +277,6 @@ fun NoteListScreen(
                     }
                 )
 
-                // Разделитель
-//                HorizontalDivider(
-//                    modifier = Modifier
-//                        .fillMaxWidth()
-//                        .padding(horizontal = 16.dp),
-//                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f),
-//                    thickness = 1.dp
-//                )
-//
-//                // Опция "Оценить приложение"
-//                MenuOption(
-//                    text = stringResource(R.string.rate_app),
-//                    onClick = {
-//                        showMenuBottomSheet = false
-//                        // Пока ничего не происходит
-//                        // TODO: Добавить логику оценки приложения
-//                    }
-//                )
-
                 Spacer(modifier = Modifier.height(46.dp))
             }
         }
@@ -314,255 +304,272 @@ fun NoteListScreen(
             Column(
                 modifier = Modifier.fillMaxSize()
             ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 14.dp, vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    // Кнопка меню (слева от поиска) с анимацией
-                    AnimatedVisibility(
-                        visible = !isSearchFocused,
-                        enter = slideInHorizontally(
-                            initialOffsetX = { -it }, // появление слева
-                            animationSpec = tween(durationMillis = 300)
-                        ) + fadeIn(
-                            animationSpec = tween(durationMillis = 300)
-                        ),
-                        exit = slideOutHorizontally(
-                            targetOffsetX = { -it }, // скрытие влево
-                            animationSpec = tween(durationMillis = 300)
-                        ) + fadeOut(
-                            animationSpec = tween(durationMillis = 300)
-                        )
-                    ) {
-                        Icon(
-                            modifier = Modifier
-                                .wrapContentSize()
-                                .size(28.dp)
-                                .clickable(
-                                    enabled = true,
-                                    role = Role.Button,
-                                    indication = null,
-                                    interactionSource = remember { MutableInteractionSource() },
-                                    onClick = {
-                                        showMenuBottomSheet = true
-                                    }
-                                ),
-                            imageVector = Icons.Rounded.Home,
-                            contentDescription = stringResource(R.string.menu),
-                            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                        )
-                    }
-
-                    // Search Bar - занимает всё доступное пространство
-                    OutlinedTextField(
-                        value = searchQuery,
-                        onValueChange = { query ->
-                            searchQuery = query
-                            if (searchQuery.isEmpty()) {
-                                viewModel.searchNotes(searchQuery)
-                            }
-                        },
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxWidth()
-                            .onFocusChanged {
-                                isSearchFocused = it.isFocused
-                            },
-                        singleLine = true,
-                        textStyle = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
-                        placeholder = {
-                            Text(
-                                text = stringResource(R.string.note_search),
-                                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium)
-                            )
-                        },
-                        shape = MaterialTheme.shapes.extraLarge,
-                        trailingIcon = {
-                            AnimatedVisibility(
-                                visible = searchQuery.isNotEmpty(),
-                                enter = slideInHorizontally { it } + fadeIn(),
-                                exit = slideOutHorizontally { it } + fadeOut()
-                            ) {
-                                IconButton(
-                                    onClick = {
-                                        viewModel.searchNotes(searchQuery)
-                                    }
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Search,
-                                        contentDescription = "Search"
-                                    )
-                                }
-                            }
-                        },
-                        keyboardOptions = KeyboardOptions(
-                            keyboardType = KeyboardType.Text,
-                            imeAction = ImeAction.Search
-                        ),
-                        keyboardActions = KeyboardActions(
-                            onSearch = {
-                                viewModel.searchNotes(searchQuery)
-                                // После поиска снимаем фокус
-                                focusManager.clearFocus()
-                            }
-                        ),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = Color.Transparent,
-                            unfocusedBorderColor = Color.Transparent,
-                            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
-                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer
-                        ),
-                        enabled = !isLoading
+                // Анимированная строка поиска
+                AnimatedVisibility(
+                    visible = isSearchBarVisible,
+                    enter = slideInVertically(
+                        initialOffsetY = { -it },
+                        animationSpec = tween(durationMillis = 300)
+                    ) + fadeIn(
+                        animationSpec = tween(durationMillis = 300)
+                    ),
+                    exit = slideOutVertically(
+                        targetOffsetY = { -it },
+                        animationSpec = tween(durationMillis = 300)
+                    ) + fadeOut(
+                        animationSpec = tween(durationMillis = 300)
                     )
-
-                    // Группа иконок справа с анимацией
-                    AnimatedVisibility(
-                        visible = !isSearchFocused,
-                        enter = slideInHorizontally(
-                            initialOffsetX = { it }, // появление справа
-                            animationSpec = tween(durationMillis = 300)
-                        ) + fadeIn(
-                            animationSpec = tween(durationMillis = 300)
-                        ),
-                        exit = slideOutHorizontally(
-                            targetOffsetX = { it }, // скрытие вправо
-                            animationSpec = tween(durationMillis = 300)
-                        ) + fadeOut(
-                            animationSpec = tween(durationMillis = 300)
-                        )
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 14.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        Row(
-                            modifier = Modifier
-                                .wrapContentSize(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        // Кнопка меню (слева от поиска) с анимацией
+                        AnimatedVisibility(
+                            visible = !isSearchFocused,
+                            enter = slideInHorizontally(
+                                initialOffsetX = { -it }, // появление слева
+                                animationSpec = tween(durationMillis = 300)
+                            ) + fadeIn(
+                                animationSpec = tween(durationMillis = 300)
+                            ),
+                            exit = slideOutHorizontally(
+                                targetOffsetX = { -it }, // скрытие влево
+                                animationSpec = tween(durationMillis = 300)
+                            ) + fadeOut(
+                                animationSpec = tween(durationMillis = 300)
+                            )
                         ) {
-                            // Кнопка фильтрации
                             Icon(
                                 modifier = Modifier
                                     .wrapContentSize()
-                                    .size(20.dp)
-                                    .clickable(
-                                        enabled = true,
-                                        role = Role.Button,
-                                        indication = null,
-                                        interactionSource = remember { MutableInteractionSource() },
-                                        onClick = {
-                                            showFilterDialog = true
-                                        }),
-                                painter = painterResource(R.drawable.filter),
-                                contentDescription = "Filter",
-                                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                            )
-
-                            // Кнопка переключения типа списка
-                            Box(
-                                modifier = Modifier
                                     .size(28.dp)
                                     .clickable(
                                         enabled = true,
-                                        interactionSource = remember { MutableInteractionSource() },
                                         role = Role.Button,
                                         indication = null,
+                                        interactionSource = remember { MutableInteractionSource() },
                                         onClick = {
-                                            listType = if (listType == 0) 1 else 0
-                                            saveListTypeToPreferences(listType, context)
+                                            showMenuBottomSheet = true
                                         }
                                     ),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                if (listType == 1) {
-                                    FlowRow(
-                                        modifier = Modifier.wrapContentSize(),
-                                        maxLines = 2,
-                                        maxItemsInEachRow = 2,
-                                        verticalArrangement = Arrangement.spacedBy(
-                                            space = 4.dp,
-                                            alignment = Alignment.CenterVertically
-                                        ),
-                                        horizontalArrangement = Arrangement.spacedBy(
-                                            space = 4.dp,
-                                            alignment = Alignment.CenterHorizontally
-                                        )
+                                imageVector = Icons.Rounded.Home,
+                                contentDescription = stringResource(R.string.menu),
+                                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                            )
+                        }
+
+                        // Search Bar - занимает всё доступное пространство
+                        OutlinedTextField(
+                            value = searchQuery,
+                            onValueChange = { query ->
+                                searchQuery = query
+                                if (searchQuery.isEmpty()) {
+                                    viewModel.searchNotes(searchQuery)
+                                }
+                            },
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxWidth()
+                                .onFocusChanged {
+                                    isSearchFocused = it.isFocused
+                                },
+                            singleLine = true,
+                            textStyle = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
+                            placeholder = {
+                                Text(
+                                    text = stringResource(R.string.note_search),
+                                    style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium)
+                                )
+                            },
+                            shape = MaterialTheme.shapes.extraLarge,
+                            trailingIcon = {
+                                AnimatedVisibility(
+                                    visible = searchQuery.isNotEmpty(),
+                                    enter = slideInHorizontally { it } + fadeIn(),
+                                    exit = slideOutHorizontally { it } + fadeOut()
+                                ) {
+                                    IconButton(
+                                        onClick = {
+                                            viewModel.searchNotes(searchQuery)
+                                        }
                                     ) {
-                                        Box(
-                                            modifier = Modifier
-                                                .width(8.dp)
-                                                .height(8.dp)
-                                                .background(
-                                                    color = MaterialTheme.colorScheme.onSurface.copy(
-                                                        alpha = 0.7f
-                                                    )
-                                                )
-                                        )
-                                        Box(
-                                            modifier = Modifier
-                                                .width(8.dp)
-                                                .height(8.dp)
-                                                .background(
-                                                    color = MaterialTheme.colorScheme.onSurface.copy(
-                                                        alpha = 0.7f
-                                                    )
-                                                )
-                                        )
-                                        Box(
-                                            modifier = Modifier
-                                                .width(8.dp)
-                                                .height(8.dp)
-                                                .background(
-                                                    color = MaterialTheme.colorScheme.onSurface.copy(
-                                                        alpha = 0.7f
-                                                    )
-                                                )
-                                        )
-                                        Box(
-                                            modifier = Modifier
-                                                .width(8.dp)
-                                                .height(8.dp)
-                                                .background(
-                                                    color = MaterialTheme.colorScheme.onSurface.copy(
-                                                        alpha = 0.7f
-                                                    )
-                                                )
+                                        Icon(
+                                            imageVector = Icons.Default.Search,
+                                            contentDescription = "Search"
                                         )
                                     }
-                                } else {
-                                    FlowRow(
-                                        modifier = Modifier.wrapContentSize(),
-                                        maxLines = 2,
-                                        maxItemsInEachRow = 1,
-                                        verticalArrangement = Arrangement.spacedBy(
-                                            space = 4.dp,
-                                            alignment = Alignment.CenterVertically
+                                }
+                            },
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Text,
+                                imeAction = ImeAction.Search
+                            ),
+                            keyboardActions = KeyboardActions(
+                                onSearch = {
+                                    viewModel.searchNotes(searchQuery)
+                                    // После поиска снимаем фокус
+                                    focusManager.clearFocus()
+                                }
+                            ),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = Color.Transparent,
+                                unfocusedBorderColor = Color.Transparent,
+                                focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+                                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer
+                            ),
+                            enabled = !isLoading
+                        )
+
+                        // Группа иконок справа с анимацией
+                        AnimatedVisibility(
+                            visible = !isSearchFocused,
+                            enter = slideInHorizontally(
+                                initialOffsetX = { it }, // появление справа
+                                animationSpec = tween(durationMillis = 300)
+                            ) + fadeIn(
+                                animationSpec = tween(durationMillis = 300)
+                            ),
+                            exit = slideOutHorizontally(
+                                targetOffsetX = { it }, // скрытие вправо
+                                animationSpec = tween(durationMillis = 300)
+                            ) + fadeOut(
+                                animationSpec = tween(durationMillis = 300)
+                            )
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .wrapContentSize(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                // Кнопка фильтрации
+                                Icon(
+                                    modifier = Modifier
+                                        .wrapContentSize()
+                                        .size(20.dp)
+                                        .clickable(
+                                            enabled = true,
+                                            role = Role.Button,
+                                            indication = null,
+                                            interactionSource = remember { MutableInteractionSource() },
+                                            onClick = {
+                                                showFilterDialog = true
+                                            }),
+                                    painter = painterResource(R.drawable.filter),
+                                    contentDescription = "Filter",
+                                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                                )
+
+                                // Кнопка переключения типа списка
+                                Box(
+                                    modifier = Modifier
+                                        .size(28.dp)
+                                        .clickable(
+                                            enabled = true,
+                                            interactionSource = remember { MutableInteractionSource() },
+                                            role = Role.Button,
+                                            indication = null,
+                                            onClick = {
+                                                listType = if (listType == 0) 1 else 0
+                                                saveListTypeToPreferences(listType, context)
+                                            }
                                         ),
-                                        horizontalArrangement = Arrangement.spacedBy(
-                                            space = 4.dp,
-                                            alignment = Alignment.CenterHorizontally
-                                        )
-                                    ) {
-                                        Box(
-                                            modifier = Modifier
-                                                .width(20.dp)
-                                                .height(6.dp)
-                                                .background(
-                                                    color = MaterialTheme.colorScheme.onSurface.copy(
-                                                        alpha = 0.7f
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    if (listType == 1) {
+                                        FlowRow(
+                                            modifier = Modifier.wrapContentSize(),
+                                            maxLines = 2,
+                                            maxItemsInEachRow = 2,
+                                            verticalArrangement = Arrangement.spacedBy(
+                                                space = 4.dp,
+                                                alignment = Alignment.CenterVertically
+                                            ),
+                                            horizontalArrangement = Arrangement.spacedBy(
+                                                space = 4.dp,
+                                                alignment = Alignment.CenterHorizontally
+                                            )
+                                        ) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .width(8.dp)
+                                                    .height(8.dp)
+                                                    .background(
+                                                        color = MaterialTheme.colorScheme.onSurface.copy(
+                                                            alpha = 0.7f
+                                                        )
                                                     )
-                                                )
-                                        )
-                                        Box(
-                                            modifier = Modifier
-                                                .width(20.dp)
-                                                .height(6.dp)
-                                                .background(
-                                                    color = MaterialTheme.colorScheme.onSurface.copy(
-                                                        alpha = 0.7f
+                                            )
+                                            Box(
+                                                modifier = Modifier
+                                                    .width(8.dp)
+                                                    .height(8.dp)
+                                                    .background(
+                                                        color = MaterialTheme.colorScheme.onSurface.copy(
+                                                            alpha = 0.7f
+                                                        )
                                                     )
-                                                )
-                                        )
+                                            )
+                                            Box(
+                                                modifier = Modifier
+                                                    .width(8.dp)
+                                                    .height(8.dp)
+                                                    .background(
+                                                        color = MaterialTheme.colorScheme.onSurface.copy(
+                                                            alpha = 0.7f
+                                                        )
+                                                    )
+                                            )
+                                            Box(
+                                                modifier = Modifier
+                                                    .width(8.dp)
+                                                    .height(8.dp)
+                                                    .background(
+                                                        color = MaterialTheme.colorScheme.onSurface.copy(
+                                                            alpha = 0.7f
+                                                        )
+                                                    )
+                                            )
+                                        }
+                                    } else {
+                                        FlowRow(
+                                            modifier = Modifier.wrapContentSize(),
+                                            maxLines = 2,
+                                            maxItemsInEachRow = 1,
+                                            verticalArrangement = Arrangement.spacedBy(
+                                                space = 4.dp,
+                                                alignment = Alignment.CenterVertically
+                                            ),
+                                            horizontalArrangement = Arrangement.spacedBy(
+                                                space = 4.dp,
+                                                alignment = Alignment.CenterHorizontally
+                                            )
+                                        ) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .width(20.dp)
+                                                    .height(6.dp)
+                                                    .background(
+                                                        color = MaterialTheme.colorScheme.onSurface.copy(
+                                                            alpha = 0.7f
+                                                        )
+                                                    )
+                                            )
+                                            Box(
+                                                modifier = Modifier
+                                                    .width(20.dp)
+                                                    .height(6.dp)
+                                                    .background(
+                                                        color = MaterialTheme.colorScheme.onSurface.copy(
+                                                            alpha = 0.7f
+                                                        )
+                                                    )
+                                            )
+                                        }
                                     }
                                 }
                             }
