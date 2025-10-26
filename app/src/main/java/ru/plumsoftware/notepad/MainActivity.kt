@@ -77,13 +77,19 @@ import ru.plumsoftware.notepad.ui.slideInWithFade
 import ru.plumsoftware.notepad.ui.slideOutWithFade
 import ru.plumsoftware.notepad.ui.verticalSlideInEnter
 import ru.plumsoftware.notepad.ui.verticalSlideInExit
+import androidx.core.content.edit
 
 class MainActivity : ComponentActivity() {
     private var showOpenAdsCounter = 0
+    private var opensForAd = 0
 
     @SuppressLint("StateFlowValueCalledInComposition")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Загружаем счетчик из SharedPreferences
+        val sharedPreferences = getSharedPreferences("app_prefs", MODE_PRIVATE)
+        opensForAd = sharedPreferences.getInt("open_counter", 0)
 
         // Загружаем настройку темы при запуске
         val isDarkTheme = getDarkThemePreference(this)
@@ -166,8 +172,15 @@ class MainActivity : ComponentActivity() {
                 LaunchedEffect(Unit) {
                     requestPermissions.launch(permissionsToRequest)
 
-                    if (showOpenAdsCounter == 0) {
-                        showOpenAds()
+                    // Показываем рекламу только после 5-го входа
+                    println ("opensForAd: $opensForAd")
+                    if (opensForAd == 5) {
+                        if (showOpenAdsCounter == 0) {
+                            showOpenAds()
+                        }
+                    } else {
+                        opensForAd ++
+                        sharedPreferences.edit { putInt("open_counter", opensForAd) }
                     }
                 }
 
