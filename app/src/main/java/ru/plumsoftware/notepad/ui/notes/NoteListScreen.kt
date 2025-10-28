@@ -1,6 +1,9 @@
 package ru.plumsoftware.notepad.ui.notes
 
+import android.content.ActivityNotFoundException
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
@@ -108,6 +111,7 @@ import androidx.navigation.NavController
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import ru.plumsoftware.notepad.App
 import ru.plumsoftware.notepad.R
 import ru.plumsoftware.notepad.data.model.Group
 import ru.plumsoftware.notepad.data.model.Note
@@ -120,6 +124,8 @@ import ru.plumsoftware.notepad.ui.elements.NoteCard
 import ru.plumsoftware.notepad.ui.formatDate
 import ru.plumsoftware.notepad.ui.player.playSound
 import ru.plumsoftware.notepad.ui.player.rememberExoPlayer
+import androidx.core.net.toUri
+import ru.plumsoftware.notepad.ui.elements.RateAppBottomSheet
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -140,6 +146,9 @@ fun NoteListScreen(
             lazyListState.firstVisibleItemScrollOffset < 150 && lazyListState.firstVisibleItemIndex == 0
         }
     }
+
+    val needToShowRateDialog by viewModel.needToShowRateDialog.collectAsState()
+    var showRateBottomSheet by remember { mutableStateOf(false) }
 
     val currentDate by remember {
         derivedStateOf {
@@ -176,12 +185,36 @@ fun NoteListScreen(
     // Добавляем FocusManager для управления фокусом
     val focusManager = LocalFocusManager.current
 
+    // ПРОВЕРКА ДЛЯ ПОКАЗА ДИАЛОГА ОЦЕНКИ
     LaunchedEffect(notes.size) {
+        // Проверяем условия для показа диалога оценки
+        if (notes.size > 1) {
+            viewModel.checkShouldShowRateDialog(notes.size)
+        }
+
         delay(100L)
         if (notes.size > previousNotesCount.value && notes.isNotEmpty()) {
             lazyListState.animateScrollToItem(0)
         }
         previousNotesCount.value = notes.size
+    }
+
+    // ПОКАЗ ДИАЛОГА ОЦЕНКИ КОГДА УСЛОВИЯ ВЫПОЛНЕНЫ
+    LaunchedEffect(needToShowRateDialog) {
+        if (needToShowRateDialog) {
+            showMenuBottomSheet = false
+            // Небольшая задержка для лучшего UX
+            delay(500L)
+            showRateBottomSheet = true
+        }
+    }
+
+    //    Rate
+    LaunchedEffect(notes.size, needToShowRateDialog) {
+        if (notes.size > 1 && needToShowRateDialog) {
+            showMenuBottomSheet = false
+            showRateBottomSheet = true
+        }
     }
 
     // Trigger animation for date change
@@ -280,6 +313,34 @@ fun NoteListScreen(
                 Spacer(modifier = Modifier.height(46.dp))
             }
         }
+    }
+
+    if (showRateBottomSheet) {
+        RateAppBottomSheet(
+            onDismiss = {
+                showRateBottomSheet = false
+                // При закрытии диалога без оценки сбрасываем флаг
+                viewModel.setNeedToShowRateDialog(false)
+            },
+            onRateConfirmed = {
+                showRateBottomSheet = false
+                // Пользователь оценил приложение
+                viewModel.setAppRated()
+                coroutineScope.launch {
+                    delay(2000L)
+                    try {
+                        context.startActivity(
+                            Intent(
+                                Intent.ACTION_VIEW,
+                                App.platformConfig.rateUrl.toUri()
+                            )
+                        )
+                    } catch (e: ActivityNotFoundException) {
+                        context.startActivity(Intent(Intent.ACTION_VIEW, App.platformConfig.rateUrl.toUri()))
+                    }
+                }
+            }
+        )
     }
 
     Scaffold(

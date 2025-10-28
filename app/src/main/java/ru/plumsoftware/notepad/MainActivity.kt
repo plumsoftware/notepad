@@ -18,7 +18,6 @@ import androidx.core.view.WindowCompat
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
@@ -41,7 +40,6 @@ import com.yandex.mobile.ads.common.AdRequestConfiguration
 import com.yandex.mobile.ads.common.AdRequestError
 import com.yandex.mobile.ads.common.ImpressionData
 import com.yandex.mobile.ads.common.MobileAds
-import ru.plumsoftware.notepad.data.model.AdsConfig
 import ru.plumsoftware.notepad.ui.NoteViewModel
 import ru.plumsoftware.notepad.ui.NoteViewModelFactory
 import ru.plumsoftware.notepad.ui.Screen
@@ -49,16 +47,11 @@ import ru.plumsoftware.notepad.ui.addnote.AddNoteScreen
 import ru.plumsoftware.notepad.ui.dialog.PermissionRationaleDialog
 import ru.plumsoftware.notepad.ui.notes.NoteListScreen
 import ru.plumsoftware.notepad.ui.theme.NotepadTheme
-import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.activity.compose.LocalActivity
-import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.runtime.Composable
 import androidx.core.view.ViewCompat
 import com.google.firebase.Firebase
 import com.google.firebase.analytics.FirebaseAnalytics
@@ -327,7 +320,7 @@ class MainActivity : ComponentActivity() {
     private fun showOpenAds() {
         val appOpenLoader = AppOpenAdLoader(baseContext)
         val adRequestConfiguration =
-            AdRequestConfiguration.Builder(App.adsConfig.openAdsId).build()
+            AdRequestConfiguration.Builder(App.platformConfig.adsConfig.openAdsId).build()
 
         val appOpenAdEventListener: AppOpenAdEventListener = object : AppOpenAdEventListener {
             override fun onAdShown() {

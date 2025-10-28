@@ -50,6 +50,9 @@
     <string name="create">创建</string>
     <string name="clear">清除</string>
 
+<!--    Rate-->
+    <string name="rate_app_title">给应用评分</string>
+
 <!--    About app-->
     <string name="app_version_">版本 %s</string>
 

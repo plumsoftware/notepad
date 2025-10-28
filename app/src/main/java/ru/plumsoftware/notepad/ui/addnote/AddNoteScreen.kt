@@ -166,6 +166,7 @@ fun AddNoteScreen(
             note?.tasks?.toMutableList() ?: mutableListOf()
         )
     }
+    val notes by viewModel.notes.collectAsState()
     var newTaskText by remember { mutableStateOf("") }
     var isReminder by remember { mutableStateOf(note?.reminderDate != null) }
     var reminderDate by remember { mutableStateOf(note?.reminderDate) }
@@ -190,7 +191,7 @@ fun AddNoteScreen(
         })
     }
     val adRequestConfiguration =
-        AdRequestConfiguration.Builder(App.adsConfig.interstitialAdsId).build()
+        AdRequestConfiguration.Builder(App.platformConfig.adsConfig.interstitialAdsId).build()
     interstitialAdsLoader.loadAd(adRequestConfiguration)
     var isExpandedTasks by remember { mutableStateOf(false) }
     var isAdsLoading by remember { mutableStateOf(false) }
@@ -429,26 +430,31 @@ fun AddNoteScreen(
                                         playSound(context, exoPlayer, R.raw.note_create)
                                         viewModel.addNote(updatedNote)
                                     }
-                                    if (myInterstitialAds != null) {
-                                        myInterstitialAds.apply {
-                                            setAdEventListener(object :
-                                                InterstitialAdEventListener {
-                                                override fun onAdShown() {}
-                                                override fun onAdFailedToShow(adError: AdError) {
-                                                    navController.navigateUp()
-                                                }
 
-                                                override fun onAdDismissed() {
-                                                    navController.navigateUp()
-                                                }
+                                    if (notes.size >= 5) {
+                                        if (myInterstitialAds != null) {
+                                            myInterstitialAds.apply {
+                                                setAdEventListener(object :
+                                                    InterstitialAdEventListener {
+                                                    override fun onAdShown() {}
+                                                    override fun onAdFailedToShow(adError: AdError) {
+                                                        navController.navigateUp()
+                                                    }
 
-                                                override fun onAdClicked() {
-                                                    navController.navigateUp()
-                                                }
+                                                    override fun onAdDismissed() {
+                                                        navController.navigateUp()
+                                                    }
 
-                                                override fun onAdImpression(impressionData: ImpressionData?) {}
-                                            })
-                                            show(activity)
+                                                    override fun onAdClicked() {
+                                                        navController.navigateUp()
+                                                    }
+
+                                                    override fun onAdImpression(impressionData: ImpressionData?) {}
+                                                })
+                                                show(activity)
+                                            }
+                                        } else {
+                                            navController.navigateUp()
                                         }
                                     } else {
                                         navController.navigateUp()
@@ -978,7 +984,7 @@ fun AddNoteScreen(
 }
 
 private fun loadRewardedAd(rewardedAdLoader: RewardedAdLoader?) {
-    val adRequestConfiguration = AdRequestConfiguration.Builder(App.adsConfig.rewardedAdsId).build()
+    val adRequestConfiguration = AdRequestConfiguration.Builder(App.platformConfig.adsConfig.rewardedAdsId).build()
     rewardedAdLoader?.loadAd(adRequestConfiguration)
 }
 

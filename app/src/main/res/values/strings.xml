@@ -51,6 +51,9 @@
     <string name="create">Создать</string>
     <string name="clear">Очистить</string>
 
+<!--    Rate-->
+    <string name="rate_app_title">Оценить приложение</string>
+
 <!--    About app-->
     <string name="app_version_">Версия %s</string>
 

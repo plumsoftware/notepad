@@ -205,7 +205,7 @@ fun GroupItem(
         modifier = Modifier
             .wrapContentSize()
             .border(
-                width = if (isAdd) 0.dp else 1.dp,
+                width = if (isAdd) 1.dp else 1.dp,
                 color = borderColor,
                 shape = MaterialTheme.shapes.large
             )
@@ -233,7 +233,7 @@ fun GroupItem(
         ) {
             if (isAdd) {
                 Icon(
-                    modifier = Modifier.size(20.dp),
+                    modifier = Modifier.size(16.dp),
                     imageVector = Icons.Default.Add,
                     contentDescription = stringResource(R.string.add_group),
                     tint = contentColor

@@ -1,5 +1,6 @@
 package ru.plumsoftware.notepad.ui
 
+import android.annotation.SuppressLint
 import android.app.Application
 import android.content.Context
 import androidx.lifecycle.ViewModel
@@ -10,6 +11,7 @@ import androidx.work.workDataOf
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.launch
@@ -19,6 +21,9 @@ import ru.plumsoftware.notepad.data.model.Group
 import ru.plumsoftware.notepad.data.model.Note
 import ru.plumsoftware.notepad.data.worker.ReminderWorker
 import java.util.concurrent.TimeUnit
+import androidx.core.content.edit
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class NoteViewModel(application: Application) : ViewModel() {
@@ -30,6 +35,63 @@ class NoteViewModel(application: Application) : ViewModel() {
     val groups: StateFlow<List<Group>> = _groups
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
+    private val appContext = application.applicationContext
+
+    // --- РЕЙТИНГ ---
+    val needToShowRateDialog = MutableStateFlow(false)
+
+    // Новые состояния для отслеживания времени
+    private val lastRateDialogShownTime = MutableStateFlow(0L)
+    private val hasRatedApp = MutableStateFlow(false)
+
+    private fun loadRatePreferences() {
+        viewModelScope.launch {
+            val prefs = appContext.getSharedPreferences("app_rating", Context.MODE_PRIVATE)
+            lastRateDialogShownTime.value = prefs.getLong("last_rate_dialog_time", 0L)
+            hasRatedApp.value = prefs.getBoolean("has_rated_app", false)
+        }
+    }
+
+    @SuppressLint("UseKtx")
+    private suspend fun saveRatePreferences() {
+        withContext(Dispatchers.IO) {
+            val prefs = appContext.getSharedPreferences("app_rating", Context.MODE_PRIVATE)
+            prefs.edit {
+                putLong("last_rate_dialog_time", lastRateDialogShownTime.value)
+                    .putBoolean("has_rated_app", hasRatedApp.value)
+                }
+        }
+    }
+
+    fun checkShouldShowRateDialog(notesCount: Int) {
+        viewModelScope.launch {
+            val currentTime = System.currentTimeMillis()
+            val oneDayInMillis = 24 * 60 * 60 * 1000L
+
+            val shouldShow = notesCount > 1 &&
+                    !hasRatedApp.value &&
+                    (currentTime - lastRateDialogShownTime.value) > oneDayInMillis
+
+            needToShowRateDialog.value = shouldShow
+
+            if (shouldShow) {
+                lastRateDialogShownTime.value = currentTime
+                saveRatePreferences()
+            }
+        }
+    }
+
+    fun setAppRated() {
+        viewModelScope.launch {
+            hasRatedApp.value = true
+            needToShowRateDialog.value = false
+            saveRatePreferences()
+        }
+    }
+
+    fun setNeedToShowRateDialog(show: Boolean) {
+        needToShowRateDialog.value = show
+    }
 
     private val _selectedGroupId = MutableStateFlow<String>("0")
     val selectedGroupId: StateFlow<String> = _selectedGroupId
@@ -55,6 +117,7 @@ class NoteViewModel(application: Application) : ViewModel() {
                     _isLoading.value = false
                 }
         }
+        loadRatePreferences()
     }
 
     fun selectGroup(groupId: String) {
