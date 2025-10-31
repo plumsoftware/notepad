@@ -6,6 +6,11 @@ import android.content.Intent
 import android.net.Uri
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.fadeIn
@@ -15,6 +20,7 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
@@ -89,10 +95,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
@@ -140,6 +149,7 @@ fun NoteListScreen(
     val isLoading by viewModel.isLoading.collectAsState()
     val lazyListState = rememberLazyListState()
     val firstVisibleItemIndex by remember { derivedStateOf { lazyListState.firstVisibleItemIndex } }
+    var needToBlur by remember {mutableStateOf(false)}
 
     val isSearchBarVisible by remember {
         derivedStateOf {
@@ -201,6 +211,7 @@ fun NoteListScreen(
 
     // ПОКАЗ ДИАЛОГА ОЦЕНКИ КОГДА УСЛОВИЯ ВЫПОЛНЕНЫ
     LaunchedEffect(needToShowRateDialog) {
+        needToBlur = needToShowRateDialog
         if (needToShowRateDialog) {
             showMenuBottomSheet = false
             // Небольшая задержка для лучшего UX
@@ -208,6 +219,18 @@ fun NoteListScreen(
             showRateBottomSheet = true
         }
     }
+
+    LaunchedEffect(key1 = showMenuBottomSheet) {
+        needToBlur = showMenuBottomSheet
+    }
+
+    LaunchedEffect(key1 = showFilterDialog) {
+        needToBlur = showFilterDialog
+    }
+
+//    LaunchedEffect(key1 = isLoading) {
+//        needToBlur = isLoading
+//    }
 
     //    Rate
     LaunchedEffect(notes.size, needToShowRateDialog) {
@@ -344,7 +367,77 @@ fun NoteListScreen(
     }
 
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.surface
+        containerColor = MaterialTheme.colorScheme.surface,
+        modifier = Modifier.blur(
+            radius = if (needToBlur) 10.dp else 0.dp
+        ),
+        floatingActionButton = {
+            // Анимация для градиента FAB
+            val infiniteTransition = rememberInfiniteTransition(label = "fabGradient")
+            val gradientRotation by infiniteTransition.animateFloat(
+                initialValue = 0f,
+                targetValue = 360f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(10000, easing = LinearEasing),
+                    repeatMode = RepeatMode.Restart
+                ),
+                label = "gradientRotation"
+            )
+
+            // Цвета радуги для градиента
+            val rainbowColors = listOf(
+                Color(0xFFFF0000), // Красный
+                Color(0xFFFFA500), // Оранжевый
+                Color(0xFFFFFF00), // Желтый
+                Color(0xFF00FF00), // Зеленый
+                Color(0xFF0000FF), // Синий
+                Color(0xFF4B0082), // Индиго
+                Color(0xFF8B00FF)  // Фиолетовый
+            )
+
+            Box(
+                modifier = Modifier.size(56.dp)
+            ) {
+                // Градиентный бордер с анимацией
+                Canvas(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .graphicsLayer {
+                            rotationZ = gradientRotation
+                        }
+                ) {
+                    drawCircle(
+                        brush = Brush.sweepGradient(
+                            colors = rainbowColors
+                        ),
+                        radius = size.width / 2,
+                        style = Stroke(width = 2.dp.toPx())
+                    )
+                }
+
+                // Кнопка без анимации
+                FloatingActionButton(
+                    onClick = { navController.navigate(Screen.AddNote.route) },
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    contentColor = MaterialTheme.colorScheme.primary,
+                    shape = CircleShape,
+                    elevation = FloatingActionButtonDefaults.elevation(
+                        defaultElevation = 0.dp,
+                        pressedElevation = 0.dp
+                    ),
+                    modifier = Modifier
+                        .size(54.dp)
+                        .align(Alignment.Center)
+                ) {
+                    Icon(
+                        modifier = Modifier.size(24.dp),
+                        imageVector = Icons.Default.Add,
+                        contentDescription = "Add Note",
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+        }
     ) { padding ->
         // Добавляем обработчик клика вне текстового поля
         Box(
@@ -732,75 +825,6 @@ fun NoteListScreen(
                                     Spacer(modifier = Modifier.height(100.dp))
                                 }
                             }
-                        }
-                    }
-                }
-            }
-
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(110.dp)
-                    .align(Alignment.BottomCenter),
-                contentAlignment = Alignment.TopCenter
-            ) {
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.CenterStart)
-                        .fillMaxHeight()
-                        .fillMaxWidth()
-                        .background(
-                            brush = Brush.verticalGradient(
-                                colors = listOf(
-                                    Color.Transparent,
-                                    MaterialTheme.colorScheme.background.copy(alpha = 0.4f),
-                                    MaterialTheme.colorScheme.background.copy(alpha = 0.8f),
-                                    MaterialTheme.colorScheme.background,
-                                )
-                            )
-                        )
-                )
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .align(Alignment.BottomCenter)
-                        .padding(vertical = 28.dp),
-                    contentAlignment = Alignment.TopCenter
-                ) {
-                    Button(
-                        onClick = { navController.navigate(Screen.AddNote.route) },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary,
-                            contentColor = MaterialTheme.colorScheme.onPrimary,
-                        ),
-                        shape = CircleShape,
-                        elevation = ButtonDefaults.elevatedButtonElevation(
-                            defaultElevation = 0.dp,
-                            pressedElevation = 0.dp
-                        )
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .wrapContentSize()
-                                .padding(vertical = 6.dp),
-                            horizontalArrangement = Arrangement.spacedBy(
-                                space = 12.dp,
-                                alignment = Alignment.CenterHorizontally
-                            ),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                modifier = Modifier.size(18.dp),
-                                imageVector = Icons.Default.Add,
-                                contentDescription = "Add Note",
-                                tint = Color.White
-                            )
-                            Text(
-                                text = stringResource(R.string.note_add),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = Color.White,
-                                fontWeight = FontWeight.Medium
-                            )
                         }
                     }
                 }

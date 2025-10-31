@@ -39,6 +39,11 @@
     <string name="settings">Настройки</string>
     <string name="rate_app">Оценить приложение</string>
 
+<!--    Tasks-->
+    <string name="add_task">Добавить задачу</string>
+    <string name="add_task_placeholder">Введите текст заметки</string>
+    <string name="add">Добавить</string>
+
 <!--    Settings-->
     <string name="dark_theme">Тёмная тема</string>
 

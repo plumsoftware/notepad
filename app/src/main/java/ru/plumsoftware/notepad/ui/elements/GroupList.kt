@@ -238,12 +238,12 @@ fun GroupItem(
                     contentDescription = stringResource(R.string.add_group),
                     tint = contentColor
                 )
-                Text(
-                    text = stringResource(R.string.add_group),
-                    style = MaterialTheme.typography.labelMedium.copy(
-                        color = contentColor
-                    )
-                )
+//                Text(
+//                    text = stringResource(R.string.add_group),
+//                    style = MaterialTheme.typography.labelMedium.copy(
+//                        color = contentColor
+//                    )
+//                )
             } else if (isAll) {
                 Text(
                     text = stringResource(R.string.all),

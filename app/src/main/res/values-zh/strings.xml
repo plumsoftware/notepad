@@ -38,6 +38,11 @@
     <string name="settings">设置</string>
     <string name="rate_app">评价应用</string>
 
+<!--    Tasks-->
+    <string name="add_task">添加任务</string>
+    <string name="add_task_placeholder">输入笔记内容</string>
+    <string name="add">添加</string>
+
 <!--    Settings-->
     <string name="dark_theme">深色主题</string>
 

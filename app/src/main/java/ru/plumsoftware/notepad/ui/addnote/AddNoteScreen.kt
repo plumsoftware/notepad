@@ -11,6 +11,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -35,6 +36,8 @@ import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -61,6 +64,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
@@ -87,14 +91,20 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
@@ -198,6 +208,10 @@ fun AddNoteScreen(
     var showAddPhotoDialog by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
+    // Добавляем состояние для диалога добавления задачи
+    var showAddTaskDialog by remember { mutableStateOf(false) }
+    val taskTextFocusRequester = remember { FocusRequester() }
+
     val pickImages =
         rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
             uri?.let {
@@ -241,6 +255,13 @@ fun AddNoteScreen(
     )
 
     var selectedColor by remember { mutableStateOf(note?.color?.toULong() ?: colors.first()) }
+
+    // Focus managers for title and description
+    val focusManager = LocalFocusManager.current
+    val titleFocusRequester = remember { FocusRequester() }
+    val descriptionFocusRequester = remember { FocusRequester() }
+    var isTitleFocused by remember { mutableStateOf(false) }
+    var isDescriptionFocused by remember { mutableStateOf(false) }
 
     // Date Picker Dialog
     if (showDatePicker) {
@@ -362,6 +383,99 @@ fun AddNoteScreen(
             imagePath = path,
             onDismiss = { fullscreenImagePath = null }
         )
+    }
+
+    // Диалог добавления задачи
+    if (showAddTaskDialog) {
+        AlertDialog(
+            onDismissRequest = { showAddTaskDialog = false },
+            title = {
+                Text(
+                    text = stringResource(R.string.new_task),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            },
+            text = {
+                OutlinedTextField(
+                    value = newTaskText,
+                    onValueChange = { newTaskText = it },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .focusRequester(taskTextFocusRequester),
+                    textStyle = MaterialTheme.typography.bodyMedium,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = Color.Transparent,
+                        unfocusedBorderColor = Color.Transparent,
+                        focusedContainerColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.05f),
+                        unfocusedContainerColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.05f),
+                        cursorColor = MaterialTheme.colorScheme.primary,
+                        focusedTextColor = MaterialTheme.colorScheme.onSurface
+                    ),
+                    placeholder = {
+                        Text(
+                            text = stringResource(R.string.add_task_placeholder),
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                        )
+                    },
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Text,
+                        imeAction = ImeAction.Done
+                    ),
+                    keyboardActions = KeyboardActions(
+                        onSearch = {
+                            if (newTaskText.isNotBlank()) {
+                                tasks.add(Task(text = newTaskText))
+                                newTaskText = ""
+                                showAddTaskDialog = false
+                            }
+                        }
+                    ),
+                    shape = MaterialTheme.shapes.medium,
+                    singleLine = true
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        if (newTaskText.isNotBlank()) {
+                            tasks.add(Task(text = newTaskText))
+                            newTaskText = ""
+                            showAddTaskDialog = false
+                        }
+                    }
+                ) {
+                    Text(
+                        text = stringResource(R.string.add),
+                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showAddTaskDialog = false
+                        newTaskText = ""
+                    }
+                ) {
+                    Text(
+                        text = stringResource(R.string.cansel_),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+        )
+
+        // Автофокус на текстовое поле при показе диалога
+        LaunchedEffect(showAddTaskDialog) {
+            if (showAddTaskDialog) {
+                delay(100) // Небольшая задержка для корректного отображения
+                taskTextFocusRequester.requestFocus()
+            }
+        }
     }
 
     LaunchedEffect(photos) {
@@ -523,7 +637,11 @@ fun AddNoteScreen(
                             .padding(
                                 start = 0.dp,
                                 end = if (title.isNotEmpty()) 48.dp else 0.dp
-                            ),
+                            )
+                            .focusRequester(titleFocusRequester)
+                            .onFocusChanged { focusState ->
+                                isTitleFocused = focusState.isFocused
+                            },
                         textStyle = MaterialTheme.typography.headlineLarge.copy(
                             fontWeight = FontWeight.Bold,
                             color = Color.White
@@ -538,7 +656,7 @@ fun AddNoteScreen(
                         modifier = Modifier.align(Alignment.CenterEnd)
                     ) {
                         AnimatedVisibility(
-                            visible = title.isNotEmpty(),
+                            visible = title.isNotEmpty() && isTitleFocused,
                             enter = slideInHorizontally { fullWidth -> fullWidth } + fadeIn(),
                             exit = slideOutHorizontally { fullWidth -> fullWidth } + fadeOut()
                         ) {
@@ -587,7 +705,11 @@ fun AddNoteScreen(
                             .padding(
                                 start = 0.dp,
                                 end = if (description.isNotEmpty()) 48.dp else 0.dp
-                            ),
+                            )
+                            .focusRequester(descriptionFocusRequester)
+                            .onFocusChanged { focusState ->
+                                isDescriptionFocused = focusState.isFocused
+                            },
                         textStyle = MaterialTheme.typography.headlineSmall.copy(
                             fontWeight = FontWeight.Medium,
                             color = Color.White
@@ -602,7 +724,7 @@ fun AddNoteScreen(
                         modifier = Modifier.align(Alignment.CenterEnd)
                     ) {
                         AnimatedVisibility(
-                            visible = description.isNotEmpty(),
+                            visible = description.isNotEmpty() && isDescriptionFocused,
                             enter = slideInHorizontally { fullWidth -> fullWidth } + fadeIn(),
                             exit = slideOutHorizontally { fullWidth -> fullWidth } + fadeOut()
                         ) {
@@ -836,49 +958,34 @@ fun AddNoteScreen(
                         }
                     }
 
-                    // Add Task
-                    Row(
+                    // Новая кнопка добавления задачи вместо текстового поля
+                    OutlinedButton(
+                        onClick = { showAddTaskDialog = true },
                         modifier = Modifier
-                            .fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
+                            .fillMaxWidth()
+                            .padding(top = 8.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            containerColor = Color.Transparent,
+                            contentColor = Color.White
+                        ),
+                        border = BorderStroke(
+                            width = 1.dp,
+                            color = Color.White.copy(alpha = 0.7f)
+                        ),
+                        enabled = !isLoading
                     ) {
-                        OutlinedTextField(
-                            value = newTaskText,
-                            onValueChange = { newTaskText = it },
-                            modifier = Modifier.weight(1f),
-                            textStyle = MaterialTheme.typography.bodyMedium.copy(color = Color.White),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = Color.White,
-                                unfocusedBorderColor = Color.White.copy(alpha = 0.7f),
-                                focusedContainerColor = Color.White.copy(alpha = 0.1f),
-                                unfocusedContainerColor = Color.White.copy(alpha = 0.06f)
-                            ),
-                            shape = MaterialTheme.shapes.extraLarge,
-                            label = {
-                                Text(
-                                    modifier = Modifier.clip(MaterialTheme.shapes.extraLarge),
-                                    text = stringResource(R.string.new_task),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = Color.White.copy(alpha = 0.7f)
-                                )
-                            },
-                            enabled = !isLoading
+                        Icon(
+                            Icons.Default.Add,
+                            contentDescription = "Add Task",
+                            tint = Color.White,
+                            modifier = Modifier.size(18.dp)
                         )
-                        IconButton(
-                            onClick = {
-                                if (newTaskText.isNotBlank()) {
-                                    tasks.add(Task(text = newTaskText))
-                                    newTaskText = ""
-                                }
-                            },
-                            enabled = !isLoading
-                        ) {
-                            Icon(
-                                Icons.Default.Add,
-                                contentDescription = "Add Task",
-                                tint = Color.White
-                            )
-                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = stringResource(R.string.add_task),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Color.White
+                        )
                     }
                 }
                 Spacer(modifier = Modifier.height(30.dp))
