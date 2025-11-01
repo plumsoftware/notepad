@@ -149,7 +149,7 @@ fun NoteListScreen(
     val isLoading by viewModel.isLoading.collectAsState()
     val lazyListState = rememberLazyListState()
     val firstVisibleItemIndex by remember { derivedStateOf { lazyListState.firstVisibleItemIndex } }
-    var needToBlur by remember {mutableStateOf(false)}
+    var needToBlur by remember { mutableStateOf(false) }
 
     val isSearchBarVisible by remember {
         derivedStateOf {
@@ -222,6 +222,10 @@ fun NoteListScreen(
 
     LaunchedEffect(key1 = showMenuBottomSheet) {
         needToBlur = showMenuBottomSheet
+    }
+
+    LaunchedEffect(key1 = showFilterDialog) {
+        needToBlur = showFilterDialog
     }
 
     LaunchedEffect(key1 = showFilterDialog) {
@@ -359,7 +363,12 @@ fun NoteListScreen(
                             )
                         )
                     } catch (e: ActivityNotFoundException) {
-                        context.startActivity(Intent(Intent.ACTION_VIEW, App.platformConfig.rateUrl.toUri()))
+                        context.startActivity(
+                            Intent(
+                                Intent.ACTION_VIEW,
+                                App.platformConfig.rateUrl.toUri()
+                            )
+                        )
                     }
                 }
             }
@@ -372,70 +381,24 @@ fun NoteListScreen(
             radius = if (needToBlur) 10.dp else 0.dp
         ),
         floatingActionButton = {
-            // Анимация для градиента FAB
-            val infiniteTransition = rememberInfiniteTransition(label = "fabGradient")
-            val gradientRotation by infiniteTransition.animateFloat(
-                initialValue = 0f,
-                targetValue = 360f,
-                animationSpec = infiniteRepeatable(
-                    animation = tween(10000, easing = LinearEasing),
-                    repeatMode = RepeatMode.Restart
+            FloatingActionButton(
+                onClick = { navController.navigate(Screen.AddNote.route) },
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
+                shape = CircleShape,
+                elevation = FloatingActionButtonDefaults.elevation(
+                    defaultElevation = 0.dp,
+                    pressedElevation = 0.dp
                 ),
-                label = "gradientRotation"
-            )
-
-            // Цвета радуги для градиента
-            val rainbowColors = listOf(
-                Color(0xFFFF0000), // Красный
-                Color(0xFFFFA500), // Оранжевый
-                Color(0xFFFFFF00), // Желтый
-                Color(0xFF00FF00), // Зеленый
-                Color(0xFF0000FF), // Синий
-                Color(0xFF4B0082), // Индиго
-                Color(0xFF8B00FF)  // Фиолетовый
-            )
-
-            Box(
-                modifier = Modifier.size(56.dp)
+                modifier = Modifier
+                    .size(54.dp)
             ) {
-                // Градиентный бордер с анимацией
-                Canvas(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .graphicsLayer {
-                            rotationZ = gradientRotation
-                        }
-                ) {
-                    drawCircle(
-                        brush = Brush.sweepGradient(
-                            colors = rainbowColors
-                        ),
-                        radius = size.width / 2,
-                        style = Stroke(width = 2.dp.toPx())
-                    )
-                }
-
-                // Кнопка без анимации
-                FloatingActionButton(
-                    onClick = { navController.navigate(Screen.AddNote.route) },
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    contentColor = MaterialTheme.colorScheme.primary,
-                    shape = CircleShape,
-                    elevation = FloatingActionButtonDefaults.elevation(
-                        defaultElevation = 0.dp,
-                        pressedElevation = 0.dp
-                    ),
-                    modifier = Modifier
-                        .size(54.dp)
-                        .align(Alignment.Center)
-                ) {
-                    Icon(
-                        modifier = Modifier.size(24.dp),
-                        imageVector = Icons.Default.Add,
-                        contentDescription = "Add Note",
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                }
+                Icon(
+                    modifier = Modifier.size(24.dp),
+                    painter = painterResource(R.drawable.plus),
+                    contentDescription = "Add Note",
+                    tint = MaterialTheme.colorScheme.onPrimary
+                )
             }
         }
     ) { padding ->
@@ -449,7 +412,6 @@ fun NoteListScreen(
                     indication = null,
                     interactionSource = remember { MutableInteractionSource() }
                 ) {
-                    // При клике в любом месте экрана снимаем фокус с поиска
                     if (isSearchFocused) {
                         focusManager.clearFocus()
                     }
@@ -741,6 +703,9 @@ fun NoteListScreen(
                     },
                     onDeleteGroup = {
                         viewModel.deleteFolder(it)
+                    },
+                    onDialog = {
+                        needToBlur = it
                     }
                 )
                 Spacer(modifier = Modifier.height(8.dp))

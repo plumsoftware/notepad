@@ -1,6 +1,5 @@
 package ru.plumsoftware.notepad.ui.elements
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -25,21 +24,18 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -50,7 +46,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -63,10 +59,15 @@ fun GroupList(
     selectedGroupId: String?,
     onGroupSelected: (String) -> Unit,
     onCreateGroup: (title: String, color: ULong) -> Unit,
-    onDeleteGroup: (Group?) -> Unit
+    onDeleteGroup: (Group?) -> Unit,
+    onDialog: (Boolean) -> Unit,
 ) {
     var showCreateDialog by remember { mutableStateOf(false) }
     val scrollState = rememberLazyListState()
+
+    LaunchedEffect(key1 = showCreateDialog) {
+        onDialog(showCreateDialog)
+    }
 
     if (showCreateDialog) {
         CreateGroupDialog(
@@ -234,7 +235,7 @@ fun GroupItem(
             if (isAdd) {
                 Icon(
                     modifier = Modifier.size(16.dp),
-                    imageVector = Icons.Default.Add,
+                    painter = painterResource(R.drawable.plus),
                     contentDescription = stringResource(R.string.add_group),
                     tint = contentColor
                 )
