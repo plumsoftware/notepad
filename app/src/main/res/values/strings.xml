@@ -59,6 +59,50 @@
 <!--    Rate-->
     <string name="rate_app_title">Оценить приложение</string>
 
+<!--    Calendar-->
+        <string name="selected_date">выбранную дату</string>
+        <string name="calendar_notes_for_date">Заметки за %s</string>
+        <string name="calendar_no_notes_for_date">Нет заметок за %s</string>
+        <string name="calendar_select_date">Выберите дату для просмотра заметок</string>
+        <string name="calendar_previous_month">Предыдущий месяц</string>
+        <string name="calendar_next_month">Следующий месяц</string>
+        <string name="monday">Пн</string>
+        <string name="tuesday">Вт</string>
+        <string name="wednesday">Ср</string>
+        <string name="thursday">Чт</string>
+        <string name="friday">Пт</string>
+        <string name="saturday">Сб</string>
+        <string name="sunday">Вс</string>
+        <string name="close">Закрыть</string>
+
+        <!-- Months -->
+        <string name="january">Январь</string>
+        <string name="february">Февраль</string>
+        <string name="march">Март</string>
+        <string name="april">Апрель</string>
+        <string name="may">Май</string>
+        <string name="june">Июнь</string>
+        <string name="july">Июль</string>
+        <string name="august">Август</string>
+        <string name="september">Сентябрь</string>
+        <string name="october">Октябрь</string>
+        <string name="november">Ноябрь</string>
+        <string name="december">Декабрь</string>
+
+        <!-- Month names for date formatting -->
+        <string name="january_genitive">января</string>
+        <string name="february_genitive">февраля</string>
+        <string name="march_genitive">марта</string>
+        <string name="april_genitive">апреля</string>
+        <string name="may_genitive">мая</string>
+        <string name="june_genitive">июня</string>
+        <string name="july_genitive">июля</string>
+        <string name="august_genitive">августа</string>
+        <string name="september_genitive">сентября</string>
+        <string name="october_genitive">октября</string>
+        <string name="november_genitive">ноября</string>
+        <string name="december_genitive">декабря</string>
+
 <!--    About app-->
     <string name="app_version_">Версия %s</string>
 

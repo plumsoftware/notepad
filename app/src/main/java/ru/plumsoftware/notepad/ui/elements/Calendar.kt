@@ -46,11 +46,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import ru.plumsoftware.notepad.R
 import ru.plumsoftware.notepad.data.model.Note
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -114,7 +116,15 @@ fun CalendarView(
 
 @Composable
 private fun DaysOfWeekHeader() {
-    val daysOfWeek = listOf("Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс")
+    val daysOfWeek = listOf(
+        stringResource(R.string.monday),
+        stringResource(R.string.tuesday),
+        stringResource(R.string.wednesday),
+        stringResource(R.string.thursday),
+        stringResource(R.string.friday),
+        stringResource(R.string.saturday),
+        stringResource(R.string.sunday),
+        )
 
     Row(
         modifier = Modifier
@@ -125,7 +135,7 @@ private fun DaysOfWeekHeader() {
         daysOfWeek.forEach { day ->
             Text(
                 text = day,
-                style = MaterialTheme.typography.bodyLarge,
+                style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Medium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
@@ -149,7 +159,10 @@ private fun CalendarHeader(
             .background(MaterialTheme.colorScheme.surfaceContainer)
             .padding(vertical = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(space = 8.dp, alignment = Alignment.CenterHorizontally)
+        horizontalArrangement = Arrangement.spacedBy(
+            space = 8.dp,
+            alignment = Alignment.CenterHorizontally
+        )
     ) {
         // Previous month button
         IconButton(onClick = onPreviousClick) {
@@ -165,7 +178,7 @@ private fun CalendarHeader(
             modifier = Modifier.width(120.dp)
         ) {
             Text(
-                text = getMonthName(currentDate),
+                text = stringResource(getMonthName(currentDate)),
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center,
@@ -334,7 +347,14 @@ private fun generateCalendarDays(currentDate: Calendar, notes: List<Note>): List
     // Add days from previous month
     calendar.add(Calendar.DAY_OF_MONTH, -daysFromPreviousMonth)
     for (i in 0 until daysFromPreviousMonth) {
-        days.add(CalendarDay(calendar.time, false, currentWeek, getNotesForDate(notes, calendar.time)))
+        days.add(
+            CalendarDay(
+                calendar.time,
+                false,
+                currentWeek,
+                getNotesForDate(notes, calendar.time)
+            )
+        )
         calendar.add(Calendar.DAY_OF_MONTH, 1)
         if (calendar.get(Calendar.DAY_OF_WEEK) == Calendar.MONDAY) {
             currentWeek++
@@ -348,7 +368,14 @@ private fun generateCalendarDays(currentDate: Calendar, notes: List<Note>): List
     // Add days of current month
     val daysInMonth = calendar.getActualMaximum(Calendar.DAY_OF_MONTH)
     for (i in 1..daysInMonth) {
-        days.add(CalendarDay(calendar.time, true, currentWeek, getNotesForDate(notes, calendar.time)))
+        days.add(
+            CalendarDay(
+                calendar.time,
+                true,
+                currentWeek,
+                getNotesForDate(notes, calendar.time)
+            )
+        )
         calendar.add(Calendar.DAY_OF_MONTH, 1)
         if (calendar.get(Calendar.DAY_OF_WEEK) == Calendar.MONDAY) {
             currentWeek++
@@ -358,7 +385,14 @@ private fun generateCalendarDays(currentDate: Calendar, notes: List<Note>): List
     // Add days from next month to complete the grid (42 cells total for 6 weeks)
     val remainingDays = 42 - days.size
     for (i in 0 until remainingDays) {
-        days.add(CalendarDay(calendar.time, false, currentWeek, getNotesForDate(notes, calendar.time)))
+        days.add(
+            CalendarDay(
+                calendar.time,
+                false,
+                currentWeek,
+                getNotesForDate(notes, calendar.time)
+            )
+        )
         calendar.add(Calendar.DAY_OF_MONTH, 1)
         if (calendar.get(Calendar.DAY_OF_WEEK) == Calendar.MONDAY) {
             currentWeek++
@@ -377,32 +411,6 @@ private fun isSameDay(date1: Date, date2: Date): Boolean {
             cal1.get(Calendar.DAY_OF_MONTH) == cal2.get(Calendar.DAY_OF_MONTH)
 }
 
-// Функция для форматирования даты (добавьте если нет)
-private fun formatCalendarDate(date: Date): String {
-    val calendar = Calendar.getInstance().apply { time = date }
-    val day = calendar.get(Calendar.DAY_OF_MONTH)
-    val month = calendar.get(Calendar.MONTH)
-    val year = calendar.get(Calendar.YEAR)
-
-    val monthName = when (month) {
-        Calendar.JANUARY -> "января"
-        Calendar.FEBRUARY -> "февраля"
-        Calendar.MARCH -> "марта"
-        Calendar.APRIL -> "апреля"
-        Calendar.MAY -> "мая"
-        Calendar.JUNE -> "июня"
-        Calendar.JULY -> "июля"
-        Calendar.AUGUST -> "августа"
-        Calendar.SEPTEMBER -> "сентября"
-        Calendar.OCTOBER -> "октября"
-        Calendar.NOVEMBER -> "ноября"
-        Calendar.DECEMBER -> "декабря"
-        else -> ""
-    }
-
-    return "$day $monthName $year"
-}
-
 private fun getYear(calendar: Calendar): String {
     return calendar.get(Calendar.YEAR).toString()
 }
@@ -414,22 +422,22 @@ private fun getDayNumber(date: Date): String {
 }
 
 // Исправленная функция для получения названия месяца в именительном падеже
-private fun getMonthName(calendar: Calendar): String {
+private fun getMonthName(calendar: Calendar): Int {
     val month = calendar.get(Calendar.MONTH)
     return when (month) {
-        Calendar.JANUARY -> "Январь"
-        Calendar.FEBRUARY -> "Февраль"
-        Calendar.MARCH -> "Март"
-        Calendar.APRIL -> "Апрель"
-        Calendar.MAY -> "Май"
-        Calendar.JUNE -> "Июнь"
-        Calendar.JULY -> "Июль"
-        Calendar.AUGUST -> "Август"
-        Calendar.SEPTEMBER -> "Сентябрь"
-        Calendar.OCTOBER -> "Октябрь"
-        Calendar.NOVEMBER -> "Ноябрь"
-        Calendar.DECEMBER -> "Декабрь"
-        else -> ""
+        Calendar.JANUARY -> R.string.january
+        Calendar.FEBRUARY -> R.string.february
+        Calendar.MARCH -> R.string.march
+        Calendar.APRIL -> R.string.april
+        Calendar.MAY -> R.string.may
+        Calendar.JUNE -> R.string.june
+        Calendar.JULY -> R.string.july
+        Calendar.AUGUST -> R.string.august
+        Calendar.SEPTEMBER -> R.string.september
+        Calendar.OCTOBER -> R.string.october
+        Calendar.NOVEMBER -> R.string.november
+        Calendar.DECEMBER -> R.string.december
+        else -> R.string.january
     }
 }
 

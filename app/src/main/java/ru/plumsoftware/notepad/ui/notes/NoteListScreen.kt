@@ -3,31 +3,18 @@ package ru.plumsoftware.notepad.ui.notes
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.focusable
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -35,8 +22,6 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -50,29 +35,16 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.lazy.staggeredgrid.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.CornerSize
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.rounded.Home
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
@@ -81,7 +53,6 @@ import androidx.compose.material3.RadioButton
 import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -96,21 +67,15 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshots.SnapshotStateMap
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -123,7 +88,6 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.edit
 import androidx.navigation.NavController
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import ru.plumsoftware.notepad.App
 import ru.plumsoftware.notepad.R
@@ -139,8 +103,6 @@ import ru.plumsoftware.notepad.ui.formatDate
 import ru.plumsoftware.notepad.ui.player.playSound
 import ru.plumsoftware.notepad.ui.player.rememberExoPlayer
 import androidx.core.net.toUri
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import ru.plumsoftware.notepad.ui.MainScreenRouteState
 import ru.plumsoftware.notepad.ui.elements.BottomBar
 import ru.plumsoftware.notepad.ui.elements.CalendarView
@@ -821,7 +783,17 @@ fun NoteListScreen(
                         notes = notes,
                         viewModel = viewModel, // передаем viewModel
                         navController = navController, // передаем navController
-                        groups = groups // передаем группы
+                        groups = groups, // передаем группы
+                        notesToDelete = notesToDelete,
+                        onDelete = { note ->
+                            notesToDelete[note.id] = true
+                            playSound(context, exoPlayer, R.raw.note_delete)
+                            coroutineScope.launch {
+                                delay(400)
+                                viewModel.deleteNote(note, context)
+                            }
+                        },
+                        onImageClick = { path -> fullscreenImagePath = path }
                     )
                 }
             }
@@ -869,7 +841,10 @@ private fun CalendarContent(
     notes: List<Note>,
     viewModel: NoteViewModel,
     navController: NavController,
-    groups: List<Group>
+    groups: List<Group>,
+    onDelete: (Note) -> Unit,
+    onImageClick: (String) -> Unit,
+    notesToDelete: SnapshotStateMap<String, Boolean>
 ) {
     // Добавляем состояние для отображения заметок по выбранной дате
     var selectedDateNotes by remember { mutableStateOf<List<Note>?>(null) }
@@ -904,8 +879,8 @@ private fun CalendarContent(
                 .clip(MaterialTheme.shapes.extraLarge.copy(
                     bottomEnd = CornerSize(0.dp),
                     bottomStart = CornerSize(0.dp),
-                    topStart = CornerSize(38.dp),
-                    topEnd = CornerSize(38.dp)
+                    topStart = CornerSize(42.dp),
+                    topEnd = CornerSize(42.dp)
                 ))
         )
 
@@ -927,7 +902,10 @@ private fun CalendarContent(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text(
-                            text = "Заметки за ${selectedDate?.let { formatCalendarDate(it) } ?: "выбранную дату"}",
+                            text = stringResource(
+                                R.string.calendar_notes_for_date,
+                                selectedDate?.let { formatCalendarDate(it) } ?: stringResource(R.string.selected_date)
+                            ),
                             style = MaterialTheme.typography.bodyMedium
                         )
 
@@ -941,7 +919,7 @@ private fun CalendarContent(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Close,
-                                contentDescription = "Close"
+                                contentDescription = stringResource(R.string.close)
                             )
                         }
                     }
@@ -953,9 +931,11 @@ private fun CalendarContent(
                             note = note,
                             viewModel = viewModel,
                             navController = navController,
-                            isVisible = true,
-                            onDelete = { /* обработка удаления */ },
-                            onImageClick = { /* обработка клика на изображение */ },
+                            isVisible = notesToDelete[note.id] != true,
+                            onDelete = {
+                                onDelete(note)
+                            },
+                            onImageClick = { path -> onImageClick(path) },
                             modifier = Modifier.padding(vertical = 8.dp),
                             groups = groups,
                             onGroupSelected = { note_, groupId ->
@@ -973,7 +953,10 @@ private fun CalendarContent(
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             Text(
-                                text = "Нет заметок за ${selectedDate?.let { formatCalendarDate(it) } ?: "выбранную дату"}",
+                                text = stringResource(
+                                    R.string.calendar_no_notes_for_date,
+                                    selectedDate?.let { formatCalendarDate(it) } ?: stringResource(R.string.selected_date)
+                                ),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                             )
@@ -989,7 +972,7 @@ private fun CalendarContent(
             // Если дата не выбрана, показываем placeholder
             Spacer(modifier = Modifier.weight(1f))
             Text(
-                text = "Выберите дату для просмотра заметок",
+                text = stringResource(R.string.calendar_select_date),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                 modifier = Modifier.padding(16.dp)
