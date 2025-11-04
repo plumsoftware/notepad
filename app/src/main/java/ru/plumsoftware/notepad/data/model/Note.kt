@@ -15,4 +15,13 @@ data class Note(
     val reminderDate: Long? = null,
     val photos: List<String> = emptyList(),
     val groupId: String = "0"
-)
+) {
+    override fun toString(): String {
+        return """
+            title: $title;\n
+            description: $description\n
+            color: $color\n
+            createdAt: $createdAt\n
+        """.trimIndent()
+    }
+}

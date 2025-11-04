@@ -51,10 +51,14 @@ import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.lazy.staggeredgrid.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.CornerSize
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.rounded.Home
@@ -134,7 +138,14 @@ import ru.plumsoftware.notepad.ui.formatDate
 import ru.plumsoftware.notepad.ui.player.playSound
 import ru.plumsoftware.notepad.ui.player.rememberExoPlayer
 import androidx.core.net.toUri
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import ru.plumsoftware.notepad.ui.MainScreenRouteState
+import ru.plumsoftware.notepad.ui.elements.BottomBar
+import ru.plumsoftware.notepad.ui.elements.CalendarView
 import ru.plumsoftware.notepad.ui.elements.RateAppBottomSheet
+import java.util.Calendar
+import java.util.Date
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -186,6 +197,7 @@ fun NoteListScreen(
     var selectedFilter by remember { mutableStateOf(0) }
     val previousNotesCount = remember { mutableStateOf(0) }
     val selectedGroupId by viewModel.selectedGroupId.collectAsState() // "0" = "All"
+    var mainScreenState by remember { mutableStateOf (MainScreenRouteState.Main) }
 
     // Добавляем состояние для BottomSheet меню
     var showMenuBottomSheet by remember { mutableStateOf(false) }
@@ -230,6 +242,12 @@ fun NoteListScreen(
 
     LaunchedEffect(key1 = showFilterDialog) {
         needToBlur = showFilterDialog
+    }
+
+    LaunchedEffect(key1 = mainScreenState) {
+        viewModel.loading(true)
+        delay(500L)
+        viewModel.loading(false)
     }
 
 //    LaunchedEffect(key1 = isLoading) {
@@ -381,25 +399,25 @@ fun NoteListScreen(
             radius = if (needToBlur) 10.dp else 0.dp
         ),
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = { navController.navigate(Screen.AddNote.route) },
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary,
-                shape = CircleShape,
-                elevation = FloatingActionButtonDefaults.elevation(
-                    defaultElevation = 0.dp,
-                    pressedElevation = 0.dp
-                ),
-                modifier = Modifier
-                    .size(54.dp)
-            ) {
-                Icon(
-                    modifier = Modifier.size(24.dp),
-                    painter = painterResource(R.drawable.plus),
-                    contentDescription = "Add Note",
-                    tint = MaterialTheme.colorScheme.onPrimary
-                )
-            }
+//            FloatingActionButton(
+//                onClick = { navController.navigate(Screen.AddNote.route) },
+//                containerColor = MaterialTheme.colorScheme.primary,
+//                contentColor = MaterialTheme.colorScheme.onPrimary,
+//                shape = CircleShape,
+//                elevation = FloatingActionButtonDefaults.elevation(
+//                    defaultElevation = 0.dp,
+//                    pressedElevation = 0.dp
+//                ),
+//                modifier = Modifier
+//                    .size(54.dp)
+//            ) {
+//                Icon(
+//                    modifier = Modifier.size(24.dp),
+//                    painter = painterResource(R.drawable.plus),
+//                    contentDescription = "Add Note",
+//                    tint = MaterialTheme.colorScheme.onPrimary
+//                )
+//            }
         }
     ) { padding ->
         // Добавляем обработчик клика вне текстового поля
@@ -417,140 +435,22 @@ fun NoteListScreen(
                     }
                 }
         ) {
-            Column(
-                modifier = Modifier.fillMaxSize()
-            ) {
-                // Анимированная строка поиска
-                AnimatedVisibility(
-                    visible = isSearchBarVisible,
-                    enter = slideInVertically(
-                        initialOffsetY = { -it },
-                        animationSpec = tween(durationMillis = 300)
-                    ) + fadeIn(
-                        animationSpec = tween(durationMillis = 300)
-                    ),
-                    exit = slideOutVertically(
-                        targetOffsetY = { -it },
-                        animationSpec = tween(durationMillis = 300)
-                    ) + fadeOut(
-                        animationSpec = tween(durationMillis = 300)
-                    )
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 14.dp, vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+            when (mainScreenState) {
+                MainScreenRouteState.Main -> {
+                    Column(
+                        modifier = Modifier.fillMaxSize()
                     ) {
-                        // Кнопка меню (слева от поиска) с анимацией
+                        // Анимированная строка поиска
                         AnimatedVisibility(
-                            visible = !isSearchFocused,
-                            enter = slideInHorizontally(
-                                initialOffsetX = { -it }, // появление слева
+                            visible = isSearchBarVisible,
+                            enter = slideInVertically(
+                                initialOffsetY = { -it },
                                 animationSpec = tween(durationMillis = 300)
                             ) + fadeIn(
                                 animationSpec = tween(durationMillis = 300)
                             ),
-                            exit = slideOutHorizontally(
-                                targetOffsetX = { -it }, // скрытие влево
-                                animationSpec = tween(durationMillis = 300)
-                            ) + fadeOut(
-                                animationSpec = tween(durationMillis = 300)
-                            )
-                        ) {
-                            Icon(
-                                modifier = Modifier
-                                    .wrapContentSize()
-                                    .size(28.dp)
-                                    .clickable(
-                                        enabled = true,
-                                        role = Role.Button,
-                                        indication = null,
-                                        interactionSource = remember { MutableInteractionSource() },
-                                        onClick = {
-                                            showMenuBottomSheet = true
-                                        }
-                                    ),
-                                imageVector = Icons.Rounded.Home,
-                                contentDescription = stringResource(R.string.menu),
-                                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                            )
-                        }
-
-                        // Search Bar - занимает всё доступное пространство
-                        OutlinedTextField(
-                            value = searchQuery,
-                            onValueChange = { query ->
-                                searchQuery = query
-                                if (searchQuery.isEmpty()) {
-                                    viewModel.searchNotes(searchQuery)
-                                }
-                            },
-                            modifier = Modifier
-                                .weight(1f)
-                                .fillMaxWidth()
-                                .onFocusChanged {
-                                    isSearchFocused = it.isFocused
-                                },
-                            singleLine = true,
-                            textStyle = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
-                            placeholder = {
-                                Text(
-                                    text = stringResource(R.string.note_search),
-                                    style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium)
-                                )
-                            },
-                            shape = MaterialTheme.shapes.extraLarge,
-                            trailingIcon = {
-                                AnimatedVisibility(
-                                    visible = searchQuery.isNotEmpty(),
-                                    enter = slideInHorizontally { it } + fadeIn(),
-                                    exit = slideOutHorizontally { it } + fadeOut()
-                                ) {
-                                    IconButton(
-                                        onClick = {
-                                            viewModel.searchNotes(searchQuery)
-                                        }
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Search,
-                                            contentDescription = "Search"
-                                        )
-                                    }
-                                }
-                            },
-                            keyboardOptions = KeyboardOptions(
-                                keyboardType = KeyboardType.Text,
-                                imeAction = ImeAction.Search
-                            ),
-                            keyboardActions = KeyboardActions(
-                                onSearch = {
-                                    viewModel.searchNotes(searchQuery)
-                                    // После поиска снимаем фокус
-                                    focusManager.clearFocus()
-                                }
-                            ),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = Color.Transparent,
-                                unfocusedBorderColor = Color.Transparent,
-                                focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
-                                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer
-                            ),
-                            enabled = !isLoading
-                        )
-
-                        // Группа иконок справа с анимацией
-                        AnimatedVisibility(
-                            visible = !isSearchFocused,
-                            enter = slideInHorizontally(
-                                initialOffsetX = { it }, // появление справа
-                                animationSpec = tween(durationMillis = 300)
-                            ) + fadeIn(
-                                animationSpec = tween(durationMillis = 300)
-                            ),
-                            exit = slideOutHorizontally(
-                                targetOffsetX = { it }, // скрытие вправо
+                            exit = slideOutVertically(
+                                targetOffsetY = { -it },
                                 animationSpec = tween(durationMillis = 300)
                             ) + fadeOut(
                                 animationSpec = tween(durationMillis = 300)
@@ -558,133 +458,356 @@ fun NoteListScreen(
                         ) {
                             Row(
                                 modifier = Modifier
-                                    .wrapContentSize(),
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 14.dp, vertical = 12.dp),
                                 verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
-                                // Кнопка фильтрации
-                                Icon(
+                                // Кнопка меню (слева от поиска) с анимацией
+                                AnimatedVisibility(
+                                    visible = !isSearchFocused,
+                                    enter = slideInHorizontally(
+                                        initialOffsetX = { -it }, // появление слева
+                                        animationSpec = tween(durationMillis = 300)
+                                    ) + fadeIn(
+                                        animationSpec = tween(durationMillis = 300)
+                                    ),
+                                    exit = slideOutHorizontally(
+                                        targetOffsetX = { -it }, // скрытие влево
+                                        animationSpec = tween(durationMillis = 300)
+                                    ) + fadeOut(
+                                        animationSpec = tween(durationMillis = 300)
+                                    )
+                                ) {
+                                    Icon(
+                                        modifier = Modifier
+                                            .wrapContentSize()
+                                            .size(28.dp)
+                                            .clickable(
+                                                enabled = true,
+                                                role = Role.Button,
+                                                indication = null,
+                                                interactionSource = remember { MutableInteractionSource() },
+                                                onClick = {
+                                                    showMenuBottomSheet = true
+                                                }
+                                            ),
+                                        painter = painterResource(R.drawable.house_fill),
+                                        contentDescription = stringResource(R.string.menu),
+                                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                                    )
+                                }
+
+                                // Search Bar - занимает всё доступное пространство
+                                OutlinedTextField(
+                                    value = searchQuery,
+                                    onValueChange = { query ->
+                                        searchQuery = query
+                                        if (searchQuery.isEmpty()) {
+                                            viewModel.searchNotes(searchQuery)
+                                        }
+                                    },
                                     modifier = Modifier
-                                        .wrapContentSize()
-                                        .size(20.dp)
-                                        .clickable(
-                                            enabled = true,
-                                            role = Role.Button,
-                                            indication = null,
-                                            interactionSource = remember { MutableInteractionSource() },
-                                            onClick = {
-                                                showFilterDialog = true
-                                            }),
-                                    painter = painterResource(R.drawable.filter),
-                                    contentDescription = "Filter",
-                                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                                        .weight(1f)
+                                        .fillMaxWidth()
+                                        .onFocusChanged {
+                                            isSearchFocused = it.isFocused
+                                        },
+                                    singleLine = true,
+                                    textStyle = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
+                                    placeholder = {
+                                        Text(
+                                            text = stringResource(R.string.note_search),
+                                            style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium)
+                                        )
+                                    },
+                                    shape = MaterialTheme.shapes.extraLarge,
+                                    trailingIcon = {
+                                        AnimatedVisibility(
+                                            visible = searchQuery.isNotEmpty(),
+                                            enter = slideInHorizontally { it } + fadeIn(),
+                                            exit = slideOutHorizontally { it } + fadeOut()
+                                        ) {
+                                            IconButton(
+                                                onClick = {
+                                                    viewModel.searchNotes(searchQuery)
+                                                }
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Search,
+                                                    contentDescription = "Search"
+                                                )
+                                            }
+                                        }
+                                    },
+                                    keyboardOptions = KeyboardOptions(
+                                        keyboardType = KeyboardType.Text,
+                                        imeAction = ImeAction.Search
+                                    ),
+                                    keyboardActions = KeyboardActions(
+                                        onSearch = {
+                                            viewModel.searchNotes(searchQuery)
+                                            // После поиска снимаем фокус
+                                            focusManager.clearFocus()
+                                        }
+                                    ),
+                                    colors = OutlinedTextFieldDefaults.colors(
+                                        focusedBorderColor = Color.Transparent,
+                                        unfocusedBorderColor = Color.Transparent,
+                                        focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+                                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer
+                                    ),
+                                    enabled = !isLoading
                                 )
 
-                                // Кнопка переключения типа списка
-                                Box(
-                                    modifier = Modifier
-                                        .size(28.dp)
-                                        .clickable(
-                                            enabled = true,
-                                            interactionSource = remember { MutableInteractionSource() },
-                                            role = Role.Button,
-                                            indication = null,
-                                            onClick = {
-                                                listType = if (listType == 0) 1 else 0
-                                                saveListTypeToPreferences(listType, context)
-                                            }
-                                        ),
-                                    contentAlignment = Alignment.Center
+                                // Группа иконок справа с анимацией
+                                AnimatedVisibility(
+                                    visible = !isSearchFocused,
+                                    enter = slideInHorizontally(
+                                        initialOffsetX = { it }, // появление справа
+                                        animationSpec = tween(durationMillis = 300)
+                                    ) + fadeIn(
+                                        animationSpec = tween(durationMillis = 300)
+                                    ),
+                                    exit = slideOutHorizontally(
+                                        targetOffsetX = { it }, // скрытие вправо
+                                        animationSpec = tween(durationMillis = 300)
+                                    ) + fadeOut(
+                                        animationSpec = tween(durationMillis = 300)
+                                    )
                                 ) {
-                                    if (listType == 1) {
-                                        FlowRow(
-                                            modifier = Modifier.wrapContentSize(),
-                                            maxLines = 2,
-                                            maxItemsInEachRow = 2,
-                                            verticalArrangement = Arrangement.spacedBy(
-                                                space = 4.dp,
-                                                alignment = Alignment.CenterVertically
-                                            ),
-                                            horizontalArrangement = Arrangement.spacedBy(
-                                                space = 4.dp,
-                                                alignment = Alignment.CenterHorizontally
-                                            )
+                                    Row(
+                                        modifier = Modifier
+                                            .wrapContentSize(),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        // Кнопка фильтрации
+                                        Icon(
+                                            modifier = Modifier
+                                                .wrapContentSize()
+                                                .size(20.dp)
+                                                .clickable(
+                                                    enabled = true,
+                                                    role = Role.Button,
+                                                    indication = null,
+                                                    interactionSource = remember { MutableInteractionSource() },
+                                                    onClick = {
+                                                        showFilterDialog = true
+                                                    }),
+                                            painter = painterResource(R.drawable.filter),
+                                            contentDescription = "Filter",
+                                            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                                        )
+
+                                        // Кнопка переключения типа списка
+                                        Box(
+                                            modifier = Modifier
+                                                .size(28.dp)
+                                                .clickable(
+                                                    enabled = true,
+                                                    interactionSource = remember { MutableInteractionSource() },
+                                                    role = Role.Button,
+                                                    indication = null,
+                                                    onClick = {
+                                                        listType = if (listType == 0) 1 else 0
+                                                        saveListTypeToPreferences(listType, context)
+                                                    }
+                                                ),
+                                            contentAlignment = Alignment.Center
                                         ) {
-                                            Box(
-                                                modifier = Modifier
-                                                    .width(8.dp)
-                                                    .height(8.dp)
-                                                    .background(
-                                                        color = MaterialTheme.colorScheme.onSurface.copy(
-                                                            alpha = 0.7f
-                                                        )
+                                            if (listType == 1) {
+                                                FlowRow(
+                                                    modifier = Modifier.wrapContentSize(),
+                                                    maxLines = 2,
+                                                    maxItemsInEachRow = 2,
+                                                    verticalArrangement = Arrangement.spacedBy(
+                                                        space = 4.dp,
+                                                        alignment = Alignment.CenterVertically
+                                                    ),
+                                                    horizontalArrangement = Arrangement.spacedBy(
+                                                        space = 4.dp,
+                                                        alignment = Alignment.CenterHorizontally
                                                     )
-                                            )
-                                            Box(
-                                                modifier = Modifier
-                                                    .width(8.dp)
-                                                    .height(8.dp)
-                                                    .background(
-                                                        color = MaterialTheme.colorScheme.onSurface.copy(
-                                                            alpha = 0.7f
-                                                        )
+                                                ) {
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .width(8.dp)
+                                                            .height(8.dp)
+                                                            .background(
+                                                                color = MaterialTheme.colorScheme.onSurface.copy(
+                                                                    alpha = 0.7f
+                                                                )
+                                                            )
                                                     )
-                                            )
-                                            Box(
-                                                modifier = Modifier
-                                                    .width(8.dp)
-                                                    .height(8.dp)
-                                                    .background(
-                                                        color = MaterialTheme.colorScheme.onSurface.copy(
-                                                            alpha = 0.7f
-                                                        )
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .width(8.dp)
+                                                            .height(8.dp)
+                                                            .background(
+                                                                color = MaterialTheme.colorScheme.onSurface.copy(
+                                                                    alpha = 0.7f
+                                                                )
+                                                            )
                                                     )
-                                            )
-                                            Box(
-                                                modifier = Modifier
-                                                    .width(8.dp)
-                                                    .height(8.dp)
-                                                    .background(
-                                                        color = MaterialTheme.colorScheme.onSurface.copy(
-                                                            alpha = 0.7f
-                                                        )
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .width(8.dp)
+                                                            .height(8.dp)
+                                                            .background(
+                                                                color = MaterialTheme.colorScheme.onSurface.copy(
+                                                                    alpha = 0.7f
+                                                                )
+                                                            )
                                                     )
-                                            )
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .width(8.dp)
+                                                            .height(8.dp)
+                                                            .background(
+                                                                color = MaterialTheme.colorScheme.onSurface.copy(
+                                                                    alpha = 0.7f
+                                                                )
+                                                            )
+                                                    )
+                                                }
+                                            } else {
+                                                FlowRow(
+                                                    modifier = Modifier.wrapContentSize(),
+                                                    maxLines = 2,
+                                                    maxItemsInEachRow = 1,
+                                                    verticalArrangement = Arrangement.spacedBy(
+                                                        space = 4.dp,
+                                                        alignment = Alignment.CenterVertically
+                                                    ),
+                                                    horizontalArrangement = Arrangement.spacedBy(
+                                                        space = 4.dp,
+                                                        alignment = Alignment.CenterHorizontally
+                                                    )
+                                                ) {
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .width(20.dp)
+                                                            .height(6.dp)
+                                                            .background(
+                                                                color = MaterialTheme.colorScheme.onSurface.copy(
+                                                                    alpha = 0.7f
+                                                                )
+                                                            )
+                                                    )
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .width(20.dp)
+                                                            .height(6.dp)
+                                                            .background(
+                                                                color = MaterialTheme.colorScheme.onSurface.copy(
+                                                                    alpha = 0.7f
+                                                                )
+                                                            )
+                                                    )
+                                                }
+                                            }
                                         }
-                                    } else {
-                                        FlowRow(
-                                            modifier = Modifier.wrapContentSize(),
-                                            maxLines = 2,
-                                            maxItemsInEachRow = 1,
-                                            verticalArrangement = Arrangement.spacedBy(
-                                                space = 4.dp,
-                                                alignment = Alignment.CenterVertically
+                                    }
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+                        GroupList(
+                            groups = groups,
+                            selectedGroupId = selectedGroupId,
+                            onGroupSelected = { id -> viewModel.selectGroup(id) },
+                            onCreateGroup = { name, color ->
+                                viewModel.addFolder(Group(title = name, color = color.toLong()))
+                            },
+                            onDeleteGroup = {
+                                viewModel.deleteFolder(it)
+                            },
+                            onDialog = {
+                                needToBlur = it
+                            }
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        // Fixed Date Label and Notes List
+                        Box(
+                            modifier = Modifier.fillMaxSize()
+                        ) {
+                            // Notes List
+                            if (listType == 1) {
+                                // Две колонки
+                                LazyVerticalStaggeredGrid(
+                                    columns = StaggeredGridCells.Fixed(2),
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .padding(top = 10.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    verticalItemSpacing = 8.dp,
+                                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+                                ) {
+                                    items(displayedNotes, key = { it.id }) { note ->
+                                        NoteCard(
+                                            note = note,
+                                            viewModel = viewModel,
+                                            navController = navController,
+                                            isVisible = notesToDelete[note.id] != true,
+                                            onDelete = {
+                                                notesToDelete[note.id] = true
+                                                playSound(context, exoPlayer, R.raw.note_delete)
+                                                coroutineScope.launch {
+                                                    delay(400)
+                                                    viewModel.deleteNote(note, context)
+                                                }
+                                            },
+                                            onImageClick = { path -> fullscreenImagePath = path },
+                                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp),
+                                            groups = groups,
+                                            onGroupSelected = { note_, groupId ->
+                                                viewModel.moveNoteToGroup(note_, groupId)
+                                            }
+                                        )
+                                    }
+
+                                    item {
+                                        Spacer(modifier = Modifier.height(94.dp))
+                                    }
+                                }
+                            } else {
+                                // Одна колонка
+                                LazyColumn(
+                                    state = lazyListState,
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .padding(top = 10.dp)
+                                ) {
+                                    items(displayedNotes, key = { it.id }) { note ->
+                                        NoteCard(
+                                            note = note,
+                                            viewModel = viewModel,
+                                            navController = navController,
+                                            isVisible = notesToDelete[note.id] != true,
+                                            onDelete = {
+                                                notesToDelete[note.id] = true
+                                                playSound(context, exoPlayer, R.raw.note_delete)
+                                                coroutineScope.launch {
+                                                    delay(400)
+                                                    viewModel.deleteNote(note, context)
+                                                }
+                                            },
+                                            onImageClick = { path -> fullscreenImagePath = path },
+                                            modifier = Modifier.padding(
+                                                horizontal = 16.dp,
+                                                vertical = 8.dp
                                             ),
-                                            horizontalArrangement = Arrangement.spacedBy(
-                                                space = 4.dp,
-                                                alignment = Alignment.CenterHorizontally
-                                            )
-                                        ) {
-                                            Box(
-                                                modifier = Modifier
-                                                    .width(20.dp)
-                                                    .height(6.dp)
-                                                    .background(
-                                                        color = MaterialTheme.colorScheme.onSurface.copy(
-                                                            alpha = 0.7f
-                                                        )
-                                                    )
-                                            )
-                                            Box(
-                                                modifier = Modifier
-                                                    .width(20.dp)
-                                                    .height(6.dp)
-                                                    .background(
-                                                        color = MaterialTheme.colorScheme.onSurface.copy(
-                                                            alpha = 0.7f
-                                                        )
-                                                    )
-                                            )
+                                            groups = groups,
+                                            onGroupSelected = { note_, groupId ->
+                                                viewModel.moveNoteToGroup(note_, groupId)
+                                            }
+                                        )
+
+                                        if (note.id == filteredNotes.last().id) {
+                                            Spacer(modifier = Modifier.height(100.dp))
                                         }
                                     }
                                 }
@@ -692,108 +815,25 @@ fun NoteListScreen(
                         }
                     }
                 }
-
-                Spacer(modifier = Modifier.height(12.dp))
-                GroupList(
-                    groups = groups,
-                    selectedGroupId = selectedGroupId,
-                    onGroupSelected = { id -> viewModel.selectGroup(id) },
-                    onCreateGroup = { name, color ->
-                        viewModel.addFolder(Group(title = name, color = color.toLong()))
-                    },
-                    onDeleteGroup = {
-                        viewModel.deleteFolder(it)
-                    },
-                    onDialog = {
-                        needToBlur = it
-                    }
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // Fixed Date Label and Notes List
-                Box(
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    // Notes List
-                    if (listType == 1) {
-                        // Две колонки
-                        LazyVerticalStaggeredGrid(
-                            columns = StaggeredGridCells.Fixed(2),
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(top = 10.dp),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalItemSpacing = 8.dp,
-                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
-                        ) {
-                            items(displayedNotes, key = { it.id }) { note ->
-                                NoteCard(
-                                    note = note,
-                                    viewModel = viewModel,
-                                    navController = navController,
-                                    isVisible = notesToDelete[note.id] != true,
-                                    onDelete = {
-                                        notesToDelete[note.id] = true
-                                        playSound(context, exoPlayer, R.raw.note_delete)
-                                        coroutineScope.launch {
-                                            delay(400)
-                                            viewModel.deleteNote(note, context)
-                                        }
-                                    },
-                                    onImageClick = { path -> fullscreenImagePath = path },
-                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp),
-                                    groups = groups,
-                                    onGroupSelected = { note_, groupId ->
-                                        viewModel.moveNoteToGroup(note_, groupId)
-                                    }
-                                )
-                            }
-
-                            item {
-                                Spacer(modifier = Modifier.height(94.dp))
-                            }
-                        }
-                    } else {
-                        // Одна колонка
-                        LazyColumn(
-                            state = lazyListState,
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(top = 10.dp)
-                        ) {
-                            items(displayedNotes, key = { it.id }) { note ->
-                                NoteCard(
-                                    note = note,
-                                    viewModel = viewModel,
-                                    navController = navController,
-                                    isVisible = notesToDelete[note.id] != true,
-                                    onDelete = {
-                                        notesToDelete[note.id] = true
-                                        playSound(context, exoPlayer, R.raw.note_delete)
-                                        coroutineScope.launch {
-                                            delay(400)
-                                            viewModel.deleteNote(note, context)
-                                        }
-                                    },
-                                    onImageClick = { path -> fullscreenImagePath = path },
-                                    modifier = Modifier.padding(
-                                        horizontal = 16.dp,
-                                        vertical = 8.dp
-                                    ),
-                                    groups = groups,
-                                    onGroupSelected = { note_, groupId ->
-                                        viewModel.moveNoteToGroup(note_, groupId)
-                                    }
-                                )
-
-                                if (note.id == filteredNotes.last().id) {
-                                    Spacer(modifier = Modifier.height(100.dp))
-                                }
-                            }
-                        }
-                    }
+                MainScreenRouteState.Calendar -> {
+                    CalendarContent(
+                        notes = notes,
+                        viewModel = viewModel, // передаем viewModel
+                        navController = navController, // передаем navController
+                        groups = groups // передаем группы
+                    )
                 }
             }
+
+            BottomBar(
+                navController = navController,
+                onHomeClick = {
+                    mainScreenState = MainScreenRouteState.Main
+                },
+                onCalendarClick = {
+                    mainScreenState = MainScreenRouteState.Calendar
+                }
+            )
 
             // Loading Dialog
             if (isLoading) {
@@ -821,6 +861,117 @@ fun NoteListScreen(
             }
         }
     }
+}
+
+@Composable
+private fun CalendarContent(
+    notes: List<Note>,
+    viewModel: NoteViewModel,
+    navController: NavController,
+    groups: List<Group>
+) {
+    // Добавляем состояние для отображения заметок по выбранной дате
+    var selectedDateNotes by remember { mutableStateOf<List<Note>?>(null) }
+    var selectedDate by remember { mutableStateOf<Date?>(null) }
+
+    Column(
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.Top,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        CalendarView(
+            notes = notes,
+            onDayClick = { date, notes ->
+                selectedDate = date
+                selectedDateNotes = notes
+            },
+            modifier = Modifier
+                .padding(top = 16.dp)
+                .clip(MaterialTheme.shapes.extraLarge.copy(
+                    bottomEnd = CornerSize(0.dp),
+                    bottomStart = CornerSize(0.dp),
+                    topStart = CornerSize(38.dp),
+                    topEnd = CornerSize(38.dp)
+                ))
+        )
+
+        // Отображаем заметки выбранной даты
+        selectedDateNotes?.let { notesForDate ->
+            if (notesForDate.isNotEmpty()) {
+                Text(
+                    text = "Заметки за ${selectedDate?.let { formatCalendarDate(it) } ?: "выбранную дату"}",
+                    style = MaterialTheme.typography.headlineSmall,
+                    modifier = Modifier.padding(16.dp)
+                )
+
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                        .padding(horizontal = 16.dp)
+                ) {
+                    items(notesForDate, key = { it.id }) { note ->
+                        NoteCard(
+                            note = note,
+                            viewModel = viewModel, // Нужно передать viewModel из параметров
+                            navController = navController, // Нужно передать navController из параметров
+                            isVisible = true,
+                            onDelete = { /* обработка удаления */ },
+                            onImageClick = { /* обработка клика на изображение */ },
+                            modifier = Modifier.padding(vertical = 8.dp),
+                            groups = emptyList(), // Нужно передать группы
+                            onGroupSelected = { _, _ -> }
+                        )
+                    }
+                }
+            } else {
+                Spacer(modifier = Modifier.weight(1f))
+                Text(
+                    text = "Нет заметок за ${selectedDate?.let { formatCalendarDate(it) } ?: "выбранную дату"}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                    modifier = Modifier.padding(16.dp)
+                )
+                Spacer(modifier = Modifier.weight(1f))
+            }
+        } ?: run {
+            // Если дата не выбрана, показываем placeholder
+            Spacer(modifier = Modifier.weight(1f))
+            Text(
+                text = "Выберите дату для просмотра заметок",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                modifier = Modifier.padding(16.dp)
+            )
+            Spacer(modifier = Modifier.weight(1f))
+        }
+    }
+}
+
+// Функция для форматирования даты
+private fun formatCalendarDate(date: Date): String {
+    val calendar = Calendar.getInstance().apply { time = date }
+    val day = calendar.get(Calendar.DAY_OF_MONTH)
+    val month = calendar.get(Calendar.MONTH)
+    val year = calendar.get(Calendar.YEAR)
+
+    val monthName = when (month) {
+        Calendar.JANUARY -> "января"
+        Calendar.FEBRUARY -> "февраля"
+        Calendar.MARCH -> "марта"
+        Calendar.APRIL -> "апреля"
+        Calendar.MAY -> "мая"
+        Calendar.JUNE -> "июня"
+        Calendar.JULY -> "июля"
+        Calendar.AUGUST -> "августа"
+        Calendar.SEPTEMBER -> "сентября"
+        Calendar.OCTOBER -> "октября"
+        Calendar.NOVEMBER -> "ноября"
+        Calendar.DECEMBER -> "декабря"
+        else -> ""
+    }
+
+    return "$day $monthName $year"
 }
 
 // Компонент для опций меню

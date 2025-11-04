@@ -23,6 +23,7 @@ import ru.plumsoftware.notepad.data.worker.ReminderWorker
 import java.util.concurrent.TimeUnit
 import androidx.core.content.edit
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -248,5 +249,9 @@ class NoteViewModel(application: Application) : ViewModel() {
                 )
             }
         }
+    }
+
+    fun loading(isLoading: Boolean) {
+        _isLoading.value = isLoading
     }
 }
