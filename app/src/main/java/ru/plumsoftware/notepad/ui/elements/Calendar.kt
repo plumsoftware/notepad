@@ -1,6 +1,11 @@
 package ru.plumsoftware.notepad.ui.elements
 
 import android.annotation.SuppressLint
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -9,15 +14,18 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
@@ -49,19 +57,23 @@ import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
+// Обновляем data class для хранения информации о неделе
 data class CalendarDay(
     val date: Date,
     val isCurrentMonth: Boolean,
+    val week: Int, // Добавляем номер недели
     val notes: List<Note> = emptyList()
 )
 
 @Composable
 fun CalendarView(
     notes: List<Note> = emptyList(),
-    onDayClick: (Date, List<Note>) -> Unit = { _, _ -> },
+    selectedDate: Date? = null,
+    selectedWeek: Int? = null,
+    isScrolled: Boolean = false,
+    onDayClick: (Date, List<Note>, Int) -> Unit = { _, _, _ -> },
     @SuppressLint("ModifierParameter") modifier: Modifier = Modifier
 ) {
-    // Используем mutableStateOf для корректного обновления UI
     var currentDate by remember { mutableStateOf(Calendar.getInstance()) }
 
     val calendarDays = remember(currentDate, notes) {
@@ -89,11 +101,39 @@ fun CalendarView(
         // Days of week
         DaysOfWeekHeader()
 
-        // Calendar grid
+        // Calendar grid с группировкой по неделям
         CalendarGrid(
             days = calendarDays,
+            selectedDate = selectedDate,
+            selectedWeek = selectedWeek,
+            isScrolled = isScrolled,
             onDayClick = onDayClick
         )
+    }
+}
+
+@Composable
+private fun DaysOfWeekHeader() {
+    val daysOfWeek = listOf("Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс")
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.surfaceContainer)
+            .padding(vertical = 8.dp)
+    ) {
+        daysOfWeek.forEach { day ->
+            Text(
+                text = day,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(4.dp)
+            )
+        }
     }
 }
 
@@ -151,43 +191,59 @@ private fun CalendarHeader(
 }
 
 @Composable
-private fun DaysOfWeekHeader() {
-    val daysOfWeek = listOf("Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс")
+private fun CalendarGrid(
+    days: List<CalendarDay>,
+    selectedDate: Date? = null,
+    selectedWeek: Int? = null,
+    isScrolled: Boolean = false,
+    onDayClick: (Date, List<Note>, Int) -> Unit
+) {
+    // Группируем дни по неделям
+    val weeks = remember(days) {
+        days.chunked(7)
+    }
 
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surfaceContainer)
-            .padding(vertical = 8.dp)
+    LazyColumn(
+        modifier = Modifier.wrapContentHeight()
     ) {
-        daysOfWeek.forEach { day ->
-            Text(
-                text = day,
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Medium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(6.dp)
-            )
+        itemsIndexed(weeks) { weekIndex, weekDays ->
+            // Определяем, нужно ли показывать эту неделю
+            val shouldShowWeek = !isScrolled || weekIndex == selectedWeek
+
+            AnimatedVisibility(
+                visible = shouldShowWeek,
+                enter = expandVertically() + fadeIn(),
+                exit = shrinkVertically() + fadeOut()
+            ) {
+                WeekRow(
+                    weekDays = weekDays,
+                    selectedDate = selectedDate,
+                    onDayClick = { date, notes ->
+                        onDayClick(date, notes, weekIndex)
+                    }
+                )
+            }
         }
     }
 }
 
 @Composable
-private fun CalendarGrid(
-    days: List<CalendarDay>,
+private fun WeekRow(
+    weekDays: List<CalendarDay>,
+    selectedDate: Date? = null,
     onDayClick: (Date, List<Note>) -> Unit
 ) {
-    LazyVerticalGrid(
-        columns = GridCells.Fixed(7),
-        modifier = Modifier.wrapContentHeight()
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 2.dp)
     ) {
-        items(days) { day ->
+        weekDays.forEach { day ->
             CalendarDayItem(
                 day = day,
-                onDayClick = onDayClick
+                selectedDate = selectedDate,
+                onDayClick = onDayClick,
+                modifier = Modifier.weight(1f)
             )
         }
     }
@@ -196,15 +252,27 @@ private fun CalendarGrid(
 @Composable
 private fun CalendarDayItem(
     day: CalendarDay,
-    onDayClick: (Date, List<Note>) -> Unit
+    selectedDate: Date? = null,
+    onDayClick: (Date, List<Note>) -> Unit,
+    modifier: Modifier = Modifier
 ) {
     val dayNumber = getDayNumber(day.date)
     val hasNotes = day.notes.isNotEmpty()
 
+    // Проверяем, выбран ли этот день
+    val isSelected = selectedDate?.let {
+        isSameDay(it, day.date)
+    } ?: false
+
     Box(
-        modifier = Modifier
-            .size(44.dp)
+        modifier = modifier
+            .aspectRatio(1f)
+            .padding(2.dp)
             .clip(MaterialTheme.shapes.extraLarge)
+            .background(
+                if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+                else Color.Transparent
+            )
             .clickable(
                 enabled = true,
                 onClick = { onDayClick(day.date, day.notes) },
@@ -218,9 +286,10 @@ private fun CalendarDayItem(
         ) {
             Text(
                 text = dayNumber,
-                style = MaterialTheme.typography.bodyLarge,
+                style = MaterialTheme.typography.bodyMedium,
                 color = if (day.isCurrentMonth) {
-                    MaterialTheme.colorScheme.onSurface
+                    if (isSelected) MaterialTheme.colorScheme.primary
+                    else MaterialTheme.colorScheme.onSurface
                 } else {
                     MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
                 },
@@ -231,10 +300,11 @@ private fun CalendarDayItem(
             if (hasNotes) {
                 Box(
                     modifier = Modifier
-                        .width(6.dp)
-                        .height(6.dp)
+                        .width(4.dp)
+                        .height(4.dp)
                         .background(
-                            color = MaterialTheme.colorScheme.primary,
+                            color = if (isSelected) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.primary,
                             shape = MaterialTheme.shapes.small
                         )
                 )
@@ -245,11 +315,13 @@ private fun CalendarDayItem(
     }
 }
 
+// Обновляем функцию генерации дней для включения номера недели
 private fun generateCalendarDays(currentDate: Calendar, notes: List<Note>): List<CalendarDay> {
     val calendar = currentDate.clone() as Calendar
     calendar.set(Calendar.DAY_OF_MONTH, 1)
 
     val days = mutableListOf<CalendarDay>()
+    var currentWeek = 0
 
     // Get first day of month and adjust to Monday
     val firstDayOfMonth = calendar.get(Calendar.DAY_OF_WEEK)
@@ -262,8 +334,11 @@ private fun generateCalendarDays(currentDate: Calendar, notes: List<Note>): List
     // Add days from previous month
     calendar.add(Calendar.DAY_OF_MONTH, -daysFromPreviousMonth)
     for (i in 0 until daysFromPreviousMonth) {
-        days.add(CalendarDay(calendar.time, false, getNotesForDate(notes, calendar.time)))
+        days.add(CalendarDay(calendar.time, false, currentWeek, getNotesForDate(notes, calendar.time)))
         calendar.add(Calendar.DAY_OF_MONTH, 1)
+        if (calendar.get(Calendar.DAY_OF_WEEK) == Calendar.MONDAY) {
+            currentWeek++
+        }
     }
 
     // Reset to first day of current month
@@ -273,18 +348,89 @@ private fun generateCalendarDays(currentDate: Calendar, notes: List<Note>): List
     // Add days of current month
     val daysInMonth = calendar.getActualMaximum(Calendar.DAY_OF_MONTH)
     for (i in 1..daysInMonth) {
-        days.add(CalendarDay(calendar.time, true, getNotesForDate(notes, calendar.time)))
+        days.add(CalendarDay(calendar.time, true, currentWeek, getNotesForDate(notes, calendar.time)))
         calendar.add(Calendar.DAY_OF_MONTH, 1)
+        if (calendar.get(Calendar.DAY_OF_WEEK) == Calendar.MONDAY) {
+            currentWeek++
+        }
     }
 
     // Add days from next month to complete the grid (42 cells total for 6 weeks)
     val remainingDays = 42 - days.size
     for (i in 0 until remainingDays) {
-        days.add(CalendarDay(calendar.time, false, getNotesForDate(notes, calendar.time)))
+        days.add(CalendarDay(calendar.time, false, currentWeek, getNotesForDate(notes, calendar.time)))
         calendar.add(Calendar.DAY_OF_MONTH, 1)
+        if (calendar.get(Calendar.DAY_OF_WEEK) == Calendar.MONDAY) {
+            currentWeek++
+        }
     }
 
     return days
+}
+
+// Вспомогательная функция для сравнения дат
+private fun isSameDay(date1: Date, date2: Date): Boolean {
+    val cal1 = Calendar.getInstance().apply { time = date1 }
+    val cal2 = Calendar.getInstance().apply { time = date2 }
+    return cal1.get(Calendar.YEAR) == cal2.get(Calendar.YEAR) &&
+            cal1.get(Calendar.MONTH) == cal2.get(Calendar.MONTH) &&
+            cal1.get(Calendar.DAY_OF_MONTH) == cal2.get(Calendar.DAY_OF_MONTH)
+}
+
+// Функция для форматирования даты (добавьте если нет)
+private fun formatCalendarDate(date: Date): String {
+    val calendar = Calendar.getInstance().apply { time = date }
+    val day = calendar.get(Calendar.DAY_OF_MONTH)
+    val month = calendar.get(Calendar.MONTH)
+    val year = calendar.get(Calendar.YEAR)
+
+    val monthName = when (month) {
+        Calendar.JANUARY -> "января"
+        Calendar.FEBRUARY -> "февраля"
+        Calendar.MARCH -> "марта"
+        Calendar.APRIL -> "апреля"
+        Calendar.MAY -> "мая"
+        Calendar.JUNE -> "июня"
+        Calendar.JULY -> "июля"
+        Calendar.AUGUST -> "августа"
+        Calendar.SEPTEMBER -> "сентября"
+        Calendar.OCTOBER -> "октября"
+        Calendar.NOVEMBER -> "ноября"
+        Calendar.DECEMBER -> "декабря"
+        else -> ""
+    }
+
+    return "$day $monthName $year"
+}
+
+private fun getYear(calendar: Calendar): String {
+    return calendar.get(Calendar.YEAR).toString()
+}
+
+private fun getDayNumber(date: Date): String {
+    val calendar = Calendar.getInstance()
+    calendar.time = date
+    return calendar.get(Calendar.DAY_OF_MONTH).toString()
+}
+
+// Исправленная функция для получения названия месяца в именительном падеже
+private fun getMonthName(calendar: Calendar): String {
+    val month = calendar.get(Calendar.MONTH)
+    return when (month) {
+        Calendar.JANUARY -> "Январь"
+        Calendar.FEBRUARY -> "Февраль"
+        Calendar.MARCH -> "Март"
+        Calendar.APRIL -> "Апрель"
+        Calendar.MAY -> "Май"
+        Calendar.JUNE -> "Июнь"
+        Calendar.JULY -> "Июль"
+        Calendar.AUGUST -> "Август"
+        Calendar.SEPTEMBER -> "Сентябрь"
+        Calendar.OCTOBER -> "Октябрь"
+        Calendar.NOVEMBER -> "Ноябрь"
+        Calendar.DECEMBER -> "Декабрь"
+        else -> ""
+    }
 }
 
 private fun getNotesForDate(notes: List<Note>, date: Date): List<Note> {
@@ -317,34 +463,4 @@ private fun getNotesForDate(notes: List<Note>, date: Date): List<Note> {
             targetYear == reminderYear && targetMonth == reminderMonth && targetDay == reminderDay
         }
     }
-}
-
-// Исправленная функция для получения названия месяца в именительном падеже
-private fun getMonthName(calendar: Calendar): String {
-    val month = calendar.get(Calendar.MONTH)
-    return when (month) {
-        Calendar.JANUARY -> "Январь"
-        Calendar.FEBRUARY -> "Февраль"
-        Calendar.MARCH -> "Март"
-        Calendar.APRIL -> "Апрель"
-        Calendar.MAY -> "Май"
-        Calendar.JUNE -> "Июнь"
-        Calendar.JULY -> "Июль"
-        Calendar.AUGUST -> "Август"
-        Calendar.SEPTEMBER -> "Сентябрь"
-        Calendar.OCTOBER -> "Октябрь"
-        Calendar.NOVEMBER -> "Ноябрь"
-        Calendar.DECEMBER -> "Декабрь"
-        else -> ""
-    }
-}
-
-private fun getYear(calendar: Calendar): String {
-    return calendar.get(Calendar.YEAR).toString()
-}
-
-private fun getDayNumber(date: Date): String {
-    val calendar = Calendar.getInstance()
-    calendar.time = date
-    return calendar.get(Calendar.DAY_OF_MONTH).toString()
 }

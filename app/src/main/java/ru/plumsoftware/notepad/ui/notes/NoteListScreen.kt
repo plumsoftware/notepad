@@ -59,6 +59,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.rounded.Home
@@ -873,6 +874,15 @@ private fun CalendarContent(
     // Добавляем состояние для отображения заметок по выбранной дате
     var selectedDateNotes by remember { mutableStateOf<List<Note>?>(null) }
     var selectedDate by remember { mutableStateOf<Date?>(null) }
+    var selectedWeek by remember { mutableStateOf<Int?>(null) }
+    var isScrolled by remember { mutableStateOf(false) }
+
+    val lazyListState = rememberLazyListState()
+
+    // Отслеживаем скролл
+    LaunchedEffect(lazyListState.firstVisibleItemIndex) {
+        isScrolled = lazyListState.firstVisibleItemIndex > 0
+    }
 
     Column(
         modifier = Modifier.fillMaxSize(),
@@ -881,9 +891,13 @@ private fun CalendarContent(
     ) {
         CalendarView(
             notes = notes,
-            onDayClick = { date, notes ->
+            selectedDate = selectedDate,
+            selectedWeek = selectedWeek,
+            isScrolled = isScrolled,
+            onDayClick = { date, notes, week ->
                 selectedDate = date
                 selectedDateNotes = notes
+                selectedWeek = week
             },
             modifier = Modifier
                 .padding(top = 16.dp)
@@ -897,42 +911,79 @@ private fun CalendarContent(
 
         // Отображаем заметки выбранной даты
         selectedDateNotes?.let { notesForDate ->
-            if (notesForDate.isNotEmpty()) {
-                Text(
-                    text = "Заметки за ${selectedDate?.let { formatCalendarDate(it) } ?: "выбранную дату"}",
-                    style = MaterialTheme.typography.headlineSmall,
-                    modifier = Modifier.padding(16.dp)
-                )
+            LazyColumn(
+                state = lazyListState,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 16.dp)
+            ) {
+                // Заголовок
+                item {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = "Заметки за ${selectedDate?.let { formatCalendarDate(it) } ?: "выбранную дату"}",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
 
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f)
-                        .padding(horizontal = 16.dp)
-                ) {
+                        // Кнопка возврата к полному календарю
+                        IconButton(
+                            onClick = {
+                                selectedDateNotes = null
+                                selectedDate = null
+                                selectedWeek = null
+                            }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Close"
+                            )
+                        }
+                    }
+                }
+
+                if (notesForDate.isNotEmpty()) {
                     items(notesForDate, key = { it.id }) { note ->
                         NoteCard(
                             note = note,
-                            viewModel = viewModel, // Нужно передать viewModel из параметров
-                            navController = navController, // Нужно передать navController из параметров
+                            viewModel = viewModel,
+                            navController = navController,
                             isVisible = true,
                             onDelete = { /* обработка удаления */ },
                             onImageClick = { /* обработка клика на изображение */ },
                             modifier = Modifier.padding(vertical = 8.dp),
-                            groups = emptyList(), // Нужно передать группы
-                            onGroupSelected = { _, _ -> }
+                            groups = groups,
+                            onGroupSelected = { note_, groupId ->
+                                viewModel.moveNoteToGroup(note_, groupId)
+                            }
                         )
                     }
+                } else {
+                    item {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(200.dp),
+                            verticalArrangement = Arrangement.Center,
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                text = "Нет заметок за ${selectedDate?.let { formatCalendarDate(it) } ?: "выбранную дату"}",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                            )
+                        }
+                    }
                 }
-            } else {
-                Spacer(modifier = Modifier.weight(1f))
-                Text(
-                    text = "Нет заметок за ${selectedDate?.let { formatCalendarDate(it) } ?: "выбранную дату"}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                    modifier = Modifier.padding(16.dp)
-                )
-                Spacer(modifier = Modifier.weight(1f))
+
+                item {
+                    Spacer(modifier = Modifier.height(100.dp))
+                }
             }
         } ?: run {
             // Если дата не выбрана, показываем placeholder
