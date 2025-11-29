@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Блокнот</string>
+    <string name="app_name">Ежедневник</string>
 
     <string name="note_search">Поиск заметок</string>
     <string name="ok_">OK</string>

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Notebook</string>
+    <string name="app_name">Daily planner</string>
     <string name="note_search">Search notes</string>
     <string name="ok_">OK</string>
     <string name="cansel_">Cancel</string>

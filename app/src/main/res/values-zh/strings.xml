@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">笔记本</string>
+    <string name="app_name">日记本</string>
     <string name="note_search">搜索笔记</string>
     <string name="ok_">确定</string>
     <string name="cansel_">取消</string>
