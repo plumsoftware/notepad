@@ -90,4 +90,12 @@ dependencies {
 
     //noinspection MobileAdsSdkVersion
     implementation(libs.mobileads)
+
+    // Glance widget
+    // For AppWidgets support
+    implementation(libs.androidx.glance.appwidget)
+    // For interop APIs with Material 3
+    implementation(libs.androidx.glance.material3)
+    // For interop APIs with Material 2
+    implementation(libs.androidx.glance.material)
 }

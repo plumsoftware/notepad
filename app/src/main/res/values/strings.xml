@@ -115,6 +115,10 @@
     <string name="november_genitive">ноября</string>
     <string name="december_genitive">декабря</string>
 
+    <!--    Add note widget-->
+    <string name="widget_add_note_description">Быстрое добавление заметки</string>
+    <string name="widget_add_note_label">Добавить заметку</string>
+
     <!--    About app-->
     <string name="app_version_">Версия %s</string>
 

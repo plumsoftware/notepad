@@ -80,6 +80,9 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        // События от виджета
+        val openAddNote = intent.getBooleanExtra("OPEN_ADD_NOTE", false)
+
         // Загружаем счетчик из SharedPreferences
         val sharedPreferences = getSharedPreferences("app_prefs", MODE_PRIVATE)
         opensForAd = sharedPreferences.getInt("open_counter", 0)
@@ -224,7 +227,7 @@ class MainActivity : ComponentActivity() {
                         }
                     ) {
                         val viewModel: NoteViewModel = viewModel(
-                            factory = NoteViewModelFactory(application)
+                            factory = NoteViewModelFactory(application, openAddNote)
                         )
                         NoteListScreen(navController, viewModel, scrollToNoteId = noteId)
                     }
@@ -245,7 +248,7 @@ class MainActivity : ComponentActivity() {
                         }
                     ) {
                         val viewModel: NoteViewModel = viewModel(
-                            factory = NoteViewModelFactory(application)
+                            factory = NoteViewModelFactory(application, openAddNote)
                         )
                         AddNoteScreen(this@MainActivity, navController, viewModel)
                     }
@@ -307,7 +310,7 @@ class MainActivity : ComponentActivity() {
                         }
                     ) { backStackEntry ->
                         val viewModel: NoteViewModel = viewModel(
-                            factory = NoteViewModelFactory(application)
+                            factory = NoteViewModelFactory(application, openAddNote)
                         )
                         val noteId = backStackEntry.arguments?.getString("noteId")
                         val note = viewModel.notes.value.find { it.id == noteId }

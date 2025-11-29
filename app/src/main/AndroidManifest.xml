@@ -40,6 +40,16 @@
             </intent-filter>
         </activity>
 
+        <receiver android:name=".widget.add_note.AddNoteWidgetReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/add_note_widget_config" />
+        </receiver>
+
         <meta-data
             android:name="com.yandex.mobile.ads.AUTOMATIC_SDK_INITIALIZATION"
             android:value="false" />

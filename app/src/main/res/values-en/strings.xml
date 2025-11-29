@@ -118,6 +118,10 @@
     <string name="november_genitive">November</string>
     <string name="december_genitive">December</string>
 
+    <!--    Add note widget-->
+    <string name="widget_add_note_description">Quick note addition</string>
+    <string name="widget_add_note_label">Add Note</string>
+
     <array name="com_google_android_gms_fonts_certs">
         <item>@array/com_google_android_gms_fonts_certs_dev</item>
         <item>@array/com_google_android_gms_fonts_certs_prod</item>

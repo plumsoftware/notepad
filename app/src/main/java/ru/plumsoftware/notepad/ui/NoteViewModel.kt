@@ -27,7 +27,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class NoteViewModel(application: Application) : ViewModel() {
+class NoteViewModel(application: Application, openAddNote: Boolean) : ViewModel() {
     private val db = NoteDatabase.getDatabase(application)
     private val workManager = WorkManager.getInstance(application)
     private val _notes = MutableStateFlow<List<Note>>(emptyList())
@@ -37,6 +37,9 @@ class NoteViewModel(application: Application) : ViewModel() {
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
     private val appContext = application.applicationContext
+
+    private val _openAddNoteScreen = MutableStateFlow(openAddNote)
+    val openAddNoteScreen: StateFlow<Boolean> = _openAddNoteScreen
 
     // --- РЕЙТИНГ ---
     val needToShowRateDialog = MutableStateFlow(false)

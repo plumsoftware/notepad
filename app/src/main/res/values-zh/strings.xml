@@ -27,7 +27,7 @@
     <string name="empty_notes_list">笔记列表为空</string>
     <string name="empty_notes_description">空的笔记列表</string>
 
-<!--    Filter dialog-->
+    <!--    Filter dialog-->
     <string name="filter_dialog_title">优先显示</string>
     <string name="filter_option_new">新的</string>
     <string name="filter_option_old">旧的</string>
@@ -35,22 +35,22 @@
     <string name="filter_option_with_photos">带照片的</string>
     <string name="filter_option_with_tasks">带任务的</string>
 
-<!--    Menu-->
+    <!--    Menu-->
     <string name="menu">菜单</string>
     <string name="about_app">关于应用</string>
     <string name="settings">设置</string>
     <string name="rate_app">评价应用</string>
     <string name="daily_planner">日记本</string>
 
-<!--    Tasks-->
+    <!--    Tasks-->
     <string name="add_task">添加任务</string>
     <string name="add_task_placeholder">输入笔记内容</string>
     <string name="add">添加</string>
 
-<!--    Settings-->
+    <!--    Settings-->
     <string name="dark_theme">深色主题</string>
 
-<!--    Group-->
+    <!--    Group-->
     <string name="add_group">创建文件夹</string>
     <string name="all">所有笔记</string>
     <string name="create_group">创建文件夹</string>
@@ -59,7 +59,7 @@
     <string name="create">创建</string>
     <string name="clear">清除</string>
 
-<!--    Add note content desc-->
+    <!--    Add note content desc-->
     <string name="back_button">返回</string>
     <string name="clear_text">清除文本</string>
     <string name="note_photo">笔记照片</string>
@@ -67,13 +67,13 @@
     <string name="add_photo">添加照片</string>
     <string name="delete_task">删除任务</string>
 
-<!--    Rate-->
+    <!--    Rate-->
     <string name="rate_app_title">给应用评分</string>
 
-<!--    About app-->
+    <!--    About app-->
     <string name="app_version_">版本 %s</string>
 
-<!--    Calendar -->
+    <!--    Calendar -->
     <string name="selected_date">所选日期</string>
     <string name="calendar_notes_for_date">%s 的笔记</string>
     <string name="calendar_no_notes_for_date">%s 没有笔记</string>
@@ -116,6 +116,10 @@
     <string name="october_genitive">十月</string>
     <string name="november_genitive">十一月</string>
     <string name="december_genitive">十二月</string>
+
+    <!--    Add note widget-->
+    <string name="widget_add_note_description">快速添加笔记</string>
+    <string name="widget_add_note_label">添加笔记</string>
 
     <array name="com_google_android_gms_fonts_certs">
         <item>@array/com_google_android_gms_fonts_certs_dev</item>

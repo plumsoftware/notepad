@@ -21,7 +21,7 @@ sealed class PlatformConfig (
     )
 
     data class GooglePlayConfig (
-        override val rateUrl: String = "",
+        override val rateUrl: String = "https://www.rustore.ru/catalog/app/ru.plumsoftware.notepad",
         override val adsConfig: AdsConfig = AdsConfig.GooglePlayAds()
     ) : PlatformConfig (
         adsConfig = adsConfig,

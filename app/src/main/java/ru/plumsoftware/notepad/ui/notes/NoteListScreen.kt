@@ -163,6 +163,7 @@ fun NoteListScreen(
     val previousNotesCount = remember { mutableStateOf(0) }
     val selectedGroupId by viewModel.selectedGroupId.collectAsState() // "0" = "All"
     var mainScreenState by remember { mutableStateOf (MainScreenRouteState.Main) }
+    val instaOpenAddNoteScreen = viewModel.openAddNoteScreen.collectAsState()
 
     // Добавляем состояние для BottomSheet меню
     var showMenuBottomSheet by remember { mutableStateOf(false) }
@@ -247,6 +248,12 @@ fun NoteListScreen(
             if (index >= 0) {
                 lazyListState.animateScrollToItem(index)
             }
+        }
+    }
+
+    LaunchedEffect(key1 = instaOpenAddNoteScreen) {
+        if (instaOpenAddNoteScreen.value) {
+            navController.navigate(Screen.AddNote.route)
         }
     }
 
