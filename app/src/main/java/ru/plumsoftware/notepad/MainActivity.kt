@@ -158,6 +158,9 @@ class MainActivity : ComponentActivity() {
                         if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.S_V2) {
                             add(Manifest.permission.WRITE_EXTERNAL_STORAGE)
                         }
+                        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.S_V2) {
+                            add(Manifest.permission.READ_EXTERNAL_STORAGE)
+                        }
                     }.toTypedArray()
                 }
 

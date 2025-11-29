@@ -12,6 +12,7 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -41,6 +42,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -203,26 +205,10 @@ fun NoteListScreen(
         needToBlur = showFilterDialog
     }
 
-    LaunchedEffect(key1 = showFilterDialog) {
-        needToBlur = showFilterDialog
-    }
-
     LaunchedEffect(key1 = mainScreenState) {
         viewModel.loading(true)
         delay(500L)
         viewModel.loading(false)
-    }
-
-//    LaunchedEffect(key1 = isLoading) {
-//        needToBlur = isLoading
-//    }
-
-    //    Rate
-    LaunchedEffect(notes.size, needToShowRateDialog) {
-        if (notes.size > 1 && needToShowRateDialog) {
-            showMenuBottomSheet = false
-            showRateBottomSheet = true
-        }
     }
 
     // Trigger animation for date change
@@ -361,26 +347,19 @@ fun NoteListScreen(
         modifier = Modifier.blur(
             radius = if (needToBlur) 10.dp else 0.dp
         ),
+        bottomBar = {
+            BottomBar(
+                navController = navController,
+                onHomeClick = {
+                    mainScreenState = MainScreenRouteState.Main
+                },
+                onCalendarClick = {
+                    mainScreenState = MainScreenRouteState.Calendar
+                }
+            )
+        },
         floatingActionButton = {
-//            FloatingActionButton(
-//                onClick = { navController.navigate(Screen.AddNote.route) },
-//                containerColor = MaterialTheme.colorScheme.primary,
-//                contentColor = MaterialTheme.colorScheme.onPrimary,
-//                shape = CircleShape,
-//                elevation = FloatingActionButtonDefaults.elevation(
-//                    defaultElevation = 0.dp,
-//                    pressedElevation = 0.dp
-//                ),
-//                modifier = Modifier
-//                    .size(54.dp)
-//            ) {
-//                Icon(
-//                    modifier = Modifier.size(24.dp),
-//                    painter = painterResource(R.drawable.plus),
-//                    contentDescription = "Add Note",
-//                    tint = MaterialTheme.colorScheme.onPrimary
-//                )
-//            }
+            // ... код без изменений ...
         }
     ) { padding ->
         // Добавляем обработчик клика вне текстового поля
@@ -455,8 +434,8 @@ fun NoteListScreen(
                                                     showMenuBottomSheet = true
                                                 }
                                             ),
-                                        painter = painterResource(R.drawable.house_fill),
-                                        contentDescription = stringResource(R.string.menu),
+                                        imageVector = Icons.Filled.Settings,
+                                        contentDescription = stringResource(R.string.settings),
                                         tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                                     )
                                 }
@@ -695,82 +674,89 @@ fun NoteListScreen(
 
                         // Fixed Date Label and Notes List
                         Box(
-                            modifier = Modifier.fillMaxSize()
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .weight(1f) // Добавляем weight чтобы занимать оставшееся пространство
                         ) {
-                            // Notes List
-                            if (listType == 1) {
-                                // Две колонки
-                                LazyVerticalStaggeredGrid(
-                                    columns = StaggeredGridCells.Fixed(2),
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .padding(top = 10.dp),
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                    verticalItemSpacing = 8.dp,
-                                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
-                                ) {
-                                    items(displayedNotes, key = { it.id }) { note ->
-                                        NoteCard(
-                                            note = note,
-                                            viewModel = viewModel,
-                                            navController = navController,
-                                            isVisible = notesToDelete[note.id] != true,
-                                            onDelete = {
-                                                notesToDelete[note.id] = true
-                                                playSound(context, exoPlayer, R.raw.note_delete)
-                                                coroutineScope.launch {
-                                                    delay(400)
-                                                    viewModel.deleteNote(note, context)
-                                                }
-                                            },
-                                            onImageClick = { path -> fullscreenImagePath = path },
-                                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp),
-                                            groups = groups,
-                                            onGroupSelected = { note_, groupId ->
-                                                viewModel.moveNoteToGroup(note_, groupId)
-                                            }
-                                        )
-                                    }
-
-                                    item {
-                                        Spacer(modifier = Modifier.height(94.dp))
-                                    }
-                                }
+                            // Отображаем пустое состояние, если заметок нет и нет загрузки
+                            if (displayedNotes.isEmpty() && !isLoading) {
+                                EmptyNotesState()
                             } else {
-                                // Одна колонка
-                                LazyColumn(
-                                    state = lazyListState,
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .padding(top = 10.dp)
-                                ) {
-                                    items(displayedNotes, key = { it.id }) { note ->
-                                        NoteCard(
-                                            note = note,
-                                            viewModel = viewModel,
-                                            navController = navController,
-                                            isVisible = notesToDelete[note.id] != true,
-                                            onDelete = {
-                                                notesToDelete[note.id] = true
-                                                playSound(context, exoPlayer, R.raw.note_delete)
-                                                coroutineScope.launch {
-                                                    delay(400)
-                                                    viewModel.deleteNote(note, context)
+                                // Notes List
+                                if (listType == 1) {
+                                    // Две колонки
+                                    LazyVerticalStaggeredGrid(
+                                        columns = StaggeredGridCells.Fixed(2),
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .padding(top = 10.dp),
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        verticalItemSpacing = 8.dp,
+                                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+                                    ) {
+                                        items(displayedNotes, key = { it.id }) { note ->
+                                            NoteCard(
+                                                note = note,
+                                                viewModel = viewModel,
+                                                navController = navController,
+                                                isVisible = notesToDelete[note.id] != true,
+                                                onDelete = {
+                                                    notesToDelete[note.id] = true
+                                                    playSound(context, exoPlayer, R.raw.note_delete)
+                                                    coroutineScope.launch {
+                                                        delay(400)
+                                                        viewModel.deleteNote(note, context)
+                                                    }
+                                                },
+                                                onImageClick = { path -> fullscreenImagePath = path },
+                                                modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp),
+                                                groups = groups,
+                                                onGroupSelected = { note_, groupId ->
+                                                    viewModel.moveNoteToGroup(note_, groupId)
                                                 }
-                                            },
-                                            onImageClick = { path -> fullscreenImagePath = path },
-                                            modifier = Modifier.padding(
-                                                horizontal = 16.dp,
-                                                vertical = 8.dp
-                                            ),
-                                            groups = groups,
-                                            onGroupSelected = { note_, groupId ->
-                                                viewModel.moveNoteToGroup(note_, groupId)
-                                            }
-                                        )
+                                            )
+                                        }
 
-                                        if (note.id == filteredNotes.last().id) {
-                                            Spacer(modifier = Modifier.height(100.dp))
+                                        item {
+                                            Spacer(modifier = Modifier.height(94.dp))
+                                        }
+                                    }
+                                } else {
+                                    // Одна колонка
+                                    LazyColumn(
+                                        state = lazyListState,
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .padding(top = 10.dp)
+                                    ) {
+                                        items(displayedNotes, key = { it.id }) { note ->
+                                            NoteCard(
+                                                note = note,
+                                                viewModel = viewModel,
+                                                navController = navController,
+                                                isVisible = notesToDelete[note.id] != true,
+                                                onDelete = {
+                                                    notesToDelete[note.id] = true
+                                                    playSound(context, exoPlayer, R.raw.note_delete)
+                                                    coroutineScope.launch {
+                                                        delay(400)
+                                                        viewModel.deleteNote(note, context)
+                                                    }
+                                                },
+                                                onImageClick = { path -> fullscreenImagePath = path },
+                                                modifier = Modifier.padding(
+                                                    horizontal = 16.dp,
+                                                    vertical = 8.dp
+                                                ),
+                                                groups = groups,
+                                                onGroupSelected = { note_, groupId ->
+                                                    viewModel.moveNoteToGroup(note_, groupId)
+                                                }
+                                            )
+
+                                            if (note.id == filteredNotes.last().id) {
+                                                Spacer(modifier = Modifier.height(100.dp))
+                                            }
                                         }
                                     }
                                 }
@@ -798,16 +784,6 @@ fun NoteListScreen(
                 }
             }
 
-            BottomBar(
-                navController = navController,
-                onHomeClick = {
-                    mainScreenState = MainScreenRouteState.Main
-                },
-                onCalendarClick = {
-                    mainScreenState = MainScreenRouteState.Calendar
-                }
-            )
-
             // Loading Dialog
             if (isLoading) {
                 LoadingDialog()
@@ -833,6 +809,30 @@ fun NoteListScreen(
                 )
             }
         }
+    }
+}
+
+// Компонент для отображения пустого состояния
+@Composable
+fun EmptyNotesState() {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Image(
+            painter = painterResource(R.drawable.empty_notes_list),
+            contentDescription = stringResource(R.string.empty_notes_description),
+            modifier = Modifier.size(80.dp)
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(
+            text = stringResource(R.string.empty_notes_list),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+        )
     }
 }
 

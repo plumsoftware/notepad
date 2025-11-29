@@ -6,9 +6,11 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -20,6 +22,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.rounded.Home
+import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -35,172 +39,150 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import androidx.navigation.compose.rememberNavController
 import ru.plumsoftware.notepad.R
 import ru.plumsoftware.notepad.ui.Screen
 
 @Composable
-fun BoxScope.BottomBar(
+fun BottomBar(
     navController: NavController,
     onHomeClick: () -> Unit,
     onCalendarClick: () -> Unit
 ) {
-
     var selected by remember { mutableIntStateOf(0) }
 
     LaunchedEffect(key1 = selected) {
         when (selected) {
-            0 -> {
-                onHomeClick()
-            }
-            1 -> {
-                onCalendarClick()
-            }
+            0 -> onHomeClick()
+            1 -> onCalendarClick()
         }
     }
 
-    Box(
+    Column(
         modifier = Modifier
             .fillMaxWidth()
-            .height(90.dp)
-            .align(Alignment.BottomCenter)
+            .wrapContentHeight()
+            .padding(bottom = 24.dp)
+            .background(MaterialTheme.colorScheme.background)
     ) {
-        // Фоновый слой с градиентом
-        Box(
+        // Полоска сверху
+        HorizontalDivider(
+            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+            thickness = 1.dp,
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        // Основной контент с иконками
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = 0.dp)
+                .height(80.dp)
+                .padding(horizontal = 32.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
+            // Левая кнопка - дом
             Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .fillMaxHeight()
+                    .size(40.dp)
+                    .clickable(
+                        role = Role.Button,
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = { selected = 0 }
+                    )
                     .background(
-                        brush = Brush.verticalGradient(
-                            colors = listOf(
-                                Color.Transparent,
-                                Color.Gray.copy(alpha = 0.7f)
-                            )
-                        )
-                    )
-                    .blur(10.dp)
-            )
-        }
-
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 6.dp)
-        ) {
-            // Основной контент
-            Row(
-                modifier = Modifier
-                    .wrapContentSize()
-                    .background(MaterialTheme.colorScheme.background, shape = CircleShape)
-                    .padding(horizontal = 6.dp, vertical = 6.dp)
-                    .align(Alignment.TopCenter),
-                horizontalArrangement = Arrangement.spacedBy(
-                    36.dp,
-                    alignment = Alignment.CenterHorizontally
-                ),
-                verticalAlignment = Alignment.CenterVertically
+                        color = if (selected == 0) MaterialTheme.colorScheme.surfaceContainer
+                        else Color.Transparent,
+                        shape = CircleShape
+                    ),
+                contentAlignment = Alignment.Center
             ) {
-                // Левая кнопка - корзина
-                Box(
-                    modifier = Modifier
-                        .size(38.dp)
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null,
-                            onClick = { selected = 0 }
-                        )
-                        .background(
-                            color = if (selected == 0) MaterialTheme.colorScheme.surfaceContainer
-                            else Color.Transparent,
-                            shape = CircleShape
-                        )
-                        .clip(MaterialTheme.shapes.medium),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        modifier = Modifier.size(24.dp),
-                        painter = painterResource(R.drawable.ui_checks),
-                        contentDescription = "Главная страница",
-                        tint = if (selected == 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
-                    )
-                }
+                Icon(
+                    modifier = Modifier.size(24.dp),
+                    painter = painterResource(R.drawable.house_fill),
+                    contentDescription = stringResource(R.string.menu),
+                    tint = if (selected == 0) MaterialTheme.colorScheme.primary
+                    else MaterialTheme.colorScheme.onSurface
+                )
+            }
 
-                // Центральная кнопка - плюс
-                Box(
-                    modifier = Modifier
-                        .size(38.dp)
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null,
-                            onClick = { /* Обработка нажатия на плюс */ }
-                        )
-                        .background(
-                            color = MaterialTheme.colorScheme.primary,
-                            shape = CircleShape
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        modifier = Modifier.size(24.dp),
-                        painter = painterResource(R.drawable.plus),
-                        contentDescription = "Добавить",
-                        tint = MaterialTheme.colorScheme.onPrimary
-                    )
-                }
+            // Центральная кнопка - плюс
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(CircleShape)
+                    .clickable(
+                        enabled = true,
+                        role = Role.Button
+                    ) {
+                        navController.navigate(Screen.AddNote.route)
+                    }
+                    .background(
+                        color = MaterialTheme.colorScheme.primary,
+                        shape = CircleShape
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    modifier = Modifier.size(24.dp),
+                    painter = painterResource(R.drawable.plus),
+                    contentDescription = stringResource(R.string.add),
+                    tint = MaterialTheme.colorScheme.onPrimary
+                )
+            }
 
-                // Правая кнопка - дом
-                Box(
-                    modifier = Modifier
-                        .size(38.dp)
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null,
-                            onClick = { selected = 1 }
-                        )
-                        .background(
-                            color = if (selected == 1) MaterialTheme.colorScheme.surfaceContainer else Color.Transparent,
-                            shape = CircleShape
-                        )
-                        .clip(MaterialTheme.shapes.medium),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        modifier = Modifier.size(24.dp),
-                        painter = painterResource(R.drawable.calendar2_week_fill),
-                        contentDescription = "Ежедневник",
-                        tint = if (selected == 1) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+            // Правая кнопка - календарь
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clickable(
+                        role = Role.Button,
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = { selected = 1 }
                     )
-                }
+                    .background(
+                        color = if (selected == 1) MaterialTheme.colorScheme.surfaceContainer
+                        else Color.Transparent,
+                        shape = CircleShape
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    modifier = Modifier.size(24.dp),
+                    painter = painterResource(R.drawable.calendar2_week_fill),
+                    contentDescription = stringResource(R.string.daily_planner),
+                    tint = if (selected == 1) MaterialTheme.colorScheme.primary
+                    else MaterialTheme.colorScheme.onSurface
+                )
             }
         }
+    }
+}
 
+// Preview функция
+@Preview(showBackground = true)
+@Composable
+fun BottomBarPreview() {
+    // Создаем mock NavController для Preview
+    val mockNavController = rememberNavController()
+
+    MaterialTheme {
         Box(
             modifier = Modifier
-                .size(64.dp)
-                .align(Alignment.TopCenter)
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                    onClick = { navController.navigate(Screen.AddNote.route) }
-                )
-                .background(
-                    color = MaterialTheme.colorScheme.primary,
-                    shape = CircleShape
-                ),
-            contentAlignment = Alignment.Center
+                .fillMaxSize()
+                .background(Color.LightGray)
         ) {
-            Icon(
-                modifier = Modifier.size(28.dp),
-                painter = painterResource(R.drawable.plus),
-                contentDescription = "Добавить",
-                tint = MaterialTheme.colorScheme.onPrimary
+            BottomBar(
+                navController = mockNavController,
+                onHomeClick = { println("Home clicked") },
+                onCalendarClick = { println("Calendar clicked") }
             )
         }
     }

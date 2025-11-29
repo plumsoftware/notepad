@@ -10,7 +10,7 @@
     <string name="save">保存</string>
     <string name="title">标题</string>
     <string name="desc">描述</string>
-    <string name="remind">提醒</string>
+    <string name="remind">提醒 🔔</string>
     <string name="reminder">提醒：%s</string>
     <string name="photos">照片</string>
     <string name="tasks">任务</string>
@@ -23,6 +23,9 @@
     <string name="go">前往</string>
     <string name="delete">删除</string>
     <string name="move_to_folder">移动到文件夹</string>
+
+    <string name="empty_notes_list">笔记列表为空</string>
+    <string name="empty_notes_description">空的笔记列表</string>
 
 <!--    Filter dialog-->
     <string name="filter_dialog_title">优先显示</string>
@@ -37,6 +40,7 @@
     <string name="about_app">关于应用</string>
     <string name="settings">设置</string>
     <string name="rate_app">评价应用</string>
+    <string name="daily_planner">日记本</string>
 
 <!--    Tasks-->
     <string name="add_task">添加任务</string>
@@ -54,6 +58,14 @@
     <string name="enter_group_name">输入名称</string>
     <string name="create">创建</string>
     <string name="clear">清除</string>
+
+<!--    Add note content desc-->
+    <string name="back_button">返回</string>
+    <string name="clear_text">清除文本</string>
+    <string name="note_photo">笔记照片</string>
+    <string name="delete_photo">删除照片</string>
+    <string name="add_photo">添加照片</string>
+    <string name="delete_task">删除任务</string>
 
 <!--    Rate-->
     <string name="rate_app_title">给应用评分</string>

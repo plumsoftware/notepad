@@ -19,4 +19,12 @@ sealed class PlatformConfig (
         adsConfig = adsConfig,
         rateUrl = rateUrl
     )
+
+    data class GooglePlayConfig (
+        override val rateUrl: String = "",
+        override val adsConfig: AdsConfig = AdsConfig.GooglePlayAds()
+    ) : PlatformConfig (
+        adsConfig = adsConfig,
+        rateUrl = rateUrl
+    )
 }

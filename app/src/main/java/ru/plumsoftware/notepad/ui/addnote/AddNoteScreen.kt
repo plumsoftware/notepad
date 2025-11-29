@@ -5,6 +5,8 @@ import android.app.Activity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
@@ -241,6 +243,13 @@ fun AddNoteScreen(
 
     var selectedColor by remember { mutableStateOf(note?.color?.toULong() ?: colors.first()) }
 
+    // Анимированный цвет фона
+    val animatedBackgroundColor by animateColorAsState(
+        targetValue = Color(selectedColor),
+        animationSpec = tween(durationMillis = 2000),
+        label = "backgroundColorAnimation"
+    )
+
     // Focus managers for title and description
     val focusManager = LocalFocusManager.current
     val titleFocusRequester = remember { FocusRequester() }
@@ -472,7 +481,7 @@ fun AddNoteScreen(
     }
 
     Scaffold(
-        containerColor = Color(selectedColor),
+        containerColor = animatedBackgroundColor, // Используем анимированный цвет
         topBar = {
             TopAppBar(
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -495,7 +504,7 @@ fun AddNoteScreen(
                         }) {
                         Icon(
                             Icons.Default.KeyboardArrowLeft,
-                            contentDescription = "Back",
+                            contentDescription = stringResource(R.string.back_button),
                             tint = Color.White
                         )
                     }
@@ -524,7 +533,7 @@ fun AddNoteScreen(
                                                 note.photos.filterNot { photos.contains(it) })
                                         }
                                         playSound(context, exoPlayer, R.raw.note_create)
-                                        viewModel.updateNote(updatedNote.copy(groupId = note.groupId ?: "0"), context)
+                                        viewModel.updateNote(updatedNote.copy(groupId = note.groupId), context)
                                     } else {
                                         playSound(context, exoPlayer, R.raw.note_create)
                                         viewModel.addNote(updatedNote)
@@ -563,8 +572,8 @@ fun AddNoteScreen(
                             enabled = title.isNotBlank() && !isLoading,
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = Color.White,
-                                contentColor = Color(selectedColor),
-                                disabledContentColor = Color(selectedColor).copy(alpha = 0.7f),
+                                contentColor = animatedBackgroundColor, // Используем анимированный цвет для контента
+                                disabledContentColor = animatedBackgroundColor.copy(alpha = 0.7f),
                                 disabledContainerColor = Color.White.copy(alpha = 0.7f)
                             ),
                             elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp)
@@ -647,7 +656,7 @@ fun AddNoteScreen(
                         ) {
                             Icon(
                                 imageVector = Icons.Rounded.Clear,
-                                contentDescription = "Clear",
+                                contentDescription = stringResource(R.string.clear_text),
                                 tint = Color.White,
                                 modifier = Modifier
                                     .clip(CircleShape)
@@ -715,7 +724,7 @@ fun AddNoteScreen(
                         ) {
                             Icon(
                                 imageVector = Icons.Rounded.Clear,
-                                contentDescription = "Clear",
+                                contentDescription = stringResource(R.string.clear_text),
                                 tint = Color.White,
                                 modifier = Modifier
                                     .clip(CircleShape)
@@ -793,7 +802,7 @@ fun AddNoteScreen(
                         ) {
                             AsyncImage(
                                 model = photoPath,
-                                contentDescription = "Note Photo",
+                                contentDescription = stringResource(R.string.note_photo),
                                 contentScale = ContentScale.Crop,
                                 modifier = Modifier
                                     .fillMaxSize()
@@ -819,7 +828,7 @@ fun AddNoteScreen(
                             ) {
                                 Image(
                                     painter = painterResource(R.drawable.delete_icon),
-                                    contentDescription = "Delete Photo",
+                                    contentDescription = stringResource(R.string.delete_photo),
                                     modifier = Modifier.size(24.dp)
                                 )
                             }
@@ -832,7 +841,7 @@ fun AddNoteScreen(
                                 .padding(end = 8.dp),
                             colors = CardDefaults.cardColors(
                                 containerColor = Color.White.copy(alpha = 0.4f),
-                                contentColor = Color(selectedColor)
+                                contentColor = animatedBackgroundColor // Используем анимированный цвет
                             ),
                             enabled = !isLoading,
                             onClick = {
@@ -852,8 +861,8 @@ fun AddNoteScreen(
                                 } else {
                                     Icon(
                                         Icons.Default.Add,
-                                        contentDescription = "Add Photo",
-                                        tint = Color(selectedColor)
+                                        contentDescription = stringResource(R.string.add_photo),
+                                        tint = animatedBackgroundColor // Используем анимированный цвет
                                     )
                                 }
                             }
@@ -933,7 +942,7 @@ fun AddNoteScreen(
                             )
                             Image(
                                 painter = painterResource(R.drawable.delete_icon),
-                                contentDescription = "Delete Photo",
+                                contentDescription = stringResource(R.string.delete_photo),
                                 modifier = Modifier
                                     .size(24.dp)
                                     .clickable(enabled = !isLoading, onClick = {
@@ -961,7 +970,7 @@ fun AddNoteScreen(
                     ) {
                         Icon(
                             Icons.Default.Add,
-                            contentDescription = "Add Task",
+                            contentDescription = stringResource(R.string.add_task),
                             tint = Color.White,
                             modifier = Modifier.size(18.dp)
                         )
@@ -999,7 +1008,9 @@ fun AddNoteScreen(
                                     color = if (selectedColor == color) Color.White else Color.Transparent,
                                     shape = CircleShape
                                 )
-                                .clickable(enabled = !isLoading) { selectedColor = color }
+                                .clickable(enabled = !isLoading) {
+                                    selectedColor = color
+                                }
                         )
                     }
                 }
