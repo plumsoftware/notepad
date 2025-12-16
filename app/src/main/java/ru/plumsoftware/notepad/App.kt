@@ -12,6 +12,6 @@ class App : Application() {
 
     companion object {
         lateinit var applicationContext: Context
-        val platformConfig = PlatformConfig.GooglePlayConfig()
+        val platformConfig = PlatformConfig.RuStoreConfig()
     }
 }
