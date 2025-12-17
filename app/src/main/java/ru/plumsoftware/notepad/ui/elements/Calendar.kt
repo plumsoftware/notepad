@@ -26,6 +26,7 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
@@ -108,7 +109,6 @@ fun CalendarView(
             days = calendarDays,
             selectedDate = selectedDate,
             selectedWeek = selectedWeek,
-            isScrolled = isScrolled,
             onDayClick = onDayClick
         )
     }
@@ -208,7 +208,6 @@ private fun CalendarGrid(
     days: List<CalendarDay>,
     selectedDate: Date? = null,
     selectedWeek: Int? = null,
-    isScrolled: Boolean = false,
     onDayClick: (Date, List<Note>, Int) -> Unit
 ) {
     // Группируем дни по неделям
@@ -220,8 +219,11 @@ private fun CalendarGrid(
         modifier = Modifier.wrapContentHeight()
     ) {
         itemsIndexed(weeks) { weekIndex, weekDays ->
-            // Определяем, нужно ли показывать эту неделю
-            val shouldShowWeek = !isScrolled || weekIndex == selectedWeek
+            // ЛОГИКА ИЗМЕНЕНА:
+            // Показываем неделю, если:
+            // 1. Никакая дата не выбрана (selectedWeek == null)
+            // 2. ИЛИ это именно выбранная неделя
+            val shouldShowWeek = selectedWeek == null || weekIndex == selectedWeek
 
             AnimatedVisibility(
                 visible = shouldShowWeek,
@@ -270,59 +272,75 @@ private fun CalendarDayItem(
     modifier: Modifier = Modifier
 ) {
     val dayNumber = getDayNumber(day.date)
-    val hasNotes = day.notes.isNotEmpty()
 
     // Проверяем, выбран ли этот день
     val isSelected = selectedDate?.let {
         isSameDay(it, day.date)
     } ?: false
 
-    Box(
+    // Цвета для состояния (текущий месяц или нет)
+    val textColor = if (day.isCurrentMonth) {
+        if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer
+        else MaterialTheme.colorScheme.onSurface
+    } else {
+        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
+    }
+
+    // Фон выбранного элемента (круглый или squircle)
+    val backgroundColor = if (isSelected) {
+        MaterialTheme.colorScheme.primaryContainer
+    } else {
+        Color.Transparent
+    }
+
+    Column(
         modifier = modifier
             .aspectRatio(1f)
             .padding(2.dp)
-            .clip(MaterialTheme.shapes.extraLarge)
-            .background(
-                if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
-                else Color.Transparent
-            )
+            .clip(MaterialTheme.shapes.medium) // Medium (около 12-16dp) выглядит лучше для календаря
+            .background(backgroundColor)
             .clickable(
                 enabled = true,
                 onClick = { onDayClick(day.date, day.notes) },
                 role = Role.Button
             ),
-        contentAlignment = Alignment.Center
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
     ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Text(
-                text = dayNumber,
-                style = MaterialTheme.typography.bodyMedium,
-                color = if (day.isCurrentMonth) {
-                    if (isSelected) MaterialTheme.colorScheme.primary
-                    else MaterialTheme.colorScheme.onSurface
-                } else {
-                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
-                },
-                textAlign = TextAlign.Center
-            )
+        Text(
+            text = dayNumber,
+            style = MaterialTheme.typography.bodyMedium.copy(
+                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+            ),
+            color = textColor,
+            textAlign = TextAlign.Center
+        )
 
-            // Show dot if there are notes for this day
-            if (hasNotes) {
-                Box(
-                    modifier = Modifier
-                        .width(4.dp)
-                        .height(4.dp)
-                        .background(
-                            color = if (isSelected) MaterialTheme.colorScheme.primary
-                            else MaterialTheme.colorScheme.primary,
-                            shape = MaterialTheme.shapes.small
-                        )
-                )
-            } else {
-                Spacer(modifier = Modifier.height(6.dp))
+        Spacer(modifier = Modifier.height(4.dp))
+
+        // --- ЛОГИКА ТОЧЕК (DOTS) ---
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(2.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.height(6.dp) // Фиксированная высота, чтобы ячейки не скакали
+        ) {
+            if (day.notes.isNotEmpty()) {
+                // Берем максимум 3 заметки
+                val notesToShow = day.notes.take(3)
+
+                notesToShow.forEach { note ->
+                    // Рисуем точку цветом заметки
+                    Box(
+                        modifier = Modifier
+                            .size(6.dp) // Размер точки
+                            .clip(CircleShape)
+                            .background(Color(note.color.toULong()))
+                    )
+                }
+
+                // Если заметок больше 3, можно показать маленькую серую точку или просто оставить 3
+                // Вариант: если > 3, третья точка чуть меньше или другого цвета?
+                // Но обычно 3 точки достаточно, чтобы понять "много дел"
             }
         }
     }

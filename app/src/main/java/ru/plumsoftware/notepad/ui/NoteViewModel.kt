@@ -3,6 +3,7 @@ package ru.plumsoftware.notepad.ui
 import android.annotation.SuppressLint
 import android.app.Application
 import android.content.Context
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.work.OneTimeWorkRequestBuilder
@@ -25,6 +26,9 @@ import androidx.core.content.edit
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.withContext
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class NoteViewModel(application: Application, openAddNote: Boolean) : ViewModel() {
@@ -235,16 +239,22 @@ class NoteViewModel(application: Application, openAddNote: Boolean) : ViewModel(
     private fun scheduleReminder(note: Note) {
         note.reminderDate?.let { reminderDate ->
             val delay = reminderDate - System.currentTimeMillis()
+
+            // Логи (оставляем, раз они нужны)
+            Log.d("REMINDER_DEBUG", "Plan reminder for: ${note.title}, Delay: $delay")
+
             if (delay > 0) {
                 val workRequest = OneTimeWorkRequestBuilder<ReminderWorker>()
                     .setInitialDelay(delay, TimeUnit.MILLISECONDS)
                     .setInputData(
                         workDataOf(
                             "noteId" to note.id,
-                            "noteTitle" to note.title
+                            "noteTitle" to note.title,
+                            "noteDescription" to note.description // <--- ДОБАВИЛИ ЭТУ СТРОКУ
                         )
                     )
                     .build()
+
                 workManager.enqueueUniqueWork(
                     "reminder_${note.id}",
                     androidx.work.ExistingWorkPolicy.REPLACE,
@@ -252,6 +262,12 @@ class NoteViewModel(application: Application, openAddNote: Boolean) : ViewModel(
                 )
             }
         }
+    }
+
+    // Вспомогательная функция для логов, если её нет в классе
+    private fun formatDate(timestamp: Long): String {
+        val dateFormat = SimpleDateFormat("dd.MM.yyyy HH:mm:ss", Locale.getDefault())
+        return dateFormat.format(Date(timestamp))
     }
 
     fun loading(isLoading: Boolean) {

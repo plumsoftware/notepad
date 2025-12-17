@@ -15,8 +15,8 @@ android {
         applicationId = "ru.plumsoftware.notepad"
         minSdk = 24
         targetSdk = 36
-        versionCode = 15
-        versionName = "1.2.1"
+        versionCode = 16
+        versionName = "1.2.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -99,5 +99,7 @@ dependencies {
     // For interop APIs with Material 2
     implementation(libs.androidx.glance.material)
 
-    implementation("io.appmetrica.analytics:analytics:7.14.0")
+    implementation(libs.analytics)
+
+    implementation(libs.androidx.compose.material.icons.extended)
 }

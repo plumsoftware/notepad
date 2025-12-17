@@ -7,6 +7,7 @@ import androidx.compose.ui.text.font.FontWeight
 
 import androidx.compose.ui.text.googlefonts.GoogleFont
 import androidx.compose.ui.text.googlefonts.Font
+import androidx.compose.ui.unit.sp
 import ru.plumsoftware.notepad.R
 
 //val provider = GoogleFont.Provider(
@@ -39,19 +40,28 @@ val bodyFontFamily = FontFamily(
 val baseline = Typography()
 
 val typography = Typography(
-    displayLarge = baseline.displayLarge.copy(fontFamily = bodyFontFamily),
-    displayMedium = baseline.displayMedium.copy(fontFamily = bodyFontFamily),
-    displaySmall = baseline.displaySmall.copy(fontFamily = bodyFontFamily),
-    headlineLarge = baseline.headlineLarge.copy(fontFamily = bodyFontFamily),
-    headlineMedium = baseline.headlineMedium.copy(fontFamily = bodyFontFamily),
-    headlineSmall = baseline.headlineSmall.copy(fontFamily = bodyFontFamily),
-    titleLarge = baseline.titleLarge.copy(fontFamily = bodyFontFamily),
-    titleMedium = baseline.titleMedium.copy(fontFamily = bodyFontFamily),
-    titleSmall = baseline.titleSmall.copy(fontFamily = bodyFontFamily),
-    bodyLarge = baseline.bodyLarge.copy(fontFamily = bodyFontFamily),
-    bodyMedium = baseline.bodyMedium.copy(fontFamily = bodyFontFamily),
-    bodySmall = baseline.bodySmall.copy(fontFamily = bodyFontFamily),
-    labelLarge = baseline.labelLarge.copy(fontFamily = bodyFontFamily),
-    labelMedium = baseline.labelMedium.copy(fontFamily = bodyFontFamily),
-    labelSmall = baseline.labelSmall.copy(fontFamily = bodyFontFamily),
+    // Заголовки: Жирные и крупные для характера
+    displayLarge = baseline.displayLarge.copy(fontFamily = bodyFontFamily, fontWeight = FontWeight.Black),
+    displayMedium = baseline.displayMedium.copy(fontFamily = bodyFontFamily, fontWeight = FontWeight.Bold),
+    displaySmall = baseline.displaySmall.copy(fontFamily = bodyFontFamily, fontWeight = FontWeight.Bold),
+
+    // Подзаголовки: Средняя жирность
+    headlineLarge = baseline.headlineLarge.copy(fontFamily = bodyFontFamily, fontWeight = FontWeight.Bold),
+    headlineMedium = baseline.headlineMedium.copy(fontFamily = bodyFontFamily, fontWeight = FontWeight.SemiBold),
+    headlineSmall = baseline.headlineSmall.copy(fontFamily = bodyFontFamily, fontWeight = FontWeight.Medium),
+
+    // Названия в списках: Читаемые, средней жирности
+    titleLarge = baseline.titleLarge.copy(fontFamily = bodyFontFamily, fontWeight = FontWeight.Bold),
+    titleMedium = baseline.titleMedium.copy(fontFamily = bodyFontFamily, fontWeight = FontWeight.Medium),
+    titleSmall = baseline.titleSmall.copy(fontFamily = bodyFontFamily, fontWeight = FontWeight.Medium),
+
+    // Основной текст: Обычный вес для легкости чтения
+    bodyLarge = baseline.bodyLarge.copy(fontFamily = bodyFontFamily, fontWeight = FontWeight.Normal, lineHeight = 24.sp), // Чуть больше воздуха
+    bodyMedium = baseline.bodyMedium.copy(fontFamily = bodyFontFamily, fontWeight = FontWeight.Normal),
+    bodySmall = baseline.bodySmall.copy(fontFamily = bodyFontFamily, fontWeight = FontWeight.Normal),
+
+    // Кнопки и подписи
+    labelLarge = baseline.labelLarge.copy(fontFamily = bodyFontFamily, fontWeight = FontWeight.Medium),
+    labelMedium = baseline.labelMedium.copy(fontFamily = bodyFontFamily, fontWeight = FontWeight.Medium),
+    labelSmall = baseline.labelSmall.copy(fontFamily = bodyFontFamily, fontWeight = FontWeight.Medium),
 )

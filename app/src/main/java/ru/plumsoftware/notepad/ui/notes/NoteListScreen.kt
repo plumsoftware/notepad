@@ -37,6 +37,7 @@ import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.lazy.staggeredgrid.items
 import androidx.compose.foundation.shape.CornerSize
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -47,6 +48,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
@@ -853,18 +855,11 @@ private fun CalendarContent(
     onImageClick: (String) -> Unit,
     notesToDelete: SnapshotStateMap<String, Boolean>
 ) {
-    // Добавляем состояние для отображения заметок по выбранной дате
     var selectedDateNotes by remember { mutableStateOf<List<Note>?>(null) }
     var selectedDate by remember { mutableStateOf<Date?>(null) }
     var selectedWeek by remember { mutableStateOf<Int?>(null) }
-    var isScrolled by remember { mutableStateOf(false) }
 
     val lazyListState = rememberLazyListState()
-
-    // Отслеживаем скролл
-    LaunchedEffect(lazyListState.firstVisibleItemIndex) {
-        isScrolled = lazyListState.firstVisibleItemIndex > 0
-    }
 
     Column(
         modifier = Modifier.fillMaxSize(),
@@ -875,20 +870,16 @@ private fun CalendarContent(
             notes = notes,
             selectedDate = selectedDate,
             selectedWeek = selectedWeek,
-            isScrolled = isScrolled,
-            onDayClick = { date, notes, week ->
+            // isScrolled больше не нужен для grid, убрали его
+            onDayClick = { date, notesForDay, week ->
                 selectedDate = date
-                selectedDateNotes = notes
-                selectedWeek = week
+                selectedDateNotes = notesForDay
+                selectedWeek = week // Это вызовет сворачивание календаря
             },
             modifier = Modifier
                 .padding(top = 16.dp)
-                .clip(MaterialTheme.shapes.extraLarge.copy(
-                    bottomEnd = CornerSize(0.dp),
-                    bottomStart = CornerSize(0.dp),
-                    topStart = CornerSize(42.dp),
-                    topEnd = CornerSize(42.dp)
-                ))
+                .clip(RoundedCornerShape(bottomStart = 32.dp, bottomEnd = 32.dp)) // Скругление только снизу выглядит стильнее
+                .background(MaterialTheme.colorScheme.surface) // Фон календаря, чтобы он выделялся
         )
 
         // Отображаем заметки выбранной даты
@@ -899,7 +890,7 @@ private fun CalendarContent(
                     .fillMaxSize()
                     .padding(horizontal = 16.dp)
             ) {
-                // Заголовок
+                // Заголовок и кнопка закрытия
                 item {
                     Row(
                         modifier = Modifier
@@ -911,18 +902,22 @@ private fun CalendarContent(
                         Text(
                             text = stringResource(
                                 R.string.calendar_notes_for_date,
-                                selectedDate?.let { formatCalendarDate(it) } ?: stringResource(R.string.selected_date)
+                                selectedDate?.let { formatCalendarDate(it) } ?: ""
                             ),
-                            style = MaterialTheme.typography.bodyMedium
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
                         )
 
-                        // Кнопка возврата к полному календарю
+                        // Кнопка закрытия (разворачивает календарь обратно)
                         IconButton(
                             onClick = {
                                 selectedDateNotes = null
                                 selectedDate = null
-                                selectedWeek = null
-                            }
+                                selectedWeek = null // Разворачиваем календарь
+                            },
+                            colors = IconButtonDefaults.iconButtonColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant
+                            )
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Close,
@@ -939,9 +934,7 @@ private fun CalendarContent(
                             viewModel = viewModel,
                             navController = navController,
                             isVisible = notesToDelete[note.id] != true,
-                            onDelete = {
-                                onDelete(note)
-                            },
+                            onDelete = { onDelete(note) },
                             onImageClick = { path -> onImageClick(path) },
                             modifier = Modifier.padding(vertical = 8.dp),
                             groups = groups,
@@ -952,39 +945,32 @@ private fun CalendarContent(
                     }
                 } else {
                     item {
-                        Column(
+                        Box(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(200.dp),
-                            verticalArrangement = Arrangement.Center,
-                            horizontalAlignment = Alignment.CenterHorizontally
+                            contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = stringResource(
-                                    R.string.calendar_no_notes_for_date,
-                                    selectedDate?.let { formatCalendarDate(it) } ?: stringResource(R.string.selected_date)
-                                ),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                text = stringResource(R.string.calendar_no_notes_for_date, ""),
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
                 }
 
-                item {
-                    Spacer(modifier = Modifier.height(100.dp))
-                }
+                item { Spacer(modifier = Modifier.height(100.dp)) }
             }
         } ?: run {
-            // Если дата не выбрана, показываем placeholder
-            Spacer(modifier = Modifier.weight(1f))
-            Text(
-                text = stringResource(R.string.calendar_select_date),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                modifier = Modifier.padding(16.dp)
-            )
-            Spacer(modifier = Modifier.weight(1f))
+            // Placeholder, когда дата не выбрана
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text(
+                    text = stringResource(R.string.calendar_select_date),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     }
 }
