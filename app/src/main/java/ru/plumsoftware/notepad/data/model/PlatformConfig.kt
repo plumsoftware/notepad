@@ -17,19 +17,21 @@ sealed class PlatformConfig (
 
     data class HuaweiConfig (
         override val rateUrl: String = "https://appgallery.huawei.ru/app/C115075655",
-        override val adsConfig: AdsConfig = AdsConfig.HuaweiAppGalleryAds()
+        override val adsConfig: AdsConfig = AdsConfig.HuaweiAppGalleryAds(),
+        override val appMetricaId: String = "92b04e85-68b9-4d89-8593-15b065b1f297"
     ) : PlatformConfig (
         adsConfig = adsConfig,
         rateUrl = rateUrl,
-        appMetricaId = ""
+        appMetricaId = appMetricaId
     )
 
     data class GooglePlayConfig (
         override val rateUrl: String = "https://www.rustore.ru/catalog/app/ru.plumsoftware.notepad",
-        override val adsConfig: AdsConfig = AdsConfig.GooglePlayAds()
+        override val adsConfig: AdsConfig = AdsConfig.GooglePlayAds(),
+        override val appMetricaId: String = "e9b63b76-0f46-42d6-8ddf-647f8b987959"
     ) : PlatformConfig (
         adsConfig = adsConfig,
         rateUrl = rateUrl,
-        appMetricaId = ""
+        appMetricaId = appMetricaId
     )
 }
