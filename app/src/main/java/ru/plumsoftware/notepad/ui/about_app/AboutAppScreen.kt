@@ -121,7 +121,7 @@ fun AboutAppScreen(
             ) {
                 Image(
                     modifier = Modifier.size(140.dp).clip(RoundedCornerShape(8.dp)),
-                    painter = painterResource(R.drawable.icon),
+                    painter = painterResource(R.drawable.full_icon),
                     contentDescription = "App Icon",
                     contentScale = ContentScale.Fit
                 )
