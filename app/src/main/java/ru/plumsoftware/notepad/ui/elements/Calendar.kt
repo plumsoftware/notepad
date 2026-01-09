@@ -421,7 +421,7 @@ private fun generateCalendarDays(currentDate: Calendar, notes: List<Note>): List
 }
 
 // Вспомогательная функция для сравнения дат
-private fun isSameDay(date1: Date, date2: Date): Boolean {
+fun isSameDay(date1: Date, date2: Date): Boolean {
     val cal1 = Calendar.getInstance().apply { time = date1 }
     val cal2 = Calendar.getInstance().apply { time = date2 }
     return cal1.get(Calendar.YEAR) == cal2.get(Calendar.YEAR) &&

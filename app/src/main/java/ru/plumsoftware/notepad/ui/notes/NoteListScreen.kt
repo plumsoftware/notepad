@@ -36,15 +36,19 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.lazy.staggeredgrid.items
-import androidx.compose.foundation.shape.CornerSize
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -86,6 +90,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -101,15 +106,17 @@ import ru.plumsoftware.notepad.ui.NoteViewModel
 import ru.plumsoftware.notepad.ui.Screen
 import ru.plumsoftware.notepad.ui.dialog.FullscreenImageDialog
 import ru.plumsoftware.notepad.ui.dialog.LoadingDialog
-import ru.plumsoftware.notepad.ui.elements.GroupList
-import ru.plumsoftware.notepad.ui.elements.NoteCard
+import ru.plumsoftware.notepad.ui.elements.IOSGroupList
 import ru.plumsoftware.notepad.ui.formatDate
 import ru.plumsoftware.notepad.ui.player.playSound
 import ru.plumsoftware.notepad.ui.player.rememberExoPlayer
 import androidx.core.net.toUri
 import ru.plumsoftware.notepad.ui.MainScreenRouteState
+import ru.plumsoftware.notepad.ui.dialog.MoveToGroupDialog
 import ru.plumsoftware.notepad.ui.elements.BottomBar
 import ru.plumsoftware.notepad.ui.elements.CalendarView
+import ru.plumsoftware.notepad.ui.elements.IOSCreateGroupDialog
+import ru.plumsoftware.notepad.ui.elements.IOSNoteCard
 import ru.plumsoftware.notepad.ui.elements.RateAppBottomSheet
 import java.util.Calendar
 import java.util.Date
@@ -128,6 +135,7 @@ fun NoteListScreen(
     val lazyListState = rememberLazyListState()
     val firstVisibleItemIndex by remember { derivedStateOf { lazyListState.firstVisibleItemIndex } }
     var needToBlur by remember { mutableStateOf(false) }
+    var noteToMove by remember { mutableStateOf<Note?>(null) }
 
     val isSearchBarVisible by remember {
         derivedStateOf {
@@ -166,6 +174,9 @@ fun NoteListScreen(
     val selectedGroupId by viewModel.selectedGroupId.collectAsState() // "0" = "All"
     var mainScreenState by remember { mutableStateOf (MainScreenRouteState.Main) }
     val instaOpenAddNoteScreen = viewModel.openAddNoteScreen.collectAsState()
+    val totalNotesCount by viewModel.totalNotesCount.collectAsState()
+
+    var showCreateGroupDialog by remember { mutableStateOf(false) }
 
     // Добавляем состояние для BottomSheet меню
     var showMenuBottomSheet by remember { mutableStateOf(false) }
@@ -665,18 +676,16 @@ fun NoteListScreen(
                         }
 
                         Spacer(modifier = Modifier.height(12.dp))
-                        GroupList(
-                            groups = groups,
+                        IOSGroupList(
+                            groups = groups, // Теперь тут GroupsWithCounts
                             selectedGroupId = selectedGroupId,
+                            totalCount = totalNotesCount,
                             onGroupSelected = { id -> viewModel.selectGroup(id) },
-                            onCreateGroup = { name, color ->
-                                viewModel.addFolder(Group(title = name, color = color.toLong()))
+                            onCreateGroup = {
+                                showCreateGroupDialog = true // Открываем диалог
                             },
-                            onDeleteGroup = {
-                                viewModel.deleteFolder(it)
-                            },
-                            onDialog = {
-                                needToBlur = it
+                            onDeleteGroup = { group ->
+                                viewModel.deleteFolder(group)
                             }
                         )
                         Spacer(modifier = Modifier.height(8.dp))
@@ -704,26 +713,73 @@ fun NoteListScreen(
                                         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
                                     ) {
                                         items(displayedNotes, key = { it.id }) { note ->
-                                            NoteCard(
-                                                note = note,
-                                                viewModel = viewModel,
-                                                navController = navController,
-                                                isVisible = notesToDelete[note.id] != true,
-                                                onDelete = {
-                                                    notesToDelete[note.id] = true
-                                                    playSound(context, exoPlayer, R.raw.note_delete)
-                                                    coroutineScope.launch {
-                                                        delay(400)
-                                                        viewModel.deleteNote(note, context)
+                                            // Логика удаления (оставляем твою анимацию)
+                                            if (notesToDelete[note.id] != true) {
+
+                                                // Переменная для управления меню конкретной заметки
+                                                var showNoteMenu by remember { mutableStateOf(false) }
+
+                                                Box {
+                                                    IOSNoteCard(
+                                                        note = note,
+                                                        groups = groups.map { it.group },
+                                                        modifier = Modifier.fillMaxWidth(), // Для списка и грида работает
+                                                        onClick = {
+                                                            navController.navigate(Screen.EditNote.createRoute(note.id))
+                                                        },
+                                                        onLongClick = {
+                                                            showNoteMenu = true
+                                                            playSound(context, exoPlayer, R.raw.note_create)
+                                                        },
+                                                        onImageClick = { path ->
+                                                            fullscreenImagePath = path // Восстановили полный экран
+                                                        },
+                                                        onNoteUpdated = { updatedNote ->
+                                                            // Обновляем заметку через ViewModel (сохраняем галочку)
+                                                            viewModel.updateNote(updatedNote, context)
+                                                            // Если хочешь звук при нажатии галочки:
+                                                            // playSound(context, exoPlayer, R.raw.note_create)
+                                                        }
+                                                    )
+
+                                                    // --- КОНТЕКСТНОЕ МЕНЮ (При долгом нажатии) ---
+                                                    DropdownMenu(
+                                                        expanded = showNoteMenu,
+                                                        onDismissRequest = { showNoteMenu = false },
+                                                        offset = DpOffset(x = 10.dp, y = 0.dp),
+                                                        containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                                                        shape = RoundedCornerShape(12.dp)
+                                                    ) {
+                                                        // Переместить в группу (сверни свой диалог выбора группы сюда или вызывай callback)
+                                                        DropdownMenuItem(
+                                                            text = { Text("В папку") },
+                                                            onClick = {
+                                                                showNoteMenu = false
+                                                                noteToMove = note
+                                                                // ТУТ ЛОГИКА ДЛЯ ОТКРЫТИЯ ДИАЛОГА ВЫБОРА ГРУППЫ
+                                                                // Тебе нужно будет поднять state showMoveToFolderDialog на уровень выше
+                                                                // или сделать callback onShowMoveDialog(note)
+                                                            },
+                                                            leadingIcon = { Icon(Icons.Default.FolderOpen, null) }
+                                                        )
+
+                                                        // Удалить
+                                                        DropdownMenuItem(
+                                                            text = { Text("Удалить", color = MaterialTheme.colorScheme.error) },
+                                                            onClick = {
+                                                                showNoteMenu = false
+                                                                notesToDelete[note.id] = true // Запуск твоей анимации удаления
+                                                                playSound(context, exoPlayer, R.raw.note_delete)
+                                                                coroutineScope.launch {
+                                                                    delay(400)
+                                                                    viewModel.deleteNote(note, context)
+                                                                }
+                                                            },
+                                                            leadingIcon = { Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error) }
+                                                        )
                                                     }
-                                                },
-                                                onImageClick = { path -> fullscreenImagePath = path },
-                                                modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp),
-                                                groups = groups,
-                                                onGroupSelected = { note_, groupId ->
-                                                    viewModel.moveNoteToGroup(note_, groupId)
                                                 }
-                                            )
+                                            }
                                         }
 
                                         item {
@@ -734,37 +790,79 @@ fun NoteListScreen(
                                     // Одна колонка
                                     LazyColumn(
                                         state = lazyListState,
+                                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                                        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 8.dp),
                                         modifier = Modifier
                                             .fillMaxSize()
                                             .padding(top = 10.dp)
                                     ) {
                                         items(displayedNotes, key = { it.id }) { note ->
-                                            NoteCard(
-                                                note = note,
-                                                viewModel = viewModel,
-                                                navController = navController,
-                                                isVisible = notesToDelete[note.id] != true,
-                                                onDelete = {
-                                                    notesToDelete[note.id] = true
-                                                    playSound(context, exoPlayer, R.raw.note_delete)
-                                                    coroutineScope.launch {
-                                                        delay(400)
-                                                        viewModel.deleteNote(note, context)
-                                                    }
-                                                },
-                                                onImageClick = { path -> fullscreenImagePath = path },
-                                                modifier = Modifier.padding(
-                                                    horizontal = 16.dp,
-                                                    vertical = 8.dp
-                                                ),
-                                                groups = groups,
-                                                onGroupSelected = { note_, groupId ->
-                                                    viewModel.moveNoteToGroup(note_, groupId)
-                                                }
-                                            )
+                                            // Логика удаления (оставляем твою анимацию)
+                                            if (notesToDelete[note.id] != true) {
 
-                                            if (note.id == filteredNotes.last().id) {
-                                                Spacer(modifier = Modifier.height(100.dp))
+                                                // Переменная для управления меню конкретной заметки
+                                                var showNoteMenu by remember { mutableStateOf(false) }
+
+                                                Box {
+                                                    IOSNoteCard(
+                                                        note = note,
+                                                        groups = groups.map { it.group },
+                                                        modifier = Modifier.fillMaxWidth(), // Для списка и грида работает
+                                                        onClick = {
+                                                            navController.navigate(Screen.EditNote.createRoute(note.id))
+                                                        },
+                                                        onLongClick = {
+                                                            showNoteMenu = true
+                                                            playSound(context, exoPlayer, R.raw.note_create)
+                                                        },
+                                                        onImageClick = { path ->
+                                                            fullscreenImagePath = path // Восстановили полный экран
+                                                        },
+                                                        onNoteUpdated = { updatedNote ->
+                                                            // Обновляем заметку через ViewModel (сохраняем галочку)
+                                                            viewModel.updateNote(updatedNote, context)
+                                                            // Если хочешь звук при нажатии галочки:
+                                                            // playSound(context, exoPlayer, R.raw.note_create)
+                                                        }
+                                                    )
+
+                                                    // --- КОНТЕКСТНОЕ МЕНЮ (При долгом нажатии) ---
+                                                    DropdownMenu(
+                                                        expanded = showNoteMenu,
+                                                        onDismissRequest = { showNoteMenu = false },
+                                                        offset = DpOffset(x = 10.dp, y = 0.dp),
+                                                        containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                                                        shape = RoundedCornerShape(12.dp)
+                                                    ) {
+                                                        // Переместить в группу (сверни свой диалог выбора группы сюда или вызывай callback)
+                                                        DropdownMenuItem(
+                                                            text = { Text("В папку") },
+                                                            onClick = {
+                                                                showNoteMenu = false
+                                                                noteToMove = note
+                                                                // ТУТ ЛОГИКА ДЛЯ ОТКРЫТИЯ ДИАЛОГА ВЫБОРА ГРУППЫ
+                                                                // Тебе нужно будет поднять state showMoveToFolderDialog на уровень выше
+                                                                // или сделать callback onShowMoveDialog(note)
+                                                            },
+                                                            leadingIcon = { Icon(Icons.Default.FolderOpen, null) }
+                                                        )
+
+                                                        // Удалить
+                                                        DropdownMenuItem(
+                                                            text = { Text("Удалить", color = MaterialTheme.colorScheme.error) },
+                                                            onClick = {
+                                                                showNoteMenu = false
+                                                                notesToDelete[note.id] = true // Запуск твоей анимации удаления
+                                                                playSound(context, exoPlayer, R.raw.note_delete)
+                                                                coroutineScope.launch {
+                                                                    delay(400)
+                                                                    viewModel.deleteNote(note, context)
+                                                                }
+                                                            },
+                                                            leadingIcon = { Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error) }
+                                                        )
+                                                    }
+                                                }
                                             }
                                         }
                                     }
@@ -778,7 +876,7 @@ fun NoteListScreen(
                         notes = notes,
                         viewModel = viewModel, // передаем viewModel
                         navController = navController, // передаем navController
-                        groups = groups, // передаем группы
+                        groups = groups.map { it.group }, // передаем группы
                         notesToDelete = notesToDelete,
                         onDelete = { note ->
                             notesToDelete[note.id] = true
@@ -819,6 +917,27 @@ fun NoteListScreen(
             }
         }
     }
+
+    if (noteToMove != null) {
+        // Твой код диалога выбора группы (Alert или BottomSheet)
+        MoveToGroupDialog(
+            groups = groups.map { it.group },
+            onDismiss = { noteToMove = null },
+            onGroupSelected = { groupId ->
+                viewModel.moveNoteToGroup(noteToMove!!, groupId)
+                noteToMove = null
+            }
+        )
+    }
+    if (showCreateGroupDialog) {
+        IOSCreateGroupDialog(
+            onDismiss = { showCreateGroupDialog = false },
+            onCreate = { title, color ->
+                showCreateGroupDialog = false
+                viewModel.addFolder(Group(title = title, color = color.toLong()))
+            }
+        )
+    }
 }
 
 // Компонент для отображения пустого состояния
@@ -845,6 +964,7 @@ fun EmptyNotesState() {
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class) // 1. Исправляем animateItem
 @Composable
 private fun CalendarContent(
     notes: List<Note>,
@@ -859,7 +979,25 @@ private fun CalendarContent(
     var selectedDate by remember { mutableStateOf<Date?>(null) }
     var selectedWeek by remember { mutableStateOf<Int?>(null) }
 
+    // Стейт для диалога перемещения в группу (нужен для календаря отдельно, если экран не общий)
+    var noteToMove by remember { mutableStateOf<Note?>(null) }
+
     val lazyListState = rememberLazyListState()
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    val exoPlayer = rememberExoPlayer()
+
+    // --- Сам Диалог перемещения ---
+    if (noteToMove != null) {
+        MoveToGroupDialog(
+            groups = groups,
+            onDismiss = { noteToMove = null },
+            onGroupSelected = { groupId ->
+                viewModel.moveNoteToGroup(noteToMove!!, groupId)
+                noteToMove = null
+            }
+        )
+    }
 
     Column(
         modifier = Modifier.fillMaxSize(),
@@ -870,16 +1008,15 @@ private fun CalendarContent(
             notes = notes,
             selectedDate = selectedDate,
             selectedWeek = selectedWeek,
-            // isScrolled больше не нужен для grid, убрали его
             onDayClick = { date, notesForDay, week ->
                 selectedDate = date
                 selectedDateNotes = notesForDay
-                selectedWeek = week // Это вызовет сворачивание календаря
+                selectedWeek = week
             },
             modifier = Modifier
                 .padding(top = 16.dp)
-                .clip(RoundedCornerShape(bottomStart = 32.dp, bottomEnd = 32.dp)) // Скругление только снизу выглядит стильнее
-                .background(MaterialTheme.colorScheme.surface) // Фон календаря, чтобы он выделялся
+                .clip(RoundedCornerShape(bottomStart = 32.dp, bottomEnd = 32.dp))
+                .background(MaterialTheme.colorScheme.surface)
         )
 
         // Отображаем заметки выбранной даты
@@ -890,7 +1027,6 @@ private fun CalendarContent(
                     .fillMaxSize()
                     .padding(horizontal = 16.dp)
             ) {
-                // Заголовок и кнопка закрытия
                 item {
                     Row(
                         modifier = Modifier
@@ -908,12 +1044,11 @@ private fun CalendarContent(
                             fontWeight = FontWeight.Bold
                         )
 
-                        // Кнопка закрытия (разворачивает календарь обратно)
                         IconButton(
                             onClick = {
                                 selectedDateNotes = null
                                 selectedDate = null
-                                selectedWeek = null // Разворачиваем календарь
+                                selectedWeek = null
                             },
                             colors = IconButtonDefaults.iconButtonColors(
                                 containerColor = MaterialTheme.colorScheme.surfaceVariant
@@ -929,19 +1064,62 @@ private fun CalendarContent(
 
                 if (notesForDate.isNotEmpty()) {
                     items(notesForDate, key = { it.id }) { note ->
-                        NoteCard(
-                            note = note,
-                            viewModel = viewModel,
-                            navController = navController,
-                            isVisible = notesToDelete[note.id] != true,
-                            onDelete = { onDelete(note) },
-                            onImageClick = { path -> onImageClick(path) },
-                            modifier = Modifier.padding(vertical = 8.dp),
-                            groups = groups,
-                            onGroupSelected = { note_, groupId ->
-                                viewModel.moveNoteToGroup(note_, groupId)
+                        // Проверяем, не удаляется ли заметка визуально
+                        if (notesToDelete[note.id] != true) {
+                            var showNoteMenu by remember { mutableStateOf(false) }
+
+                            Box(
+                                modifier = Modifier
+                                    .animateItem() // 2. Анимация теперь работает
+                                    .padding(vertical = 8.dp)
+                            ) {
+                                // 3. Используем IOSNoteCard вместо NoteCard
+                                IOSNoteCard(
+                                    note = note,
+                                    groups = groups,
+                                    modifier = Modifier.fillMaxWidth(), // Для списка и грида работает
+                                    onClick = {
+                                        navController.navigate(Screen.EditNote.createRoute(note.id))
+                                    },
+                                    onLongClick = {
+                                        showNoteMenu = true
+                                        playSound(context, exoPlayer, R.raw.note_create)
+                                    },
+                                    onImageClick = onImageClick,
+                                    onNoteUpdated = { updatedNote ->
+                                        // Обновляем заметку через ViewModel (сохраняем галочку)
+                                        viewModel.updateNote(updatedNote, context)
+                                        // Если хочешь звук при нажатии галочки:
+                                        // playSound(context, exoPlayer, R.raw.note_create)
+                                    }
+                                )
+
+                                // Контекстное меню (как в списке заметок)
+                                DropdownMenu(
+                                    expanded = showNoteMenu,
+                                    onDismissRequest = { showNoteMenu = false },
+                                    containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    DropdownMenuItem(
+                                        text = { Text("В папку") },
+                                        onClick = {
+                                            showNoteMenu = false
+                                            noteToMove = note // Открываем диалог
+                                        },
+                                        leadingIcon = { Icon(Icons.Default.FolderOpen, null) }
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text("Удалить", color = MaterialTheme.colorScheme.error) },
+                                        onClick = {
+                                            showNoteMenu = false
+                                            onDelete(note)
+                                        },
+                                        leadingIcon = { Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error) }
+                                    )
+                                }
                             }
-                        )
+                        }
                     }
                 } else {
                     item {
@@ -963,7 +1141,6 @@ private fun CalendarContent(
                 item { Spacer(modifier = Modifier.height(100.dp)) }
             }
         } ?: run {
-            // Placeholder, когда дата не выбрана
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text(
                     text = stringResource(R.string.calendar_select_date),

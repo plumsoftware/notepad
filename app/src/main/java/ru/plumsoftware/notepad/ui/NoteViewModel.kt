@@ -24,8 +24,11 @@ import ru.plumsoftware.notepad.data.worker.ReminderWorker
 import java.util.concurrent.TimeUnit
 import androidx.core.content.edit
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.withContext
+import ru.plumsoftware.notepad.data.database.GroupWithCount
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -35,11 +38,19 @@ class NoteViewModel(application: Application, openAddNote: Boolean) : ViewModel(
     private val db = NoteDatabase.getDatabase(application)
     private val workManager = WorkManager.getInstance(application)
     private val _notes = MutableStateFlow<List<Note>>(emptyList())
-    private val _groups = MutableStateFlow<List<Group>>(emptyList())
     val notes: StateFlow<List<Note>> = _notes
-    val groups: StateFlow<List<Group>> = _groups
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
+    private val _groups = MutableStateFlow<List<GroupWithCount>>(emptyList())
+    val groups: StateFlow<List<GroupWithCount>> = _groups
+
+    val totalNotesCount: StateFlow<Int> = db.noteDao().getAllNotesCount()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = 0
+        )
+
     private val appContext = application.applicationContext
 
     private val _openAddNoteScreen = MutableStateFlow(openAddNote)
@@ -106,8 +117,8 @@ class NoteViewModel(application: Application, openAddNote: Boolean) : ViewModel(
 
     init {
         viewModelScope.launch {
-            db.groupDao().getAllGroups().collectLatest { groups ->
-                _groups.value = groups
+            db.groupDao().getGroupsWithCounts().collectLatest { groupsWithCounts ->
+                _groups.value = groupsWithCounts
             }
         }
 

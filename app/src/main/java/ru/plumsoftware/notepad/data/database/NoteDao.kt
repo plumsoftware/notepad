@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.Query
+import androidx.room.Transaction
 import androidx.room.Update
 import kotlinx.coroutines.flow.Flow
 import ru.plumsoftware.notepad.data.model.Note
@@ -38,4 +39,7 @@ interface NoteDao {
 
     @Delete
     suspend fun delete(note: Note)
+
+    @Query("SELECT COUNT(*) FROM notes")
+    fun getAllNotesCount(): Flow<Int>
 }
