@@ -2,18 +2,26 @@ package ru.plumsoftware.notepad.ui.about_app
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBackIos
 import androidx.compose.material.icons.filled.KeyboardArrowLeft
+import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -28,6 +36,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -35,7 +44,9 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import ru.plumsoftware.notepad.R
 
@@ -44,8 +55,9 @@ import ru.plumsoftware.notepad.R
 fun AboutAppScreen(
     navController: NavController
 ) {
-    // Получаем версию приложения
     val context = LocalContext.current
+
+    // Получение версии приложения
     val appVersion = remember {
         try {
             val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
@@ -56,47 +68,58 @@ fun AboutAppScreen(
     } ?: "1.0"
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.surface,
         topBar = {
-            TopAppBar(
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Transparent
+            CenterAlignedTopAppBar(
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface // Используем фон экрана
                 ),
                 title = {
                     Text(
-                        modifier = Modifier.fillMaxWidth(),
                         text = stringResource(R.string.about_app),
-                        style = MaterialTheme.typography.titleMedium,
-                        textAlign = TextAlign.Center
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        textAlign = TextAlign.Center,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 },
                 navigationIcon = {
-                    IconButton(
-                        onClick = {
-                            navController.navigateUp()
-                        }) {
+                    // Кнопка Назад (Шеврон + Текст "Назад")
+                    Row(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .clickable { navController.navigateUp() }
+                            .padding(start = 8.dp, end = 8.dp, top = 8.dp, bottom = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                         Icon(
-                            Icons.Default.KeyboardArrowLeft,
-                            contentDescription = "Back",
-                            tint = MaterialTheme.colorScheme.onBackground
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBackIos,
+                            contentDescription = null, // Декоративный элемент, текст рядом есть
+                            tint = MaterialTheme.colorScheme.primary, // iOS Blue
+                            modifier = Modifier.size(20.dp)
+                        )
+                        // Текст кнопки (обычно "Назад" или название предыдущего экрана)
+                        // В твоем коде настроек использовался "back_button"
+                        Text(
+                            text = stringResource(R.string.back_button),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.primary
                         )
                     }
                 },
                 actions = {
+                    // Невидимая кнопка справа для идеального центрирования заголовка,
+                    // если кнопка "Назад" слева широкая.
                     IconButton(
-                        modifier = Modifier,
+                        onClick = {},
                         enabled = false,
                         colors = IconButtonDefaults.iconButtonColors(
-                            contentColor = Color.Transparent,
-                            containerColor = Color.Transparent,
-                            disabledContentColor = Color.Transparent,
-                            disabledContainerColor = Color.Transparent
-                        ),
-                        onClick = {}) {
-                        Icon(
-                            Icons.Default.KeyboardArrowLeft,
-                            contentDescription = "Back",
-                            tint = Color.Transparent
+                            disabledContainerColor = Color.Transparent,
+                            disabledContentColor = Color.Transparent
                         )
+                    ) {
+                        // Размер должен примерно совпадать с иконкой слева, чтобы заголовок не "уезжал"
+                        Box(modifier = Modifier.size(24.dp))
                     }
                 }
             )
@@ -105,45 +128,61 @@ fun AboutAppScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding),
+                .padding(padding)
+                .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            // Иконка приложения 140x140
+            // --- ИКОНКА ПРИЛОЖЕНИЯ ---
             Box(
                 modifier = Modifier
-                    .size(140.dp)
-                    .background(
-                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
-                        shape = RoundedCornerShape(28.dp)
-                    ),
-                contentAlignment = Alignment.Center
+                    .size(120.dp)
+                    .shadow(
+                        elevation = 10.dp,
+                        shape = RoundedCornerShape(28.dp),
+                        spotColor = Color.Black.copy(alpha = 0.2f),
+                        ambientColor = Color.Black.copy(alpha = 0.1f)
+                    )
+                    .clip(RoundedCornerShape(28.dp))
+                    .background(MaterialTheme.colorScheme.surface)
             ) {
                 Image(
-                    modifier = Modifier.size(140.dp).clip(RoundedCornerShape(8.dp)),
                     painter = painterResource(R.drawable.full_icon),
-                    contentDescription = "App Icon",
-                    contentScale = ContentScale.Fit
+                    contentDescription = null,
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier.fillMaxSize()
                 )
             }
-            Spacer(modifier = Modifier.height(32.dp))
 
-            // Название приложения
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Название
             Text(
                 text = stringResource(R.string.app_name),
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurface,
-                fontWeight = FontWeight.Medium
+                style = MaterialTheme.typography.headlineMedium.copy(
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 28.sp
+                ),
+                color = MaterialTheme.colorScheme.onSurface
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
-            // Версия приложения
+            // Версия
             Text(
                 text = stringResource(R.string.app_version_, appVersion),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
                 fontWeight = FontWeight.Normal
+            )
+
+            Spacer(modifier = Modifier.height(60.dp))
+
+            // Футер (опционально)
+            Text(
+                text = "Designed in 2025",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
             )
         }
     }
