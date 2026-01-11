@@ -7,6 +7,7 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -16,7 +17,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -186,8 +186,13 @@ fun IOSTopBar(
                         tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier
                             .size(24.dp)
-                            .clip(CircleShape)
-                            .clickable(onClick = onFilterClick, enabled = true, role = Role.Button)
+                            .clickable(
+                                onClick = onFilterClick,
+                                enabled = true,
+                                role = Role.Button,
+                                indication = null,
+                                interactionSource = remember { MutableInteractionSource() }
+                            )
                     )
                 }
 

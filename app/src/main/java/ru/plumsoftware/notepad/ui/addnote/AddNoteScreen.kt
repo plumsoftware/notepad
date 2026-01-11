@@ -11,25 +11,33 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBackIos
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.KeyboardArrowLeft
@@ -39,16 +47,20 @@ import androidx.compose.material.icons.filled.NotificationsNone
 import androidx.compose.material.icons.rounded.Call
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.CheckBox
+import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Notifications
+import androidx.compose.material.icons.rounded.RadioButtonUnchecked
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.BottomSheetDefaults
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -77,14 +89,19 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import ru.plumsoftware.notepad.R
@@ -113,7 +130,10 @@ import com.yandex.mobile.ads.rewarded.RewardedAdLoadListener
 import com.yandex.mobile.ads.rewarded.RewardedAdLoader
 import kotlinx.coroutines.launch
 import ru.plumsoftware.notepad.App
+import java.text.SimpleDateFormat
 import java.util.Calendar
+import java.util.Date
+import java.util.Locale
 
 @SuppressLint("MutableCollectionMutableState", "UnrememberedMutableInteractionSource")
 @OptIn(ExperimentalMaterial3Api::class)
@@ -124,34 +144,27 @@ fun AddNoteScreen(
     viewModel: NoteViewModel,
     note: Note? = null
 ) {
-    // --- Ads Setup (Без изменений) ---
+    // --- Ads Setup (Твой код, без изменений) ---
     var rewardedAd: RewardedAd? = null
     var rewardedAdLoader: RewardedAdLoader? = null
     rewardedAdLoader = RewardedAdLoader(LocalContext.current).apply {
         setAdLoadListener(object : RewardedAdLoadListener {
-            override fun onAdLoaded(rewarded: RewardedAd) {
-                rewardedAd = rewarded
-            }
-
+            override fun onAdLoaded(rewarded: RewardedAd) { rewardedAd = rewarded }
             override fun onAdFailedToLoad(error: AdRequestError) {}
         })
     }
-    loadRewardedAd(rewardedAdLoader)
+    val adRequestConfiguration = AdRequestConfiguration.Builder(App.platformConfig.adsConfig.rewardedAdsId).build()
+    rewardedAdLoader?.loadAd(adRequestConfiguration)
 
-    // --- Ads Interstitial (Без изменений) ---
     var myInterstitialAds: InterstitialAd? = null
     val interstitialAdsLoader = InterstitialAdLoader(activity).apply {
         setAdLoadListener(object : InterstitialAdLoadListener {
-            override fun onAdLoaded(interstitialAd: InterstitialAd) {
-                myInterstitialAds = interstitialAd
-            }
-
+            override fun onAdLoaded(interstitialAd: InterstitialAd) { myInterstitialAds = interstitialAd }
             override fun onAdFailedToLoad(error: AdRequestError) {}
         })
     }
-    val adRequestConfiguration =
-        AdRequestConfiguration.Builder(App.platformConfig.adsConfig.interstitialAdsId).build()
-    interstitialAdsLoader.loadAd(adRequestConfiguration)
+    val interstitialConfig = AdRequestConfiguration.Builder(App.platformConfig.adsConfig.interstitialAdsId).build()
+    interstitialAdsLoader.loadAd(interstitialConfig)
 
     // --- State ---
     val context = LocalContext.current
@@ -162,175 +175,179 @@ fun AddNoteScreen(
     // Data States
     var title by remember { mutableStateOf(note?.title ?: "") }
     var description by remember { mutableStateOf(note?.description ?: "") }
-    var tasks by remember {
-        mutableStateOf<MutableList<Task>>(
-            note?.tasks?.toMutableList() ?: mutableListOf()
-        )
-    }
+    var tasks by remember { mutableStateOf<MutableList<Task>>(note?.tasks?.toMutableList() ?: mutableListOf()) }
     var photos by remember { mutableStateOf<List<String>>(note?.photos ?: emptyList()) }
 
-    // UI Logic States
-    var newTaskText by remember { mutableStateOf("") }
+    // UI Logic
     var isReminder by remember { mutableStateOf(note?.reminderDate != null) }
     var reminderDate by remember { mutableStateOf(note?.reminderDate) }
+    var tempSelectedDateMillis by remember { mutableStateOf<Long?>(null) }
 
-    // Dialogs & Pickers Visibility
+    // Modals visibility
     var showDatePicker by remember { mutableStateOf(false) }
     var showTimePicker by remember { mutableStateOf(false) }
     var showAddTaskDialog by remember { mutableStateOf(false) }
     var showAddPhotoDialog by remember { mutableStateOf(false) }
-    var showColorSheet by remember { mutableStateOf(false) } // State для шторки цветов
-
-    var tempSelectedDateMillis by remember { mutableStateOf<Long?>(null) }
+    var showColorSheet by remember { mutableStateOf(false) }
     var fullscreenImagePath by remember { mutableStateOf<String?>(null) }
 
     val isLoading by viewModel.isLoading.collectAsState()
     val notes by viewModel.notes.collectAsState()
     val exoPlayer = rememberExoPlayer()
-
     var isAdsLoading by remember { mutableStateOf(false) }
 
-    // --- Colors & Contrast Logic ---
-    val colors = listOf(
-        Color(0xFF81C784).value, Color(0xFF4DB6AC).value, Color(0xFFF48FB1).value,
-        Color(0xFFFF8A65).value, Color(0xFF64B5F6).value, Color(0xFF7986CB).value,
-        Color(0xFFAB47BC).value, Color(0xFF9575CD).value, Color(0xFFFFCA28).value,
-        Color(0xFFF9A825).value, Color(0xFF90A4AE).value, Color(0xFFD7CCC8).value,
-        Color(0xFF283593).value, Color(0xFF37474F).value, Color(0xFF1A237E).value
+    // Colors
+    // Цвета в виде объектов Color для удобства
+    val availableColors = listOf(
+        Color(0xFF81C784), Color(0xFF4DB6AC), Color(0xFFF48FB1),
+        Color(0xFFFF8A65), Color(0xFF64B5F6), Color(0xFF7986CB),
+        Color(0xFFAB47BC), Color(0xFF9575CD), Color(0xFFFFCA28),
+        Color(0xFFF9A825), Color(0xFF90A4AE), Color(0xFFD7CCC8),
+        Color(0xFF283593), Color(0xFF37474F), Color(0xFF1A237E),
+        Color.White // Добавил белый для чистого iOS стиля
     )
-    var selectedColor by remember { mutableStateOf(note?.color?.toULong() ?: colors.first()) }
 
-    // Анимация фона
+    var selectedColor by remember { mutableStateOf(note?.color?.let { Color(it.toULong()) } ?: availableColors.last()) }
+
+    // --- Animation & Contrast ---
     val animatedBackgroundColor by animateColorAsState(
-        targetValue = Color(selectedColor),
-        animationSpec = tween(durationMillis = 500), // Чуть быстрее для отзывчивости
-        label = "backgroundColorAnimation"
+        targetValue = selectedColor,
+        animationSpec = tween(durationMillis = 500),
+        label = "bgColor"
     )
 
-    // Определяем цвет контента (черный или белый) в зависимости от яркости фона
-    val contentColor = if (luminance(selectedColor.toInt()) > 0.5f) Color.Black else Color.White
-    val secondaryContentColor = contentColor.copy(alpha = 0.7f)
+    // Контраст: Если фон темный -> текст белый, иначе -> черный
+    val isLightBg = luminance(selectedColor.toArgb()) > 0.5f
+    val contentColor = if (isLightBg) Color.Black else Color.White
+    val placeholderColor = contentColor.copy(alpha = 0.4f)
+    val dividerColor = contentColor.copy(alpha = 0.1f)
 
-    // --- Focus Managers ---
-    val focusManager = LocalFocusManager.current
-    val titleFocusRequester = remember { FocusRequester() }
-    val descriptionFocusRequester = remember { FocusRequester() }
-    val taskTextFocusRequester = remember { FocusRequester() }
-
-    // --- Helpers ---
-    val pickImages =
-        rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
-            uri?.let {
-                if (photos.size < 5) {
-                    photos = photos.toMutableList().apply {
-                        saveImageToInternalStorage(context, it)?.let { path -> add(path) }
-                    }
+    // Helpers
+    val pickImages = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        uri?.let {
+            if (photos.size < 5) {
+                photos = photos.toMutableList().apply {
+                    saveImageToInternalStorage(context, it)?.let { path -> add(path) }
                 }
             }
         }
+    }
 
     // --- Функция сохранения ---
-    val onSaveClick = {
-        if (title.isNotBlank()) {
+    // Добавляем явное указание типа : () -> Unit или Unit в конце
+    val onSaveClick: () -> Unit = {
+        if (title.isNotBlank() || description.isNotBlank()) {
             val updatedNote = Note(
                 id = note?.id ?: UUID.randomUUID().toString(),
                 title = title,
                 description = description,
-                color = selectedColor.toLong(),
+                color = selectedColor.value.toLong(),
                 tasks = tasks,
                 createdAt = note?.createdAt ?: System.currentTimeMillis(),
                 reminderDate = if (isReminder) reminderDate else null,
-                photos = photos
+                photos = photos,
+                groupId = note?.groupId ?: "0"
             )
+
             if (isEditing) {
                 if (note.photos != photos) {
                     deleteImagesFromStorage(context, note.photos.filterNot { photos.contains(it) })
                 }
                 playSound(context, exoPlayer, R.raw.note_create)
-                viewModel.updateNote(updatedNote.copy(groupId = note.groupId), context)
+                viewModel.updateNote(updatedNote, context)
             } else {
                 playSound(context, exoPlayer, R.raw.note_create)
                 viewModel.addNote(updatedNote)
             }
 
-            // Logic for Interstitial Ads
             if (notes.size >= 5 && myInterstitialAds != null) {
                 myInterstitialAds.show(activity)
             }
             navController.navigateUp()
+        } else {
+            navController.navigateUp()
         }
+        Unit
     }
 
-    // --- UI Structure ---
+    // --- DIALOGS (IOS STYLE) ---
 
-    // Bottom Sheet для выбора цвета
+    // 1. Цвет (Шторка снизу)
     if (showColorSheet) {
         ModalBottomSheet(
             onDismissRequest = { showColorSheet = false },
-            containerColor = MaterialTheme.colorScheme.surface,
-            dragHandle = { BottomSheetDefaults.DragHandle() }
+            containerColor = if (isLightBg) Color(0xFFF2F2F7) else Color(0xFF1C1C1E), // iOS system bg
+            dragHandle = { Box(modifier = Modifier.padding(top = 8.dp).width(36.dp).height(5.dp).clip(CircleShape).background(Color.Gray.copy(0.4f))) }
         ) {
-            Column(modifier = Modifier
-                .padding(16.dp)
-                .padding(bottom = 32.dp)) {
+            Column(modifier = Modifier.padding(bottom = 40.dp, start = 16.dp, end = 16.dp, top = 16.dp)) {
                 Text(
                     text = stringResource(R.string.note_color),
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                    color = if (isLightBg) Color.Black else Color.White,
                     modifier = Modifier.padding(bottom = 16.dp)
                 )
-                FlowRow(
-                    verticalArrangement = Arrangement.spacedBy(space = 12.dp, alignment = Alignment.Top),
-                    horizontalArrangement = Arrangement.spacedBy(space = 12.dp, alignment = Alignment.Start),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    colors.forEach { colorULong ->
-                        val color = Color(colorULong)
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    items(availableColors) { color ->
                         Box(
                             modifier = Modifier
-                                .size(50.dp)
+                                .size(44.dp)
                                 .clip(CircleShape)
                                 .background(color)
                                 .border(
-                                    width = if (selectedColor == colorULong) 3.dp else 0.dp,
-                                    color = MaterialTheme.colorScheme.onSurface,
+                                    width = if (selectedColor == color) 3.dp else 1.dp,
+                                    color = if (selectedColor == color) MaterialTheme.colorScheme.primary else Color.Gray.copy(0.3f),
                                     shape = CircleShape
                                 )
-                                .clickable { selectedColor = colorULong }
-                        ) {
-                            if (selectedColor == colorULong) {
-                                Icon(
-                                    imageVector = Icons.Rounded.Check,
-                                    contentDescription = null,
-                                    tint = if (luminance(colorULong.toInt()) > 0.5f) Color.Black else Color.White,
-                                    modifier = Modifier.align(Alignment.Center)
-                                )
-                            }
-                        }
+                                .clickable { selectedColor = color }
+                        )
                     }
                 }
             }
         }
     }
 
-    // Date/Time Dialogs (оставил логику как была, но сократил код визуально)
-    if (showDatePicker) {
-        // ... (код DatePickerDialog без изменений, используй тот же) ...
-        // Для краткости я его свернул, но вставь сюда свой код диалога
-        val datePickerState = rememberDatePickerState(
-            initialSelectedDateMillis = reminderDate ?: System.currentTimeMillis()
+    // 2. Задача (iOS Alert)
+    if (showAddTaskDialog) {
+        IOSAddTaskDialog(
+            onDismiss = { showAddTaskDialog = false },
+            onAdd = { text ->
+                tasks.add(Task(text = text))
+                showAddTaskDialog = false
+            }
         )
+    }
+
+    // 3. Фото за рекламу (iOS Alert)
+    if (showAddPhotoDialog) {
+        IOSAdsDialog(
+            onDismiss = { showAddPhotoDialog = false },
+            onWatch = {
+                showAddPhotoDialog = false
+                isAdsLoading = true
+                showAd(rewardedAd, rewardedAdLoader, activity) {
+                    scope.launch {
+                        isAdsLoading = false
+                        pickImages.launch("image/*")
+                    }
+                }
+            }
+        )
+    }
+
+    // System Date Pickers (как просил - системные)
+    if (showDatePicker) {
+        val datePickerState = rememberDatePickerState(initialSelectedDateMillis = reminderDate ?: System.currentTimeMillis())
         DatePickerDialog(
             onDismissRequest = { showDatePicker = false },
             confirmButton = {
                 TextButton(onClick = {
-                    showDatePicker = false; tempSelectedDateMillis =
-                    datePickerState.selectedDateMillis; showTimePicker = true
-                }) { Text("OK") }
+                    showDatePicker = false
+                    tempSelectedDateMillis = datePickerState.selectedDateMillis
+                    showTimePicker = true
+                }) { Text(stringResource(R.string.ok_)) }
             },
             dismissButton = {
-                TextButton(onClick = {
-                    showDatePicker = false; isReminder = false
-                }) { Text("Cancel") }
+                TextButton(onClick = { showDatePicker = false; isReminder = false }) { Text(stringResource(R.string.cancel)) }
             }
         ) { DatePicker(state = datePickerState) }
     }
@@ -340,387 +357,363 @@ fun AddNoteScreen(
             initialMinute = Calendar.getInstance().get(Calendar.MINUTE),
             is24Hour = true
         )
-
         AlertDialog(
             onDismissRequest = { showTimePicker = false },
             confirmButton = {
                 TextButton(onClick = {
                     showTimePicker = false
                     tempSelectedDateMillis?.let { dateMillis ->
-                        // 1. Создаем календарь и устанавливаем выбранную ДАТУ
-                        val calendar = Calendar.getInstance()
-                        calendar.timeInMillis = dateMillis
-
-                        // ВАЖНО: DatePicker часто возвращает время в UTC.
-                        // Чтобы сохранить именно тот день, который выбрал пользователь,
-                        // но с его локальным временем, лучше явно вытащить год/месяц/день:
-                        val dateCalendar = Calendar.getInstance().apply { timeInMillis = dateMillis }
-                        val year = dateCalendar.get(Calendar.YEAR)
-                        val month = dateCalendar.get(Calendar.MONTH)
-                        val day = dateCalendar.get(Calendar.DAY_OF_MONTH)
-
-                        // 2. Устанавливаем в итоговый календарь правильные компоненты
-                        val finalCalendar = Calendar.getInstance() // Текущее время и зона
-                        finalCalendar.set(Calendar.YEAR, year)
-                        finalCalendar.set(Calendar.MONTH, month)
-                        finalCalendar.set(Calendar.DAY_OF_MONTH, day)
-
-                        // 3. Добавляем ВРЕМЯ из TimePicker
-                        finalCalendar.set(Calendar.HOUR_OF_DAY, timePickerState.hour)
-                        finalCalendar.set(Calendar.MINUTE, timePickerState.minute)
-                        finalCalendar.set(Calendar.SECOND, 0)
-                        finalCalendar.set(Calendar.MILLISECOND, 0)
-
-                        // 4. Сохраняем результат
+                        val finalCalendar = Calendar.getInstance().apply {
+                            timeInMillis = dateMillis
+                            set(Calendar.HOUR_OF_DAY, timePickerState.hour)
+                            set(Calendar.MINUTE, timePickerState.minute)
+                            set(Calendar.SECOND, 0)
+                        }
                         reminderDate = finalCalendar.timeInMillis
                     }
-                }) { Text("OK") }
+                }) { Text(stringResource(R.string.ok_)) }
             },
             text = { TimePicker(state = timePickerState) }
         )
     }
 
-    // Add Task Dialog
-    if (showAddTaskDialog) {
-        AlertDialog(
-            onDismissRequest = { showAddTaskDialog = false },
-            title = { Text(stringResource(R.string.new_task)) },
-            text = {
-                OutlinedTextField(
-                    value = newTaskText,
-                    onValueChange = { newTaskText = it },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .focusRequester(taskTextFocusRequester),
-                    singleLine = true
-                )
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    if (newTaskText.isNotBlank()) {
-                        tasks.add(Task(text = newTaskText)); newTaskText = ""; showAddTaskDialog =
-                            false
-                    }
-                }) { Text(stringResource(R.string.add)) }
-            },
-            dismissButton = {
-                TextButton(onClick = { showAddTaskDialog = false }) {
-                    Text(
-                        stringResource(R.string.cancel)
-                    )
-                }
-            }
-        )
-        LaunchedEffect(Unit) { taskTextFocusRequester.requestFocus() }
-    }
-
-    // Ads Dialog for Photo
-    if (showAddPhotoDialog) {
-        // ... (Твой код AlertDialog для рекламы без изменений) ...
-        AlertDialog(
-            onDismissRequest = { showAddPhotoDialog = false },
-            title = { Text(stringResource(R.string.photo_add_ads_promo_title)) },
-            confirmButton = {
-                TextButton(onClick = {
-                    showAddPhotoDialog = false; isAdsLoading = true
-                    showAd(rewardedAd, rewardedAdLoader, activity) {
-                        scope.launch { isAdsLoading = false; pickImages.launch("image/*") }
-                    }
-                }) { Text(stringResource(R.string.watch_ad)) }
-            },
-            dismissButton = {
-                TextButton(onClick = { showAddPhotoDialog = false }) {
-                    Text(
-                        stringResource(R.string.cancel)
-                    )
-                }
-            }
-        )
-    }
-
-    // Fullscreen Image
+    // Fullscreen
     fullscreenImagePath?.let {
-        FullscreenImageDialog(
-            imagePath = it,
-            onDismiss = { fullscreenImagePath = null })
+        FullscreenImageDialog(imagePath = it, onDismiss = { fullscreenImagePath = null })
     }
-
 
     Scaffold(
         containerColor = animatedBackgroundColor,
         topBar = {
-            TopAppBar(
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
-                title = {},
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(
-                            Icons.Default.KeyboardArrowLeft,
-                            contentDescription = "Back",
-                            tint = contentColor
-                        )
+            // --- IOS TOP BAR (Прозрачный) ---
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp, vertical = 8.dp)
+                    .statusBarsPadding(), // Учитываем статус бар
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Кнопка НАЗАД (Шеврон)
+                TextButton(
+                    onClick = onSaveClick,
+                    colors = ButtonDefaults.textButtonColors(contentColor = contentColor)
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBackIos,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Text(
+                        text = stringResource(R.string.notes),
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                }
+
+                // Кнопка СОХРАНИТЬ (Готово)
+                // Показываем более ярко, если есть изменения (здесь упрощенно всегда "Готово")
+                TextButton(
+                    onClick = onSaveClick,
+                    enabled = !isLoading,
+                    colors = ButtonDefaults.textButtonColors(contentColor = contentColor)
+                ) {
+                    Text(
+                        text = stringResource(R.string.save),
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                    )
+                }
+            }
+        },
+        bottomBar = {
+            // --- IOS TOOLBAR (Плоский, часть фона) ---
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 12.dp)
+                    .navigationBarsPadding()
+                    .imePadding(), // Чтобы поднимался над клавиатурой
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // 1. Чеклист
+                IconButton(onClick = { showAddTaskDialog = true }) {
+                    Icon(
+                        imageVector = Icons.Rounded.CheckBox,
+                        contentDescription = "Checklist",
+                        tint = contentColor,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+
+                // 2. Фото
+                IconButton(onClick = {
+                    if (photos.size < 5) {
+                        if (photos.size == 4) showAddPhotoDialog = true else pickImages.launch("image/*")
                     }
-                },
-                actions = {
-                    // Кнопка "Сохранить" теперь галочка
-                    IconButton(
-                        onClick = onSaveClick,
-                        enabled = title.isNotBlank() && !isLoading
-                    ) {
+                }) {
+                    if (isAdsLoading) {
+                        CircularProgressIndicator(modifier = Modifier.size(20.dp), color = contentColor, strokeWidth = 2.dp)
+                    } else {
                         Icon(
-                            imageVector = Icons.Rounded.Check,
-                            contentDescription = stringResource(R.string.save),
-                            tint = if (title.isNotBlank()) contentColor else contentColor.copy(alpha = 0.3f),
-                            modifier = Modifier.size(28.dp)
+                            imageVector = Icons.Default.Image,
+                            contentDescription = "Photo",
+                            tint = contentColor,
+                            modifier = Modifier.size(24.dp)
                         )
                     }
                 }
-            )
-        },
-        // Нижняя панель инструментов для быстрого доступа
-        bottomBar = {
-            BottomAppBar(
-                containerColor = Color.Black.copy(alpha = 0.1f),
-                contentColor = contentColor,
-                tonalElevation = 0.dp,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(88.dp)
-            ) {
-                // 1. Кнопка "Палитра"
-                IconButton(onClick = { showColorSheet = true }, modifier = Modifier.weight(1f)) {
+
+                // 3. Цвет
+                IconButton(onClick = { showColorSheet = true }) {
                     Icon(
                         painter = painterResource(R.drawable.palette_icon),
                         contentDescription = "Color",
                         tint = contentColor,
                         modifier = Modifier.size(24.dp)
-                    ) // Замени на свою иконку палитры
-                }
-
-                // 2. Кнопка "Фото"
-                IconButton(
-                    modifier = Modifier.weight(1f),
-                    onClick = {
-                        if (photos.size < 5) {
-                            if (photos.size == 4) showAddPhotoDialog =
-                                true else pickImages.launch("image/*")
-                        }
-                    }
-                ) {
-                    if (isAdsLoading) CircularProgressIndicator(
-                        modifier = Modifier.size(24.dp),
-                        color = contentColor
-                    )
-                    else Icon(
-                        Icons.Default.Image,
-                        contentDescription = "Add Photo",
-                        tint = contentColor
                     )
                 }
 
-                // 3. Кнопка "Задача"
-                IconButton(onClick = { showAddTaskDialog = true }, modifier = Modifier.weight(1f)) {
+                // 4. Напоминание
+                IconButton(onClick = { showDatePicker = true; isReminder = true }) {
                     Icon(
-                        Icons.Rounded.CheckBox,
-                        contentDescription = "Add Task",
-                        tint = contentColor
-                    )
-                }
-
-                // 4. Кнопка "Напоминание"
-                IconButton(
-                    onClick = { showDatePicker = true; isReminder = true },
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Icon(
-                        if (isReminder) Icons.Default.NotificationsActive else Icons.Default.NotificationsNone,
+                        imageVector = if (isReminder) Icons.Default.NotificationsActive else Icons.Default.NotificationsNone,
                         contentDescription = "Reminder",
-                        tint = if (isReminder) contentColor else secondaryContentColor
+                        tint = if (isReminder) contentColor else contentColor.copy(alpha = 0.5f),
+                        modifier = Modifier.size(24.dp)
                     )
                 }
             }
         }
     ) { padding ->
-
+        // --- КОНТЕНТ ---
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
                 .verticalScroll(scrollState)
-                .padding(horizontal = 20.dp)
         ) {
-            // --- Title ---
-            Box(modifier = Modifier.fillMaxWidth()) {
+            // Дата создания (сверху, серая)
+            Text(
+                text = getFriendlyDate(note?.createdAt ?: System.currentTimeMillis()),
+                style = MaterialTheme.typography.labelMedium,
+                color = contentColor.copy(alpha = 0.5f),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp),
+                textAlign = TextAlign.Center
+            )
+
+            // ЗАГОЛОВОК (Large Title)
+            Box(modifier = Modifier.padding(horizontal = 20.dp)) {
                 if (title.isEmpty()) {
                     Text(
                         text = stringResource(R.string.title),
                         style = MaterialTheme.typography.displaySmall.copy(fontWeight = FontWeight.Bold),
-                        color = secondaryContentColor
+                        color = placeholderColor
                     )
                 }
                 BasicTextField(
                     value = title,
                     onValueChange = { title = it },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .focusRequester(titleFocusRequester),
                     textStyle = MaterialTheme.typography.displaySmall.copy(
                         fontWeight = FontWeight.Bold,
                         color = contentColor
                     ),
-                    cursorBrush = SolidColor(contentColor)
+                    cursorBrush = SolidColor(contentColor),
+                    modifier = Modifier.fillMaxWidth()
                 )
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
-            // --- Description ---
-            Box(modifier = Modifier.fillMaxWidth()) {
-                if (description.isEmpty()) {
+            // ТЕКСТ (Body)
+            Box(modifier = Modifier.padding(horizontal = 20.dp).fillMaxWidth()) {
+                if (description.isEmpty() && tasks.isEmpty()) {
                     Text(
                         text = stringResource(R.string.desc),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = secondaryContentColor
+                        style = MaterialTheme.typography.bodyLarge.copy(fontSize = 17.sp, lineHeight = 24.sp),
+                        color = placeholderColor
                     )
                 }
                 BasicTextField(
                     value = description,
                     onValueChange = { description = it },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .focusRequester(descriptionFocusRequester),
-                    textStyle = MaterialTheme.typography.bodyLarge.copy(color = contentColor),
-                    cursorBrush = SolidColor(contentColor)
+                    textStyle = MaterialTheme.typography.bodyLarge.copy(
+                        color = contentColor,
+                        fontSize = 17.sp, // iOS size
+                        lineHeight = 24.sp
+                    ),
+                    cursorBrush = SolidColor(contentColor),
+                    modifier = Modifier.fillMaxWidth()
                 )
             }
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // --- Reminder Info (Если выбрано) ---
+            // НАПОМИНАНИЕ (Чип внутри контента, если активно)
             if (isReminder && reminderDate != null) {
                 Row(
-                    verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .background(contentColor.copy(alpha = 0.1f), MaterialTheme.shapes.medium)
-                        .padding(12.dp)
+                        .padding(horizontal = 20.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(contentColor.copy(alpha = 0.08f))
+                        .clickable { isReminder = false; reminderDate = null }
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
-                        Icons.Default.Notifications,
-                        null,
-                        tint = contentColor,
-                        modifier = Modifier.size(20.dp)
-                    )
+                    Icon(Icons.Default.Notifications, null, tint = contentColor, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = formatDate(reminderDate!!),
                         style = MaterialTheme.typography.bodyMedium,
                         color = contentColor
                     )
-                    Spacer(modifier = Modifier.weight(1f))
-                    Icon(
-                        Icons.Default.Close,
-                        null,
-                        tint = contentColor,
-                        modifier = Modifier.clickable { isReminder = false; reminderDate = null }
-                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Icon(Icons.Default.Close, null, tint = contentColor.copy(0.6f), modifier = Modifier.size(16.dp))
                 }
                 Spacer(modifier = Modifier.height(24.dp))
             }
 
-            // --- Photos Grid ---
+            // ЗАДАЧИ
+            if (tasks.isNotEmpty()) {
+                tasks.forEachIndexed { index, task ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.Top
+                    ) {
+                        Icon(
+                            imageVector = if (task.isChecked) Icons.Rounded.CheckCircle else Icons.Rounded.RadioButtonUnchecked,
+                            contentDescription = null,
+                            tint = if (task.isChecked) contentColor.copy(0.5f) else contentColor,
+                            modifier = Modifier
+                                .size(24.dp)
+                                .clickable {
+                                    val isCh = !task.isChecked
+                                    tasks = tasks.toMutableList().apply { this[index] = task.copy(isChecked = isCh) }
+                                }
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(
+                            text = task.text,
+                            style = MaterialTheme.typography.bodyLarge.copy(
+                                color = if (task.isChecked) contentColor.copy(0.5f) else contentColor,
+                                textDecoration = if (task.isChecked) TextDecoration.LineThrough else null
+                            ),
+                            modifier = Modifier.weight(1f)
+                        )
+                        Icon(
+                            Icons.Default.Close, null,
+                            tint = contentColor.copy(0.3f),
+                            modifier = Modifier
+                                .size(20.dp)
+                                .clickable { tasks = tasks.toMutableList().apply { removeAt(index) } }
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(24.dp))
+            }
+
+            // ФОТОГРАФИИ
             if (photos.isNotEmpty()) {
-                Text(
-                    stringResource(R.string.photos),
-                    style = MaterialTheme.typography.titleSmall,
-                    color = secondaryContentColor
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(photos) { photoPath ->
-                        Box(modifier = Modifier.size(100.dp)) {
+                LazyRow(
+                    contentPadding = PaddingValues(horizontal = 20.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    items(photos) { path ->
+                        Box {
                             AsyncImage(
-                                model = photoPath,
+                                model = path,
                                 contentDescription = null,
                                 contentScale = ContentScale.Crop,
                                 modifier = Modifier
-                                    .fillMaxSize()
-                                    .clip(MaterialTheme.shapes.medium)
-                                    .clickable { fullscreenImagePath = photoPath }
+                                    .height(140.dp)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .clickable { fullscreenImagePath = path }
                             )
-                            // Кнопка удаления фото
+                            // Кнопка удалить (круглый крестик)
                             Box(
                                 modifier = Modifier
-                                    .align(Alignment.TopEnd)
-                                    .padding(4.dp)
-                                    .background(Color.Black.copy(alpha = 0.5f), CircleShape)
+                                    .padding(6.dp)
+                                    .size(22.dp)
+                                    .clip(CircleShape)
+                                    .background(Color.Black.copy(0.6f))
                                     .clickable {
-                                        photos = photos.toMutableList().apply { remove(photoPath) }
-                                        deleteImagesFromStorage(context, listOf(photoPath))
+                                        photos = photos.toMutableList().apply { remove(path) }
+                                        deleteImagesFromStorage(context, listOf(path))
                                     }
-                                    .padding(4.dp)
+                                    .align(Alignment.TopEnd),
+                                contentAlignment = Alignment.Center
                             ) {
-                                Icon(
-                                    Icons.Default.Close,
-                                    null,
-                                    tint = Color.White,
-                                    modifier = Modifier.size(16.dp)
-                                )
+                                Icon(Icons.Default.Close, null, tint = Color.White, modifier = Modifier.size(14.dp))
                             }
                         }
                     }
                 }
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(100.dp)) // Отступ снизу
             }
-
-            // --- Tasks List ---
-            if (tasks.isNotEmpty()) {
-                Text(
-                    stringResource(R.string.tasks),
-                    style = MaterialTheme.typography.titleSmall,
-                    color = secondaryContentColor
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                tasks.forEachIndexed { index, task ->
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(vertical = 4.dp)
-                    ) {
-                        Checkbox(
-                            checked = task.isChecked,
-                            onCheckedChange = { isChecked ->
-                                tasks = tasks.toMutableList()
-                                    .apply { this[index] = task.copy(isChecked = isChecked) }
-                            },
-                            colors = CheckboxDefaults.colors(
-                                checkedColor = contentColor,
-                                uncheckedColor = secondaryContentColor,
-                                checkmarkColor = animatedBackgroundColor
-                            )
-                        )
-                        Text(
-                            text = task.text,
-                            style = MaterialTheme.typography.bodyLarge.copy(
-                                textDecoration = if (task.isChecked) TextDecoration.LineThrough else null
-                            ),
-                            color = if (task.isChecked) secondaryContentColor else contentColor,
-                            modifier = Modifier.weight(1f)
-                        )
-                        IconButton(onClick = {
-                            tasks = tasks.toMutableList().apply { removeAt(index) }
-                        }) {
-                            Icon(Icons.Default.Close, null, tint = secondaryContentColor)
-                        }
-                    }
-                }
-            }
-
-            // Отступ снизу, чтобы контент не перекрывался BottomBar
-            Spacer(modifier = Modifier.height(80.dp))
         }
 
         if (isLoading) LoadingDialog()
     }
+}
+
+// --- ВСПОМОГАТЕЛЬНЫЕ ДИАЛОГИ (ВСТАВИТЬ ВНИЗ ФАЙЛА) ---
+
+@Composable
+fun IOSAddTaskDialog(onDismiss: () -> Unit, onAdd: (String) -> Unit) {
+    var text by remember { mutableStateOf("") }
+    val focusRequester = remember { FocusRequester() }
+    LaunchedEffect(Unit) { focusRequester.requestFocus() }
+
+    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+        Box(modifier = Modifier.fillMaxSize().clickable(interactionSource = remember{MutableInteractionSource()}, indication=null){onDismiss()}, contentAlignment = Alignment.Center) {
+            Column(modifier = Modifier.width(280.dp).clip(RoundedCornerShape(14.dp)).background(MaterialTheme.colorScheme.surface.copy(alpha=0.95f)).clickable(enabled=false){}) {
+                Text(stringResource(R.string.new_task), fontWeight=FontWeight.Bold, modifier=Modifier.padding(16.dp).align(Alignment.CenterHorizontally), style=MaterialTheme.typography.titleMedium)
+                BasicTextField(
+                    value = text, onValueChange = { text = it },
+                    modifier = Modifier.padding(horizontal=16.dp).fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(Color.Gray.copy(0.1f)).padding(12.dp).focusRequester(focusRequester)
+                )
+                Row(modifier = Modifier.padding(top=16.dp).height(44.dp)) {
+                    Box(modifier = Modifier.weight(1f).fillMaxHeight().clickable{onDismiss()}, contentAlignment=Alignment.Center) {
+                        Text(stringResource(R.string.cancel), color=MaterialTheme.colorScheme.primary)
+                    }
+                    Box(modifier = Modifier.width(0.5.dp).fillMaxHeight().background(Color.Gray.copy(0.3f)))
+                    Box(modifier = Modifier.weight(1f).fillMaxHeight().clickable(enabled=text.isNotBlank()){ if(text.isNotBlank()) onAdd(text)}, contentAlignment=Alignment.Center) {
+                        Text(stringResource(R.string.add), fontWeight=FontWeight.Bold, color=if(text.isNotBlank()) MaterialTheme.colorScheme.primary else Color.Gray)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun IOSAdsDialog(onDismiss: () -> Unit, onWatch: () -> Unit) {
+    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+        Box(modifier = Modifier.fillMaxSize().clickable(interactionSource = remember{MutableInteractionSource()}, indication=null){onDismiss()}, contentAlignment = Alignment.Center) {
+            Column(modifier = Modifier.width(280.dp).clip(RoundedCornerShape(14.dp)).background(MaterialTheme.colorScheme.surface.copy(alpha=0.95f)).clickable(enabled=false){}, horizontalAlignment=Alignment.CenterHorizontally) {
+                Text(stringResource(R.string.photo_add_ads_promo_title), fontWeight=FontWeight.Bold, modifier=Modifier.padding(top=16.dp, bottom=4.dp), style=MaterialTheme.typography.titleMedium)
+                Text(stringResource(R.string.photo_add_ads_promo_description), style=MaterialTheme.typography.bodySmall, textAlign= TextAlign.Center, modifier=Modifier.padding(horizontal=16.dp))
+                HorizontalDivider(modifier=Modifier.padding(top=16.dp), color=Color.Gray.copy(0.3f))
+                Row(modifier = Modifier.height(44.dp)) {
+                    Box(modifier = Modifier.weight(1f).fillMaxHeight().clickable{onDismiss()}, contentAlignment=Alignment.Center) {
+                        Text(stringResource(R.string.cancel), color=MaterialTheme.colorScheme.primary)
+                    }
+                    Box(modifier = Modifier.width(0.5.dp).fillMaxHeight().background(Color.Gray.copy(0.3f)))
+                    Box(modifier = Modifier.weight(1f).fillMaxHeight().clickable{onWatch()}, contentAlignment=Alignment.Center) {
+                        Text(stringResource(R.string.watch_ad), fontWeight=FontWeight.Bold, color=MaterialTheme.colorScheme.primary)
+                    }
+                }
+            }
+        }
+    }
+}
+
+// Дата для шапки: "15 января, 10:30"
+fun getFriendlyDate(time: Long): String {
+    return SimpleDateFormat("d MMMM, HH:mm", Locale.getDefault()).format(Date(time))
 }
 
 private fun loadRewardedAd(rewardedAdLoader: RewardedAdLoader?) {
