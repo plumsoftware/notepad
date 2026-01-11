@@ -8,9 +8,7 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -19,7 +17,6 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -28,8 +25,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -37,28 +32,19 @@ import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.lazy.staggeredgrid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.FolderOpen
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.RadioButton
-import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -80,7 +66,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
@@ -88,8 +74,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -114,12 +99,17 @@ import androidx.core.net.toUri
 import ru.plumsoftware.notepad.ui.MainScreenRouteState
 import ru.plumsoftware.notepad.ui.dialog.MoveToGroupDialog
 import ru.plumsoftware.notepad.ui.elements.BottomBar
-import ru.plumsoftware.notepad.ui.elements.CalendarView
+import ru.plumsoftware.notepad.ui.elements.IOSActionSheetOption
+import ru.plumsoftware.notepad.ui.elements.IOSCalendarView
 import ru.plumsoftware.notepad.ui.elements.IOSCreateGroupDialog
 import ru.plumsoftware.notepad.ui.elements.IOSNoteCard
+import ru.plumsoftware.notepad.ui.elements.IOSTopBar
 import ru.plumsoftware.notepad.ui.elements.RateAppBottomSheet
+import ru.plumsoftware.notepad.ui.elements.getNotesForDate
+import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -283,48 +273,71 @@ fun NoteListScreen(
     }
 
     // BottomSheet для меню
+    // IOS Action Sheet (Меню)
     if (showMenuBottomSheet) {
         ModalBottomSheet(
             onDismissRequest = { showMenuBottomSheet = false },
             sheetState = rememberModalBottomSheetState(),
-            containerColor = MaterialTheme.colorScheme.surface,
-            scrimColor = Color.Black.copy(alpha = 0.5f) // Затемнение фона
+            containerColor = Color.Transparent, // Прозрачный фон, чтобы видеть отступы
+            contentColor = MaterialTheme.colorScheme.primary,
+            dragHandle = null, // Убираем полоску сверху, в iOS её нет в таких меню
+            scrimColor = Color.Black.copy(alpha = 0.4f)
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 24.dp, vertical = 20.dp)
+                    .padding(horizontal = 16.dp) // Отступы с краев
+                    .padding(bottom = 16.dp)     // Отступ снизу
+                    .navigationBarsPadding()     // Учитываем полоску навигации телефона
             ) {
-                // Опция "О приложении"
-                MenuOption(
-                    text = stringResource(R.string.about_app),
-                    onClick = {
-                        showMenuBottomSheet = false
-                        // Переход на экран "О приложении"
-                        navController.navigate(Screen.AboutApp.route)
-                    }
-                )
+                // --- 1. ОСНОВНОЙ БЛОК ОПЦИЙ ---
+                Column(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.9f))
+                ) {
+                    // Заголовок (опционально, в iOS часто его нет, но можно оставить пустым или добавить описание)
+                    // Если заголовка нет, просто опции
 
-                // Разделитель
-                HorizontalDivider(
+                    // Опция "О приложении"
+                    IOSActionSheetOption(
+                        text = stringResource(R.string.about_app),
+                        onClick = {
+                            showMenuBottomSheet = false
+                            navController.navigate(Screen.AboutApp.route)
+                        },
+                        showDivider = true
+                    )
+
+                    // Опция "Настройки"
+                    IOSActionSheetOption(
+                        text = stringResource(R.string.settings),
+                        onClick = {
+                            showMenuBottomSheet = false
+                            navController.navigate(Screen.Settings.route)
+                        },
+                        showDivider = false
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // --- 2. КНОПКА ОТМЕНА ---
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
-                    thickness = 1.dp,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)
-                )
-
-                // Опция "Настройки"
-                MenuOption(
-                    text = stringResource(R.string.settings),
-                    onClick = {
-                        showMenuBottomSheet = false
-                        // Переход на экран настроек
-                        navController.navigate(Screen.Settings.route)
-                    }
-                )
-
-                Spacer(modifier = Modifier.height(46.dp))
+                        .height(56.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(MaterialTheme.colorScheme.surface) // Белый/Черный фон для Отмены
+                        .clickable { showMenuBottomSheet = false },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = stringResource(R.string.cancel), // "Отмена"
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
             }
         }
     }
@@ -404,278 +417,34 @@ fun NoteListScreen(
                     ) {
                         // Анимированная строка поиска
                         AnimatedVisibility(
-                            visible = isSearchBarVisible,
-                            enter = slideInVertically(
-                                initialOffsetY = { -it },
-                                animationSpec = tween(durationMillis = 300)
-                            ) + fadeIn(
-                                animationSpec = tween(durationMillis = 300)
-                            ),
-                            exit = slideOutVertically(
-                                targetOffsetY = { -it },
-                                animationSpec = tween(durationMillis = 300)
-                            ) + fadeOut(
-                                animationSpec = tween(durationMillis = 300)
-                            )
+                            visible = isSearchBarVisible || isSearchFocused, // Если поиск активен, бар не скрываем
+                            enter = slideInVertically { -it } + fadeIn(),
+                            exit = slideOutVertically { -it } + fadeOut()
                         ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 14.dp, vertical = 12.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)
-                            ) {
-                                // Кнопка меню (слева от поиска) с анимацией
-                                AnimatedVisibility(
-                                    visible = !isSearchFocused,
-                                    enter = slideInHorizontally(
-                                        initialOffsetX = { -it }, // появление слева
-                                        animationSpec = tween(durationMillis = 300)
-                                    ) + fadeIn(
-                                        animationSpec = tween(durationMillis = 300)
-                                    ),
-                                    exit = slideOutHorizontally(
-                                        targetOffsetX = { -it }, // скрытие влево
-                                        animationSpec = tween(durationMillis = 300)
-                                    ) + fadeOut(
-                                        animationSpec = tween(durationMillis = 300)
-                                    )
-                                ) {
-                                    Icon(
-                                        modifier = Modifier
-                                            .wrapContentSize()
-                                            .size(28.dp)
-                                            .clickable(
-                                                enabled = true,
-                                                role = Role.Button,
-                                                indication = null,
-                                                interactionSource = remember { MutableInteractionSource() },
-                                                onClick = {
-                                                    showMenuBottomSheet = true
-                                                }
-                                            ),
-                                        imageVector = Icons.Filled.Settings,
-                                        contentDescription = stringResource(R.string.settings),
-                                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                                    )
-                                }
-
-                                // Search Bar - занимает всё доступное пространство
-                                OutlinedTextField(
-                                    value = searchQuery,
-                                    onValueChange = { query ->
-                                        searchQuery = query
-                                        if (searchQuery.isEmpty()) {
-                                            viewModel.searchNotes(searchQuery)
-                                        }
-                                    },
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .fillMaxWidth()
-                                        .onFocusChanged {
-                                            isSearchFocused = it.isFocused
-                                        },
-                                    singleLine = true,
-                                    textStyle = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
-                                    placeholder = {
-                                        Text(
-                                            text = stringResource(R.string.note_search),
-                                            style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium)
-                                        )
-                                    },
-                                    shape = MaterialTheme.shapes.extraLarge,
-                                    trailingIcon = {
-                                        AnimatedVisibility(
-                                            visible = searchQuery.isNotEmpty(),
-                                            enter = slideInHorizontally { it } + fadeIn(),
-                                            exit = slideOutHorizontally { it } + fadeOut()
-                                        ) {
-                                            IconButton(
-                                                onClick = {
-                                                    viewModel.searchNotes(searchQuery)
-                                                }
-                                            ) {
-                                                Icon(
-                                                    imageVector = Icons.Default.Search,
-                                                    contentDescription = "Search"
-                                                )
-                                            }
-                                        }
-                                    },
-                                    keyboardOptions = KeyboardOptions(
-                                        keyboardType = KeyboardType.Text,
-                                        imeAction = ImeAction.Search
-                                    ),
-                                    keyboardActions = KeyboardActions(
-                                        onSearch = {
-                                            viewModel.searchNotes(searchQuery)
-                                            // После поиска снимаем фокус
-                                            focusManager.clearFocus()
-                                        }
-                                    ),
-                                    colors = OutlinedTextFieldDefaults.colors(
-                                        focusedBorderColor = Color.Transparent,
-                                        unfocusedBorderColor = Color.Transparent,
-                                        focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
-                                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer
-                                    ),
-                                    enabled = !isLoading
-                                )
-
-                                // Группа иконок справа с анимацией
-                                AnimatedVisibility(
-                                    visible = !isSearchFocused,
-                                    enter = slideInHorizontally(
-                                        initialOffsetX = { it }, // появление справа
-                                        animationSpec = tween(durationMillis = 300)
-                                    ) + fadeIn(
-                                        animationSpec = tween(durationMillis = 300)
-                                    ),
-                                    exit = slideOutHorizontally(
-                                        targetOffsetX = { it }, // скрытие вправо
-                                        animationSpec = tween(durationMillis = 300)
-                                    ) + fadeOut(
-                                        animationSpec = tween(durationMillis = 300)
-                                    )
-                                ) {
-                                    Row(
-                                        modifier = Modifier
-                                            .wrapContentSize(),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                    ) {
-                                        // Кнопка фильтрации
-                                        Icon(
-                                            modifier = Modifier
-                                                .wrapContentSize()
-                                                .size(20.dp)
-                                                .clickable(
-                                                    enabled = true,
-                                                    role = Role.Button,
-                                                    indication = null,
-                                                    interactionSource = remember { MutableInteractionSource() },
-                                                    onClick = {
-                                                        showFilterDialog = true
-                                                    }),
-                                            painter = painterResource(R.drawable.filter),
-                                            contentDescription = "Filter",
-                                            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                                        )
-
-                                        // Кнопка переключения типа списка
-                                        Box(
-                                            modifier = Modifier
-                                                .size(28.dp)
-                                                .clickable(
-                                                    enabled = true,
-                                                    interactionSource = remember { MutableInteractionSource() },
-                                                    role = Role.Button,
-                                                    indication = null,
-                                                    onClick = {
-                                                        listType = if (listType == 0) 1 else 0
-                                                        saveListTypeToPreferences(listType, context)
-                                                    }
-                                                ),
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            if (listType == 1) {
-                                                FlowRow(
-                                                    modifier = Modifier.wrapContentSize(),
-                                                    maxLines = 2,
-                                                    maxItemsInEachRow = 2,
-                                                    verticalArrangement = Arrangement.spacedBy(
-                                                        space = 4.dp,
-                                                        alignment = Alignment.CenterVertically
-                                                    ),
-                                                    horizontalArrangement = Arrangement.spacedBy(
-                                                        space = 4.dp,
-                                                        alignment = Alignment.CenterHorizontally
-                                                    )
-                                                ) {
-                                                    Box(
-                                                        modifier = Modifier
-                                                            .width(8.dp)
-                                                            .height(8.dp)
-                                                            .background(
-                                                                color = MaterialTheme.colorScheme.onSurface.copy(
-                                                                    alpha = 0.7f
-                                                                )
-                                                            )
-                                                    )
-                                                    Box(
-                                                        modifier = Modifier
-                                                            .width(8.dp)
-                                                            .height(8.dp)
-                                                            .background(
-                                                                color = MaterialTheme.colorScheme.onSurface.copy(
-                                                                    alpha = 0.7f
-                                                                )
-                                                            )
-                                                    )
-                                                    Box(
-                                                        modifier = Modifier
-                                                            .width(8.dp)
-                                                            .height(8.dp)
-                                                            .background(
-                                                                color = MaterialTheme.colorScheme.onSurface.copy(
-                                                                    alpha = 0.7f
-                                                                )
-                                                            )
-                                                    )
-                                                    Box(
-                                                        modifier = Modifier
-                                                            .width(8.dp)
-                                                            .height(8.dp)
-                                                            .background(
-                                                                color = MaterialTheme.colorScheme.onSurface.copy(
-                                                                    alpha = 0.7f
-                                                                )
-                                                            )
-                                                    )
-                                                }
-                                            } else {
-                                                FlowRow(
-                                                    modifier = Modifier.wrapContentSize(),
-                                                    maxLines = 2,
-                                                    maxItemsInEachRow = 1,
-                                                    verticalArrangement = Arrangement.spacedBy(
-                                                        space = 4.dp,
-                                                        alignment = Alignment.CenterVertically
-                                                    ),
-                                                    horizontalArrangement = Arrangement.spacedBy(
-                                                        space = 4.dp,
-                                                        alignment = Alignment.CenterHorizontally
-                                                    )
-                                                ) {
-                                                    Box(
-                                                        modifier = Modifier
-                                                            .width(20.dp)
-                                                            .height(6.dp)
-                                                            .background(
-                                                                color = MaterialTheme.colorScheme.onSurface.copy(
-                                                                    alpha = 0.7f
-                                                                )
-                                                            )
-                                                    )
-                                                    Box(
-                                                        modifier = Modifier
-                                                            .width(20.dp)
-                                                            .height(6.dp)
-                                                            .background(
-                                                                color = MaterialTheme.colorScheme.onSurface.copy(
-                                                                    alpha = 0.7f
-                                                                )
-                                                            )
-                                                    )
-                                                }
-                                            }
-                                        }
+                            IOSTopBar(
+                                searchQuery = searchQuery,
+                                onSearchQueryChange = { query ->
+                                    searchQuery = query
+                                    if (searchQuery.isEmpty()) {
+                                        viewModel.searchNotes("") // Сбрасываем поиск
+                                    } else {
+                                        // Можно добавить debounce, если нужно
+                                        viewModel.searchNotes(query)
                                     }
-                                }
-                            }
+                                },
+                                isSearchFocused = isSearchFocused,
+                                onFocusChange = { focused -> isSearchFocused = focused },
+                                onSettingsClick = { showMenuBottomSheet = true },
+                                onFilterClick = { showFilterDialog = true },
+                                onLayoutToggle = {
+                                    listType = if (listType == 0) 1 else 0
+                                    saveListTypeToPreferences(listType, context)
+                                },
+                                listType = listType
+                            )
                         }
 
-                        Spacer(modifier = Modifier.height(12.dp))
+                        //Spacer(modifier = Modifier.height(12.dp))
                         IOSGroupList(
                             groups = groups, // Теперь тут GroupsWithCounts
                             selectedGroupId = selectedGroupId,
@@ -688,7 +457,7 @@ fun NoteListScreen(
                                 viewModel.deleteFolder(group)
                             }
                         )
-                        Spacer(modifier = Modifier.height(8.dp))
+                        //Spacer(modifier = Modifier.height(8.dp))
 
                         // Fixed Date Label and Notes List
                         Box(
@@ -964,7 +733,7 @@ fun EmptyNotesState() {
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class) // 1. Исправляем animateItem
+@OptIn(ExperimentalFoundationApi::class) // Нужен для animateItem / animateItemPlacement
 @Composable
 private fun CalendarContent(
     notes: List<Note>,
@@ -975,19 +744,24 @@ private fun CalendarContent(
     onImageClick: (String) -> Unit,
     notesToDelete: SnapshotStateMap<String, Boolean>
 ) {
-    var selectedDateNotes by remember { mutableStateOf<List<Note>?>(null) }
-    var selectedDate by remember { mutableStateOf<Date?>(null) }
-    var selectedWeek by remember { mutableStateOf<Int?>(null) }
+    // Выбранная дата (по умолчанию - сейчас)
+    var selectedDate by remember { mutableStateOf<Date?>(Date()) }
 
-    // Стейт для диалога перемещения в группу (нужен для календаря отдельно, если экран не общий)
-    var noteToMove by remember { mutableStateOf<Note?>(null) }
+    // Режим календаря: true = месяц, false = неделя
+    var isMonthView by remember { mutableStateOf(true) }
+
+    // Получаем список заметок на выбранную дату
+    val selectedDateNotes = remember(selectedDate, notes) {
+        selectedDate?.let { date ->
+            getNotesForDate(notes, date)
+        } ?: emptyList()
+    }
 
     val lazyListState = rememberLazyListState()
+    var noteToMove by remember { mutableStateOf<Note?>(null) }
     val context = LocalContext.current
-    val coroutineScope = rememberCoroutineScope()
-    val exoPlayer = rememberExoPlayer()
 
-    // --- Сам Диалог перемещения ---
+    // Диалог "В папку" (появляется при выборе в меню)
     if (noteToMove != null) {
         MoveToGroupDialog(
             groups = groups,
@@ -1001,155 +775,137 @@ private fun CalendarContent(
 
     Column(
         modifier = Modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.Top,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        CalendarView(
+        // --- КАЛЕНДАРЬ ---
+        IOSCalendarView(
             notes = notes,
-            selectedDate = selectedDate,
-            selectedWeek = selectedWeek,
-            onDayClick = { date, notesForDay, week ->
+            selectedDate = selectedDate ?: Date(),
+            isMonthExpanded = isMonthView,
+            onDateSelected = { date ->
                 selectedDate = date
-                selectedDateNotes = notesForDay
-                selectedWeek = week
+                isMonthView = false // При клике на день сворачиваем до недели
+            },
+            onExpandChange = { isExpanded ->
+                isMonthView = isExpanded
             },
             modifier = Modifier
-                .padding(top = 16.dp)
-                .clip(RoundedCornerShape(bottomStart = 32.dp, bottomEnd = 32.dp))
+                .fillMaxWidth()
                 .background(MaterialTheme.colorScheme.surface)
+                // Тень в стиле iOS
+                .shadow(4.dp, spotColor = Color.Black.copy(alpha = 0.05f))
+                .padding(bottom = 8.dp)
         )
 
-        // Отображаем заметки выбранной даты
-        selectedDateNotes?.let { notesForDate ->
-            LazyColumn(
-                state = lazyListState,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 16.dp)
-            ) {
-                item {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 16.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text(
-                            text = stringResource(
-                                R.string.calendar_notes_for_date,
-                                selectedDate?.let { formatCalendarDate(it) } ?: ""
-                            ),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
-                        )
+        // --- СПИСОК ЗАМЕТОК ---
+        LazyColumn(
+            state = lazyListState,
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp)
+        ) {
+            // Заголовок даты над списком
+            item {
+                Text(
+                    text = selectedDate?.let { getFancyDateTitle(it) } ?: "",
+                    style = MaterialTheme.typography.titleLarge.copy(
+                        fontWeight = FontWeight.Bold
+                    ),
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.padding(bottom = 12.dp)
+                )
+            }
 
-                        IconButton(
-                            onClick = {
-                                selectedDateNotes = null
-                                selectedDate = null
-                                selectedWeek = null
-                            },
-                            colors = IconButtonDefaults.iconButtonColors(
-                                containerColor = MaterialTheme.colorScheme.surfaceVariant
-                            )
+            if (selectedDateNotes.isNotEmpty()) {
+                // Если заметки есть
+                items(selectedDateNotes, key = { it.id }) { note ->
+                    if (notesToDelete[note.id] != true) {
+                        var showNoteMenu by remember { mutableStateOf(false) }
+
+                        // Анимация элемента списка
+                        Box(
+                            modifier = Modifier
+                                .animateItem() // Если ошибка версии, удали эту строку или замени на .animateItemPlacement()
+                                .padding(vertical = 6.dp)
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.Close,
-                                contentDescription = stringResource(R.string.close)
-                            )
-                        }
-                    }
-                }
-
-                if (notesForDate.isNotEmpty()) {
-                    items(notesForDate, key = { it.id }) { note ->
-                        // Проверяем, не удаляется ли заметка визуально
-                        if (notesToDelete[note.id] != true) {
-                            var showNoteMenu by remember { mutableStateOf(false) }
-
-                            Box(
-                                modifier = Modifier
-                                    .animateItem() // 2. Анимация теперь работает
-                                    .padding(vertical = 8.dp)
-                            ) {
-                                // 3. Используем IOSNoteCard вместо NoteCard
-                                IOSNoteCard(
-                                    note = note,
-                                    groups = groups,
-                                    modifier = Modifier.fillMaxWidth(), // Для списка и грида работает
-                                    onClick = {
-                                        navController.navigate(Screen.EditNote.createRoute(note.id))
-                                    },
-                                    onLongClick = {
-                                        showNoteMenu = true
-                                        playSound(context, exoPlayer, R.raw.note_create)
-                                    },
-                                    onImageClick = onImageClick,
-                                    onNoteUpdated = { updatedNote ->
-                                        // Обновляем заметку через ViewModel (сохраняем галочку)
-                                        viewModel.updateNote(updatedNote, context)
-                                        // Если хочешь звук при нажатии галочки:
-                                        // playSound(context, exoPlayer, R.raw.note_create)
-                                    }
-                                )
-
-                                // Контекстное меню (как в списке заметок)
-                                DropdownMenu(
-                                    expanded = showNoteMenu,
-                                    onDismissRequest = { showNoteMenu = false },
-                                    containerColor = MaterialTheme.colorScheme.surfaceContainer,
-                                    shape = RoundedCornerShape(12.dp)
-                                ) {
-                                    DropdownMenuItem(
-                                        text = { Text("В папку") },
-                                        onClick = {
-                                            showNoteMenu = false
-                                            noteToMove = note // Открываем диалог
-                                        },
-                                        leadingIcon = { Icon(Icons.Default.FolderOpen, null) }
-                                    )
-                                    DropdownMenuItem(
-                                        text = { Text("Удалить", color = MaterialTheme.colorScheme.error) },
-                                        onClick = {
-                                            showNoteMenu = false
-                                            onDelete(note)
-                                        },
-                                        leadingIcon = { Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error) }
-                                    )
+                            IOSNoteCard(
+                                note = note,
+                                groups = groups,
+                                onClick = { navController.navigate(Screen.EditNote.createRoute(note.id)) },
+                                onLongClick = { showNoteMenu = true },
+                                onImageClick = onImageClick,
+                                onNoteUpdated = { updatedNote ->
+                                    viewModel.updateNote(updatedNote, context)
                                 }
+                            )
+
+                            // Контекстное меню
+                            DropdownMenu(
+                                expanded = showNoteMenu,
+                                onDismissRequest = { showNoteMenu = false },
+                                containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.move_to_folder)) },
+                                    onClick = {
+                                        showNoteMenu = false; noteToMove = note
+                                    },
+                                    leadingIcon = { Icon(Icons.Default.FolderOpen, null) }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error) },
+                                    onClick = {
+                                        showNoteMenu = false; onDelete(note)
+                                    },
+                                    leadingIcon = { Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error) }
+                                )
                             }
                         }
                     }
-                } else {
-                    item {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(200.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
+                }
+
+                // Пустое место снизу для прокрутки
+                item { Spacer(modifier = Modifier.height(100.dp)) }
+
+            } else {
+                // ПУСТОЕ СОСТОЯНИЕ (Если нет заметок)
+                item {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(200.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            // "Здесь пока пусто"
                             Text(
-                                text = stringResource(R.string.calendar_no_notes_for_date, ""),
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                text = stringResource(R.string.empty_notes_list),
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
+                                fontWeight = FontWeight.Bold
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+
+                            // "Нет заметок на [Дата]"
+                            val dateStr = selectedDate?.let { getFancyDateTitle(it) } ?: ""
+                            Text(
+                                text = stringResource(R.string.calendar_no_notes_for_date, dateStr),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
+                                textAlign = TextAlign.Center
                             )
                         }
                     }
                 }
-
-                item { Spacer(modifier = Modifier.height(100.dp)) }
-            }
-        } ?: run {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text(
-                    text = stringResource(R.string.calendar_select_date),
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
             }
         }
     }
+}
+
+// Форматирует дату для заголовка списка (Например: "Понедельник, 12 Октября")
+fun getFancyDateTitle(date: Date): String {
+    val fmt = SimpleDateFormat("EEEE, d MMMM", Locale.getDefault())
+    return fmt.format(date).replaceFirstChar { it.uppercase() }
 }
 
 // Функция для форматирования даты
@@ -1206,7 +962,6 @@ fun MenuOption(
     }
 }
 
-// Диалоговое окно фильтрации
 @Composable
 fun FilterDialog(
     selectedFilter: Int,
@@ -1220,97 +975,131 @@ fun FilterDialog(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.5f))
-                .clickable { onDismiss() },
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null
+                ) { onDismiss() }, // Закрытие по клику на фон
             contentAlignment = Alignment.Center
         ) {
             Column(
                 modifier = Modifier
+                    .padding(horizontal = 48.dp) // Большие отступы с боков для iOS стиля
                     .fillMaxWidth()
-                    .padding(horizontal = 24.dp)
-                    .background(
-                        color = MaterialTheme.colorScheme.surface,
-                        shape = MaterialTheme.shapes.extraLarge
-                    )
-                    .padding(vertical = 20.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.95f)),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Заголовок
+                // 1. ЗАГОЛОВОК
                 Text(
                     text = stringResource(R.string.filter_dialog_title),
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                    modifier = Modifier.padding(top = 16.dp, bottom = 12.dp),
+                    color = MaterialTheme.colorScheme.onSurface
                 )
 
-                Spacer(modifier = Modifier.height(8.dp))
+                HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f))
 
-                // Опции фильтрации
-                FilterOption(
+                // 2. ОПЦИИ (Убрали RadioButton, добавили галочки справа)
+                IOSFilterOption(
                     text = stringResource(R.string.filter_option_new),
                     isSelected = selectedFilter == 0,
-                    onClick = { onFilterSelected(0) }
+                    onClick = { onFilterSelected(0) },
+                    showDivider = true
                 )
 
-                FilterOption(
+                IOSFilterOption(
                     text = stringResource(R.string.filter_option_old),
                     isSelected = selectedFilter == 1,
-                    onClick = { onFilterSelected(1) }
+                    onClick = { onFilterSelected(1) },
+                    showDivider = true
                 )
 
-                FilterOption(
+                IOSFilterOption(
                     text = stringResource(R.string.filter_option_with_reminders),
                     isSelected = selectedFilter == 2,
-                    onClick = { onFilterSelected(2) }
+                    onClick = { onFilterSelected(2) },
+                    showDivider = true
                 )
 
-                FilterOption(
+                IOSFilterOption(
                     text = stringResource(R.string.filter_option_with_photos),
                     isSelected = selectedFilter == 3,
-                    onClick = { onFilterSelected(3) }
+                    onClick = { onFilterSelected(3) },
+                    showDivider = true
                 )
 
-                FilterOption(
+                IOSFilterOption(
                     text = stringResource(R.string.filter_option_with_tasks),
                     isSelected = selectedFilter == 4,
-                    onClick = { onFilterSelected(4) }
+                    onClick = { onFilterSelected(4) },
+                    showDivider = false // У последнего элемента разделитель не нужен
                 )
+
+                // Разделитель перед отменой (жирный)
+                HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f))
+
+                // 3. КНОПКА ОТМЕНА (Текстовая, на всю ширину)
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp)
+                        .clickable { onDismiss() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = stringResource(R.string.cancel), // Убедись, что ресурс есть, или напиши "Отмена"
+                        style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
             }
         }
     }
 }
 
-// Компонент опции фильтрации
+// Новый компонент опции фильтрации в стиле iOS
 @Composable
-fun FilterOption(
+fun IOSFilterOption(
     text: String,
     isSelected: Boolean,
+    showDivider: Boolean,
     onClick: () -> Unit
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onClick() }
-            .padding(horizontal = 20.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        RadioButton(
-            selected = isSelected,
-            onClick = onClick,
-            colors = RadioButtonDefaults.colors(
-                selectedColor = MaterialTheme.colorScheme.primary,
-                unselectedColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+    Column {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onClick)
+                .padding(vertical = 12.dp, horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            // Текст слева
+            Text(
+                text = text,
+                style = MaterialTheme.typography.bodyLarge, // 17sp стандарт iOS
+                color = MaterialTheme.colorScheme.onSurface
             )
-        )
 
-        Spacer(modifier = Modifier.width(12.dp))
+            // Галочка справа (только если выбрано)
+            if (isSelected) {
+                Icon(
+                    imageVector = Icons.Default.Check,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary, // Синий цвет галочки
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+        }
 
-        Text(
-            text = text,
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.weight(1f)
-        )
+        // Разделитель (Inset separator - отступ слева 16dp)
+        if (showDivider) {
+            HorizontalDivider(
+                modifier = Modifier.padding(start = 16.dp),
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f),
+                thickness = 0.5.dp
+            )
+        }
     }
 }
 

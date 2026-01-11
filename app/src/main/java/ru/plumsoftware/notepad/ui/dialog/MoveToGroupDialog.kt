@@ -46,95 +46,40 @@ import ru.plumsoftware.notepad.R
 import ru.plumsoftware.notepad.data.model.Group
 
 @Composable
-fun MoveToGroupDialog(
-    groups: List<Group>,
-    onDismiss: () -> Unit,
-    onGroupSelected: (String) -> Unit
-) {
-    Dialog(
-        onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false)
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null
-                ) { onDismiss() }, // Закрытие по клику на фон
-            contentAlignment = Alignment.Center
-        ) {
+fun MoveToGroupDialog(groups: List<Group>, onDismiss: () -> Unit, onGroupSelected: (String) -> Unit) {
+    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+        Box(modifier = Modifier.fillMaxSize().clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { onDismiss() }, contentAlignment = Alignment.Center) {
             Column(
-                modifier = Modifier
-                    .padding(horizontal = 24.dp)
-                    .widthIn(max = 320.dp) // Фиксированная ширина как у алерта iOS
-                    .clip(RoundedCornerShape(14.dp)) // Squircle
-                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.95f))
-                    .clickable(enabled = false) {}, // Блокируем клик сквозь
+                modifier = Modifier.padding(horizontal = 24.dp).widthIn(max = 320.dp).clip(RoundedCornerShape(14.dp)).background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.95f)).clickable(enabled = false) {},
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // 1. ЗАГОЛОВОК
                 Text(
-                    text = stringResource(R.string.move_to_folder),
+                    text = stringResource(R.string.move_to_folder), // <-- STRING
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                     modifier = Modifier.padding(top = 20.dp, bottom = 12.dp),
                     color = MaterialTheme.colorScheme.onSurface
                 )
-
-                // Тонкий разделитель перед списком
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
-
-                // 2. СПИСОК ПАПОК
-                LazyColumn(
-                    modifier = Modifier.heightIn(max = 400.dp) // Ограничиваем высоту, если папок много
-                ) {
-                    // Пункт "Все заметки" (Убрать из папки)
+                LazyColumn(modifier = Modifier.heightIn(max = 400.dp)) {
                     item {
                         IOSGroupItem(
-                            title = stringResource(R.string.all),
-                            color = null, // Дефолтная иконка
+                            title = stringResource(R.string.all_notes), // <-- STRING (Все заметки)
+                            color = null,
                             onClick = { onGroupSelected("0") }
                         )
-                        // Разделитель с отступом слева (iOS Style inset divider)
-                        HorizontalDivider(
-                            modifier = Modifier.padding(start = 52.dp),
-                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f),
-                            thickness = 0.5.dp
-                        )
+                        HorizontalDivider(modifier = Modifier.padding(start = 52.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f), thickness = 0.5.dp)
                     }
-
-                    // Список пользовательских папок
                     items(groups) { group ->
-                        IOSGroupItem(
-                            title = group.title,
-                            color = Color(group.color.toULong()),
-                            onClick = { onGroupSelected(group.id) }
-                        )
-                        // Разделитель для всех, кроме последнего?
-                        // В LazyColumn проще рисовать для всех, визуально это не портит вид внутри скролла
-                        HorizontalDivider(
-                            modifier = Modifier.padding(start = 52.dp),
-                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f),
-                            thickness = 0.5.dp
-                        )
+                        IOSGroupItem(title = group.title, color = Color(group.color.toULong()), onClick = { onGroupSelected(group.id) })
+                        HorizontalDivider(modifier = Modifier.padding(start = 52.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f), thickness = 0.5.dp)
                     }
                 }
-
-                // Разделитель перед кнопкой отмены
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
-
-                // 3. КНОПКА ОТМЕНА
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(48.dp)
-                        .clickable { onDismiss() },
-                    contentAlignment = Alignment.Center
-                ) {
+                Box(modifier = Modifier.fillMaxWidth().height(48.dp).clickable { onDismiss() }, contentAlignment = Alignment.Center) {
                     Text(
-                        text = stringResource(R.string.cancel),
+                        text = stringResource(R.string.cancel), // <-- STRING
                         style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold),
-                        color = MaterialTheme.colorScheme.primary // Акцентный синий цвет
+                        color = MaterialTheme.colorScheme.primary
                     )
                 }
             }

@@ -60,6 +60,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
@@ -77,29 +78,26 @@ import ru.plumsoftware.notepad.data.model.Group
 
 @Composable
 fun IOSGroupList(
-    groups: List<GroupWithCount>, // Используем новый тип с данными
+    groups: List<GroupWithCount>,
     selectedGroupId: String?,
     totalCount: Int,
     onGroupSelected: (String) -> Unit,
-    onCreateGroup: () -> Unit, // Упростили коллбэк, диалог внутри экрана
+    onCreateGroup: () -> Unit,
     onDeleteGroup: (Group) -> Unit
 ) {
     val scrollState = rememberLazyListState()
     val haptic = LocalHapticFeedback.current
 
-    // Определяем ширину экрана для градиентов
-    // (можно убрать градиенты, в iOS 15+ их часто нет, но оставим для эстетики)
-
     LazyRow(
         state = scrollState,
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 12.dp), // Отступы сверху/снизу от поиска
-        horizontalArrangement = Arrangement.spacedBy(10.dp), // Отступ между капсулами
+            .padding(vertical = 12.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalAlignment = Alignment.CenterVertically,
-        contentPadding = PaddingValues(horizontal = 16.dp)   // Отступ списка от краев
+        contentPadding = PaddingValues(horizontal = 16.dp)
     ) {
-        // 1. Кнопка создания новой группы (+)
+        // Кнопка создания (+)
         item {
             IOSActionChip(
                 icon = Icons.Default.Add,
@@ -110,24 +108,23 @@ fun IOSGroupList(
             )
         }
 
-        // Разделитель (вертикальная черта), как в некоторых муз. приложениях
+        // Разделитель
         item {
             Box(
                 modifier = Modifier
                     .height(24.dp)
                     .width(1.dp)
                     .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-//                    .align(Alignment.CenterVertically)
             )
         }
 
-        // 2. Кнопка "Все"
+        // Кнопка "Все"
         item {
             IOSGroupChip(
-                title = stringResource(R.string.all), // "Все"
+                title = stringResource(R.string.all_notes),
                 count = totalCount,
                 isSelected = selectedGroupId == "0",
-                color = null, // Для "Всех" нет спец цвета, будет черный/белый
+                color = null,
                 onClick = {
                     onGroupSelected("0")
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -135,13 +132,13 @@ fun IOSGroupList(
             )
         }
 
-        // 3. Список групп
+        // Список папок
         items(groups, key = { it.group.id }) { item ->
             IOSGroupChip(
                 title = item.group.title,
                 count = item.noteCount,
                 isSelected = selectedGroupId == item.group.id,
-                color = Color(item.group.color.toULong()), // Цвет самой категории (точки)
+                color = Color(item.group.color.toULong()),
                 onClick = {
                     onGroupSelected(item.group.id)
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -154,6 +151,7 @@ fun IOSGroupList(
     }
 }
 
+// --- 2. ЭЛЕМЕНТ ГРУППЫ (CHIP) ---
 @Composable
 fun IOSGroupChip(
     title: String,
@@ -163,7 +161,6 @@ fun IOSGroupChip(
     onClick: () -> Unit,
     onLongClick: (() -> Unit)? = null
 ) {
-    // Анимация цветов
     val backgroundColor by animateColorAsState(
         targetValue = if (isSelected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
         animationSpec = tween(durationMillis = 200), label = "bgColor"
@@ -176,7 +173,7 @@ fun IOSGroupChip(
 
     Box(
         modifier = Modifier
-            .height(36.dp) // Высота стандартной iOS кнопки
+            .height(36.dp)
             .clip(CircleShape)
             .background(backgroundColor)
             .pointerInput(Unit) {
@@ -185,15 +182,13 @@ fun IOSGroupChip(
                     onLongPress = { onLongClick?.invoke() }
                 )
             }
-            .padding(horizontal = 14.dp), // Внутренний отступ текста
+            .padding(horizontal = 14.dp),
         contentAlignment = Alignment.Center
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center
         ) {
-            // Если у группы есть свой цвет (точка), показываем её только в неактивном состоянии
-            // (в активном всё черно-белое для стиля)
             if (color != null && !isSelected) {
                 Box(
                     modifier = Modifier
@@ -203,14 +198,12 @@ fun IOSGroupChip(
                 Spacer(modifier = Modifier.width(8.dp))
             }
 
-            // Название группы
             Text(
                 text = title,
                 style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
                 color = contentColor
             )
 
-            // Счетчик заметок (отображаем, если больше 0)
             if (count > 0) {
                 Spacer(modifier = Modifier.width(6.dp))
                 Text(
@@ -223,7 +216,7 @@ fun IOSGroupChip(
     }
 }
 
-// Маленькая круглая кнопка для действия (+ добавить)
+// --- 3. КНОПКА ДЕЙСТВИЯ (Круглая с иконкой) ---
 @Composable
 fun IOSActionChip(
     icon: ImageVector,
@@ -231,21 +224,22 @@ fun IOSActionChip(
 ) {
     Box(
         modifier = Modifier
-            .size(36.dp) // Квадратная (круглая)
+            .size(36.dp)
             .clip(CircleShape)
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)) // Серый фон
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
         Icon(
             imageVector = icon,
             contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary, // Синий iOS акцент
+            tint = MaterialTheme.colorScheme.primary,
             modifier = Modifier.size(20.dp)
         )
     }
 }
 
+// --- 4. ДИАЛОГ СОЗДАНИЯ ПАПКИ (IOS STYLE + RESOURCE FIX) ---
 @Composable
 fun IOSCreateGroupDialog(
     onDismiss: () -> Unit,
@@ -254,26 +248,15 @@ fun IOSCreateGroupDialog(
     var title by remember { mutableStateOf("") }
     val focusRequester = remember { FocusRequester() }
 
-
+    // Используем Color объекты сразу, чтобы избежать ошибки краша конвертации
     val colors = listOf(
-        Color(0xFF4DB6AC), // Teal
-        Color(0xFF81C784), // Green
-        Color(0xFFFFB74D), // Orange
-        Color(0xFFE57373), // Red
-        Color(0xFFF06292), // Pink
-        Color(0xFFBA68C8), // Purple
-        Color(0xFF64B5F6), // Blue
-        Color(0xFF4DD0E1), // Cyan
-        Color(0xFFA1887F), // Brown
-        Color(0xFF90A4AE)  // Blue Grey
+        Color(0xFF4DB6AC), Color(0xFF81C784), Color(0xFFFFB74D), Color(0xFFE57373),
+        Color(0xFFF06292), Color(0xFFBA68C8), Color(0xFF64B5F6), Color(0xFF4DD0E1),
+        Color(0xFFA1887F), Color(0xFF90A4AE)
     )
-
-    // Выбранный цвет по умолчанию
     var selectedColor by remember { mutableStateOf(colors.first()) }
 
-    LaunchedEffect(Unit) {
-        focusRequester.requestFocus()
-    }
+    LaunchedEffect(Unit) { focusRequester.requestFocus() }
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -297,16 +280,17 @@ fun IOSCreateGroupDialog(
                     .clickable(enabled = false) {},
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // ЗАГОЛОВОК
+                // Заголовок: "Создать папку"
                 Text(
-                    text = "Новая папка",
+                    text = stringResource(R.string.create_group),
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                     modifier = Modifier.padding(top = 20.dp, bottom = 4.dp),
                     color = MaterialTheme.colorScheme.onSurface
                 )
 
+                // Описание: "Введите название"
                 Text(
-                    text = "Введите название для этой папки",
+                    text = stringResource(R.string.enter_group_name),
                     style = MaterialTheme.typography.bodySmall,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp),
                     textAlign = TextAlign.Center,
@@ -315,7 +299,7 @@ fun IOSCreateGroupDialog(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // ПОЛЕ ВВОДА
+                // Поле ввода
                 BasicTextField(
                     value = title,
                     onValueChange = { title = it },
@@ -333,8 +317,9 @@ fun IOSCreateGroupDialog(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Box(modifier = Modifier.weight(1f)) {
                                 if (title.isEmpty()) {
+                                    // Плейсхолдер внутри поля
                                     Text(
-                                        text = "Название",
+                                        text = stringResource(R.string.enter_group_name),
                                         style = MaterialTheme.typography.bodyMedium,
                                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
                                     )
@@ -344,7 +329,7 @@ fun IOSCreateGroupDialog(
                             if (title.isNotEmpty()) {
                                 Icon(
                                     imageVector = Icons.Default.Cancel,
-                                    contentDescription = null,
+                                    contentDescription = stringResource(R.string.clear),
                                     tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
                                     modifier = Modifier
                                         .size(16.dp)
@@ -357,7 +342,7 @@ fun IOSCreateGroupDialog(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // ВЫБОР ЦВЕТА
+                // Выбор цвета
                 LazyRow(
                     modifier = Modifier.fillMaxWidth(),
                     contentPadding = PaddingValues(horizontal = 16.dp),
@@ -369,16 +354,17 @@ fun IOSCreateGroupDialog(
                             modifier = Modifier
                                 .size(30.dp)
                                 .clip(CircleShape)
-                                .background(color) // Используем объект Color напрямую
+                                .background(color)
                                 .clickable { selectedColor = color }
                         ) {
                             if (isSelected) {
+                                // Используем .luminance() напрямую из класса Color
+                                val isDark = color.luminance() < 0.5f
                                 Box(
                                     modifier = Modifier
                                         .size(10.dp)
                                         .clip(CircleShape)
-                                        // Белая точка если цвет темный, черная если светлый
-                                        .background(if (color.luminance() < 0.5) Color.White else Color.Black.copy(alpha = 0.5f))
+                                        .background(if (isDark) Color.White else Color.Black.copy(alpha = 0.5f))
                                         .align(Alignment.Center)
                                 )
                             }
@@ -387,10 +373,11 @@ fun IOSCreateGroupDialog(
                 }
 
                 Spacer(modifier = Modifier.height(24.dp))
-
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
 
+                // Кнопки
                 Row(modifier = Modifier.height(48.dp)) {
+                    // Отмена
                     Box(
                         modifier = Modifier
                             .weight(1f)
@@ -399,7 +386,7 @@ fun IOSCreateGroupDialog(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "Отмена",
+                            text = stringResource(R.string.cancel),
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.primary
                         )
@@ -412,35 +399,28 @@ fun IOSCreateGroupDialog(
                             .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
                     )
 
+                    // Создать
                     Box(
                         modifier = Modifier
                             .weight(1f)
                             .fillMaxHeight()
                             .clickable(enabled = title.isNotBlank()) {
                                 if (title.isNotBlank()) {
-                                    // 🔥 Отправляем color.value (ULong) в колбэк
+                                    // Отправляем ULong значение цвета
                                     onCreate(title, selectedColor.value)
                                 }
                             },
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "Создать",
+                            text = stringResource(R.string.create),
                             style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold),
-                            color = if (title.isNotBlank()) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
+                            color = if (title.isNotBlank()) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
                         )
                     }
                 }
             }
         }
     }
-}
-
-// Утилитная функция, если её нет (чтобы импорты работали)
-@Composable
-fun luminance(color: Int): Float {
-    val r = android.graphics.Color.red(color) / 255.0
-    val g = android.graphics.Color.green(color) / 255.0
-    val b = android.graphics.Color.blue(color) / 255.0
-    return (0.2126 * r + 0.7152 * g + 0.0722 * b).toFloat()
 }

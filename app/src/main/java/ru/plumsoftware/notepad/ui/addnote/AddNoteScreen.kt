@@ -406,7 +406,7 @@ fun AddNoteScreen(
             dismissButton = {
                 TextButton(onClick = { showAddTaskDialog = false }) {
                     Text(
-                        stringResource(R.string.cansel_)
+                        stringResource(R.string.cancel)
                     )
                 }
             }

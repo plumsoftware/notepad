@@ -1,6 +1,9 @@
 package ru.plumsoftware.notepad.ui.elements
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -8,17 +11,20 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.rounded.Home
@@ -38,6 +44,8 @@ import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -56,6 +64,9 @@ fun BottomBar(
 ) {
     var selected by remember { mutableIntStateOf(0) }
 
+    // Эффект нажатия (вибрация)
+    val haptic = LocalHapticFeedback.current
+
     LaunchedEffect(key1 = selected) {
         when (selected) {
             0 -> onHomeClick()
@@ -63,105 +74,130 @@ fun BottomBar(
         }
     }
 
+    // 1. Контейнер Бара
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .wrapContentHeight()
-            .padding(bottom = 24.dp)
-            .background(MaterialTheme.colorScheme.background)
+            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.95f)) // Почти непрозрачный фон
+            // В iOS тапбар учитывает системные отступы (Navigation Bar)
+            .navigationBarsPadding()
     ) {
-        // Полоска сверху
+        // 2. Разделитель (Hairline)
         HorizontalDivider(
-            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
-            thickness = 1.dp,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f), // Чуть темнее чем было
+            thickness = 0.5.dp, // Очень тонкая линия
             modifier = Modifier.fillMaxWidth()
         )
 
-        // Основной контент с иконками
+        // 3. Ряд Иконок
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(80.dp)
-                .padding(horizontal = 32.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
+                .height(70.dp) // Стандартная высота iOS TabBar (49pt)
+                .padding(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.SpaceAround, // Равномерное распределение
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Левая кнопка - дом
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .clickable(
-                        role = Role.Button,
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = { selected = 0 }
-                    )
-                    .background(
-                        color = if (selected == 0) MaterialTheme.colorScheme.surfaceContainer
-                        else Color.Transparent,
-                        shape = CircleShape
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    modifier = Modifier.size(24.dp),
-                    painter = painterResource(R.drawable.house_fill),
-                    contentDescription = stringResource(R.string.menu),
-                    tint = if (selected == 0) MaterialTheme.colorScheme.primary
-                    else MaterialTheme.colorScheme.onSurface
-                )
-            }
 
-            // Центральная кнопка - плюс
+            // --- ТАБ 1: ГЛАВНАЯ ---
+            IOSTabItem(
+                iconRes = R.drawable.house_fill, // Замени на контурную house, если не выбран (для полного iOS)
+                label = stringResource(R.string.menu),
+                isSelected = selected == 0,
+                onClick = {
+                    selected = 0
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                }
+            )
+
+            // --- ЦЕНТРАЛЬНАЯ КНОПКА (Добавить) ---
+            // В iOS приложениях (Instagram, TikTok) центральная кнопка создания
+            // стоит в общем ряду, не имеет фона, но выделяется цветом или размером.
             Box(
                 modifier = Modifier
-                    .size(48.dp)
-                    .clip(CircleShape)
+                    .weight(1f)
+                    .fillMaxHeight()
                     .clickable(
-                        enabled = true,
-                        role = Role.Button
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null // Без волны при нажатии (iOS style)
                     ) {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                         navController.navigate(Screen.AddNote.route)
-                    }
-                    .background(
-                        color = MaterialTheme.colorScheme.primary,
-                        shape = CircleShape
-                    ),
+                    },
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    modifier = Modifier.size(24.dp),
-                    painter = painterResource(R.drawable.plus),
-                    contentDescription = stringResource(R.string.add),
-                    tint = MaterialTheme.colorScheme.onPrimary
-                )
+                // В iOS часто кнопку "Создать" делают чуть жирнее или в рамке
+                Box(
+                    modifier = Modifier
+                        .size(32.dp) // Размер кнопки
+                        .border(2.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(8.dp)) // Стиль "Кнопка"
+                    // Или просто иконка, если хочешь минимализм, убери border и radius
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.plus),
+                        contentDescription = stringResource(R.string.add),
+                        tint = MaterialTheme.colorScheme.primary, // Всегда акцентный цвет
+                        modifier = Modifier
+                            .size(16.dp)
+                            .align(Alignment.Center)
+                    )
+                }
             }
 
-            // Правая кнопка - календарь
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .clickable(
-                        role = Role.Button,
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = { selected = 1 }
-                    )
-                    .background(
-                        color = if (selected == 1) MaterialTheme.colorScheme.surfaceContainer
-                        else Color.Transparent,
-                        shape = CircleShape
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    modifier = Modifier.size(24.dp),
-                    painter = painterResource(R.drawable.calendar2_week_fill),
-                    contentDescription = stringResource(R.string.daily_planner),
-                    tint = if (selected == 1) MaterialTheme.colorScheme.primary
-                    else MaterialTheme.colorScheme.onSurface
-                )
-            }
+            // --- ТАБ 2: КАЛЕНДАРЬ ---
+            IOSTabItem(
+                iconRes = R.drawable.calendar2_week_fill,
+                label = stringResource(R.string.daily_planner),
+                isSelected = selected == 1,
+                onClick = {
+                    selected = 1
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                }
+            )
+        }
+    }
+}
+
+// Компонент одного Таба (Иконка + Подпись если нужна, но мы делаем без подписи для минимализма, как просил)
+@Composable
+fun RowScope.IOSTabItem(
+    iconRes: Int,
+    label: String, // Можно использовать для accessibility
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    // Анимация цвета
+    val tabColor by animateColorAsState(
+        targetValue = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
+        animationSpec = tween(durationMillis = 200), label = "tabColor"
+    )
+
+    Box(
+        modifier = Modifier
+            .weight(1f) // Занимает равное пространство
+            .fillMaxHeight()
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null // Важно: в iOS нет Ripple эффекта (кругов при нажатии)
+            ) { onClick() },
+        contentAlignment = Alignment.Center
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Icon(
+                painter = painterResource(iconRes),
+                contentDescription = label,
+                tint = tabColor,
+                modifier = Modifier.size(26.dp) // Чуть крупнее стандартных 24dp
+            )
+            // Если захочешь добавить подписи снизу (как в стандартном iOS TabBar), раскомментируй:
+            /*
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                color = tabColor
+            )
+            */
         }
     }
 }

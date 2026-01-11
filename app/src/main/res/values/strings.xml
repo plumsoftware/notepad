@@ -1,83 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Ежедневник</string>
 
-    <string name="note_search">Поиск заметок</string>
+    <!-- Общие действия -->
     <string name="ok_">OK</string>
-    <string name="cansel_">Отмена</string>
-    <string name="when_to_remind_about_event">Когда напомнить о событии</string>
-    <string name="select_time">Выберите время</string>
-    <string name="note_editing">Редактирование заметки</string>
-    <string name="note_add">Добавить заметку</string>
+    <string name="cancel">Отмена</string>
     <string name="save">Сохранить</string>
+    <string name="add">Добавить</string>
+    <string name="create">Создать</string>
+    <string name="delete">Удалить</string>
+    <string name="edit">Изменить</string>
+    <string name="close">Закрыть</string>
+    <string name="clear">Очистить</string>
+    <string name="go">Перейти</string>
+    <string name="done">Готово</string>
+    <string name="notes">Заметки</string>
+
+    <!-- Поиск и Главная -->
+    <string name="note_search">Поиск</string>
+    <string name="menu">Меню</string>
+    <string name="settings">Настройки</string>
+    <string name="about_app">О приложении</string>
+    <string name="rate_app">Оценить приложение</string>
+    <string name="daily_planner">Календарь</string>
+    <string name="all_notes">Все заметки</string>
+    <string name="empty_notes_list">Здесь пока пусто</string>
+    <string name="empty_notes_description">Список заметок пуст</string>
+
+    <!-- Редактирование заметки -->
+    <string name="note_editing">Редактирование</string>
+    <string name="note_add">Новая заметка</string>
     <string name="title">Заголовок</string>
-    <string name="desc">Описание</string>
-    <string name="remind">Напомнить 🔔</string>
-    <string name="reminder">Напоминание: %s</string>
-    <string name="photos">Фотографии</string>
+    <string name="desc">Заметка</string>
     <string name="tasks">Задачи</string>
     <string name="new_task">Новая задача</string>
-    <string name="note_color">Цвет заметки</string>
-    <string name="photo_add_ads_promo_title">Для добавления посмотрите рекламу</string>
-    <string name="photo_add_ads_promo_description">Чтобы добавить еще одно фото, посмотрите короткую рекламу</string>
-    <string name="watch_ad">Смотреть</string>
-    <string name="cancel">Отмена</string>
-    <string name="go">Перейти</string>
-    <string name="delete">Удалить</string>
-    <string name="move_to_folder">Переместить в папку</string>
+    <string name="photos">Фотографии</string>
+    <string name="note_color">Цвет</string>
+    <string name="remind">Напомнить</string>
+    <string name="reminder">Напоминание: %s</string>
+    <string name="when_to_remind_about_event">Когда напомнить?</string>
+    <string name="select_time">Выберите время</string>
 
-    <string name="empty_notes_list">Список с заметками пустой</string>
-    <string name="empty_notes_description">Пустой список заметок</string>
+    <!-- Папки (Группы) -->
+    <string name="create_group">Новая папка</string>
+    <string name="add_group">Добавить папку</string>
+    <string name="enter_group_name">Название папки</string>
+    <string name="group_color">Цвет папки</string>
+    <string name="move_to_folder">В папку</string>
 
-    <!--    Filter dialog-->
-    <string name="filter_dialog_title">Показать сначала</string>
-    <string name="filter_option_new">Новые</string>
-    <string name="filter_option_old">Старые</string>
+    <!-- Фильтры -->
+    <string name="filter_dialog_title">Сортировка</string>
+    <string name="filter_option_new">Сначала новые</string>
+    <string name="filter_option_old">Сначала старые</string>
     <string name="filter_option_with_reminders">С напоминаниями</string>
-    <string name="filter_option_with_photos">С фотографиями</string>
+    <string name="filter_option_with_photos">С фото</string>
     <string name="filter_option_with_tasks">С задачами</string>
 
-    <!--    Menu-->
-    <string name="menu">Меню</string>
-    <string name="about_app">О приложении</string>
-    <string name="settings">Настройки</string>
-    <string name="rate_app">Оценить приложение</string>
-    <string name="daily_planner">Ежедневник</string>
+    <!-- Календарь -->
+    <string name="calendar_notes_for_date">Заметки на %s</string>
+    <string name="calendar_no_notes_for_date">Нет планов на %s</string>
+    <string name="calendar_select_date">Выберите дату</string>
+    <string name="calendar_previous_month">Пред. месяц</string>
+    <string name="calendar_next_month">След. месяц</string>
 
-    <!--    Tasks-->
-    <string name="add_task">Добавить задачу</string>
-    <string name="add_task_placeholder">Введите текст заметки</string>
-    <string name="add">Добавить</string>
-
-    <!--    Settings-->
-    <string name="dark_theme">Тёмная тема</string>
-
-    <!--    Group-->
-    <string name="add_group">Создать папку</string>
-    <string name="all">Все заметки</string>
-    <string name="create_group">Создать папку</string>
-    <string name="enter_group_name">Введите название</string>
-    <string name="group_color">Цвет папки</string>
-    <string name="create">Создать</string>
-    <string name="clear">Очистить</string>
-
-    <!--    Add note content desc-->
-    <string name="back_button">Назад</string>
-    <string name="clear_text">Очистить текст</string>
-    <string name="note_photo">Фотография заметки</string>
-    <string name="delete_photo">Удалить фотографию</string>
-    <string name="add_photo">Добавить фотографию</string>
-    <string name="delete_task">Удалить задачу</string>
-
-    <!--    Rate-->
-    <string name="rate_app_title">Оценить приложение</string>
-
-    <!--    Calendar-->
-    <string name="selected_date">выбранную дату</string>
-    <string name="calendar_notes_for_date">Заметки за %s</string>
-    <string name="calendar_no_notes_for_date">Нет заметок за %s</string>
-    <string name="calendar_select_date">Выберите дату для просмотра заметок</string>
-    <string name="calendar_previous_month">Предыдущий месяц</string>
-    <string name="calendar_next_month">Следующий месяц</string>
+    <!-- Дни недели (Кратко) -->
     <string name="monday">Пн</string>
     <string name="tuesday">Вт</string>
     <string name="wednesday">Ср</string>
@@ -85,55 +71,30 @@
     <string name="friday">Пт</string>
     <string name="saturday">Сб</string>
     <string name="sunday">Вс</string>
-    <string name="close">Закрыть</string>
 
-    <!-- Months -->
-    <string name="january">Январь</string>
-    <string name="february">Февраль</string>
-    <string name="march">Март</string>
-    <string name="april">Апрель</string>
-    <string name="may">Май</string>
-    <string name="june">Июнь</string>
-    <string name="july">Июль</string>
-    <string name="august">Август</string>
-    <string name="september">Сентябрь</string>
-    <string name="october">Октябрь</string>
-    <string name="november">Ноябрь</string>
-    <string name="december">Декабрь</string>
+    <!-- Месяцы (Именительный / Родительный падеж для форматеров) -->
+    <string name="january">января</string>
+    <string name="february">февраля</string>
+    <string name="march">марта</string>
+    <string name="april">апреля</string>
+    <string name="may">мая</string>
+    <string name="june">июня</string>
+    <string name="july">июля</string>
+    <string name="august">августа</string>
+    <string name="september">сентября</string>
+    <string name="october">октября</string>
+    <string name="november">ноября</string>
+    <string name="december">декабря</string>
 
-    <!-- Month names for date formatting -->
-    <string name="january_genitive">января</string>
-    <string name="february_genitive">февраля</string>
-    <string name="march_genitive">марта</string>
-    <string name="april_genitive">апреля</string>
-    <string name="may_genitive">мая</string>
-    <string name="june_genitive">июня</string>
-    <string name="july_genitive">июля</string>
-    <string name="august_genitive">августа</string>
-    <string name="september_genitive">сентября</string>
-    <string name="october_genitive">октября</string>
-    <string name="november_genitive">ноября</string>
-    <string name="december_genitive">декабря</string>
-
-    <!--    Add note widget-->
-    <string name="widget_add_note_description">Быстрое добавление заметки</string>
-    <string name="widget_add_note_label">Добавить заметку</string>
-
-    <!--    About app-->
+    <!-- Разное -->
+    <string name="dark_theme">Темная тема</string>
     <string name="app_version_">Версия %s</string>
+    <string name="rate_app_title">Вам нравится приложение?</string>
+    <string name="watch_ad">Смотреть</string>
+    <string name="photo_add_ads_promo_title">Лимит фото</string>
+    <string name="photo_add_ads_promo_description">Посмотрите короткую рекламу, чтобы добавить больше фото.</string>
 
-    <array name="com_google_android_gms_fonts_certs">
-        <item>@array/com_google_android_gms_fonts_certs_dev</item>
-        <item>@array/com_google_android_gms_fonts_certs_prod</item>
-    </array>
-    <string-array name="com_google_android_gms_fonts_certs_dev">
-        <item>
-            MIIEqDCCA5CgAwIBAgIJANWFuGx90071MA0GCSqGSIb3DQEBBAUAMIGUMQswCQYDVQQGEwJVUzETMBEGA1UECBMKQ2FsaWZvcm5pYTEWMBQGA1UEBxMNTW91bnRhaW4gVmlldzEQMA4GA1UEChMHQW5kcm9pZDEQMA4GA1UECxMHQW5kcm9pZDEQMA4GA1UEAxMHQW5kcm9pZDEiMCAGCSqGSIb3DQEJARYTYW5kcm9pZEBhbmRyb2lkLmNvbTAeFw0wODA0MTUyMzM2NTZaFw0zNTA5MDEyMzM2NTZaMIGUMQswCQYDVQQGEwJVUzETMBEGA1UECBMKQ2FsaWZvcm5pYTEWMBQGA1UEBxMNTW91bnRhaW4gVmlldzEQMA4GA1UEChMHQW5kcm9pZDEQMA4GA1UECxMHQW5kcm9pZDEQMA4GA1UEAxMHQW5kcm9pZDEiMCAGCSqGSIb3DQEJARYTYW5kcm9pZEBhbmRyb2lkLmNvbTCCASAwDQYJKoZIhvcNAQEBBQADggENADCCAQgCggEBANbOLggKv+IxTdGNs8/TGFy0PTP6DHThvbbR24kT9ixcOd9W+EaBPWW+wPPKQmsHxajtWjmQwWfna8mZuSeJS48LIgAZlKkpFeVyxW0qMBujb8X8ETrWy550NaFtI6t9+u7hZeTfHwqNvacKhp1RbE6dBRGWynwMVX8XW8N1+UjFaq6GCJukT4qmpN2afb8sCjUigq0GuMwYXrFVee74bQgLHWGJwPmvmLHC69EH6kWr22ijx4OKXlSIx2xT1AsSHee70w5iDBiK4aph27yH3TxkXy9V89TDdexAcKk/cVHYNnDBapcavl7y0RiQ4biu8ymM8Ga/nmzhRKya6G0cGw8CAQOjgfwwgfkwHQYDVR0OBBYEFI0cxb6VTEM8YYY6FbBMvAPyT+CyMIHJBgNVHSMEgcEwgb6AFI0cxb6VTEM8YYY6FbBMvAPyT+CyoYGapIGXMIGUMQswCQYDVQQGEwJVUzETMBEGA1UECBMKQ2FsaWZvcm5pYTEWMBQGA1UEBxMNTW91bnRhaW4gVmlldzEQMA4GA1UEChMHQW5kcm9pZDEQMA4GA1UECxMHQW5kcm9pZDEQMA4GA1UEAxMHQW5kcm9pZDEiMCAGCSqGSIb3DQEJARYTYW5kcm9pZEBhbmRyb2lkLmNvbYIJANWFuGx90071MAwGA1UdEwQFMAMBAf8wDQYJKoZIhvcNAQEEBQADggEBABnTDPEF+3iSP0wNfdIjIz1AlnrPzgAIHVvXxunW7SBrDhEglQZBbKJEk5kT0mtKoOD1JMrSu1xuTKEBahWRbqHsXclaXjoBADb0kkjVEJu/Lh5hgYZnOjvlba8Ld7HCKePCVePoTJBdI4fvugnL8TsgK05aIskyY0hKI9L8KfqfGTl1lzOv2KoWD0KWwtAWPoGChZxmQ+nBli+gwYMzM1vAkP+aayLe0a1EQimlOalO762r0GXO0ks+UeXde2Z4e+8S/pf7pITEI/tP+MxJTALw9QUWEv9lKTk+jkbqxbsh8nfBUapfKqYn0eidpwq2AzVp3juYl7//fKnaPhJD9gs=
-        </item>
-    </string-array>
-    <string-array name="com_google_android_gms_fonts_certs_prod">
-        <item>
-            MIIEQzCCAyugAwIBAgIJAMLgh0ZkSjCNMA0GCSqGSIb3DQEBBAUAMHQxCzAJBgNVBAYTAlVTMRMwEQYDVQQIEwpDYWxpZm9ybmlhMRYwFAYDVQQHEw1Nb3VudGFpbiBWaWV3MRQwEgYDVQQKEwtHb29nbGUgSW5jLjEQMA4GA1UECxMHQW5kcm9pZDEQMA4GA1UEAxMHQW5kcm9pZDAeFw0wODA4MjEyMzEzMzRaFw0zNjAxMDcyMzEzMzRaMHQxCzAJBgNVBAYTAlVTMRMwEQYDVQQIEwpDYWxpZm9ybmlhMRYwFAYDVQQHEw1Nb3VudGFpbiBWaWV3MRQwEgYDVQQKEwtHb29nbGUgSW5jLjEQMA4GA1UECxMHQW5kcm9pZDEQMA4GA1UEAxMHQW5kcm9pZDCCASAwDQYJKoZIhvcNAQEBBQADggENADCCAQgCggEBAKtWLgDYO6IIrgqWbxJOKdoR8qtW0I9Y4sypEwPpt1TTcvZApxsdyxMJZ2JORland2qSGT2y5b+3JKkedxiLDmpHpDsz2WCbdxgxRczfey5YZnTJ4VZbH0xqWVW/8lGmPav5xVwnIiJS6HXk+BVKZF+JcWjAsb/GEuq/eFdpuzSqeYTcfi6idkyugwfYwXFU1+5fZKUaRKYCwkkFQVfcAs1fXA5V+++FGfvjJ/CxURaSxaBvGdGDhfXE28LWuT9ozCl5xw4Yq5OGazvV24mZVSoOO0yZ31j7kYvtwYK6NeADwbSxDdJEqO4k//0zOHKrUiGYXtqw/A0LFFtqoZKFjnkCAQOjgdkwgdYwHQYDVR0OBBYEFMd9jMIhF1Ylmn/Tgt9r45jk14alMIGmBgNVHSMEgZ4wgZuAFMd9jMIhF1Ylmn/Tgt9r45jk14aloXikdjB0MQswCQYDVQQGEwJVUzETMBEGA1UECBMKQ2FsaWZvcm5pYTEWMBQGA1UEBxMNTW91bnRhaW4gVmlldzEUMBIGA1UEChMLR29vZ2xlIEluYy4xEDAOBgNVBAsTB0FuZHJvaWQxEDAOBgNVBAMTB0FuZHJvaWSCCQDC4IdGZEowjTAMBgNVHRMEBTADAQH/MA0GCSqGSIb3DQEBBAUAA4IBAQBt0lLO74UwLDYKqs6Tm8/yzKkEu116FmH4rkaymUIE0P9KaMftGlMexFlaYjzmB2OxZyl6euNXEsQH8gjwyxCUKRJNexBiGcCEyj6z+a1fuHHvkiaai+KL8W1EyNmgjmyy8AW7P+LLlkR+ho5zEHatRbM/YAnqGcFh5iZBqpknHf1SKMXFh4dd239FJ1jWYfbMDMy3NS5CTMQ2XFI1MvcyUTdZPErjQfTbQe3aDQsQcafEQPD+nqActifKZ0Np0IS9L9kR/wbNvyz6ENwPiTrjV2KRkEjH78ZMcUQXg0L3BYHJ3lc69Vs5Ddf9uUGGMYldX3WfMBEmh/9iFBDAaTCK
-        </item>
-    </string-array>
+    <!-- Виджет -->
+    <string name="widget_add_note_label">Заметка</string>
+    <string name="widget_add_note_description">Быстро создать заметку</string>
 </resources>

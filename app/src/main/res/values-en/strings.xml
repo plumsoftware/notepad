@@ -1,86 +1,69 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Daily planner</string>
-    <string name="note_search">Search notes</string>
+    <string name="app_name">Daily Planner</string>
+
+    <!-- General Actions -->
     <string name="ok_">OK</string>
-    <string name="cansel_">Cancel</string>
-    <string name="when_to_remind_about_event">When to remind about the event</string>
-    <string name="select_time">Select time</string>
-    <string name="note_editing">Editing note</string>
-    <string name="note_add">Add note</string>
+    <string name="cancel">Cancel</string> <!-- Исправлено с cansel_ -->
     <string name="save">Save</string>
+    <string name="add">Add</string>
+    <string name="create">Create</string>
+    <string name="delete">Delete</string>
+    <string name="edit">Edit</string>
+    <string name="close">Close</string>
+    <string name="clear">Clear</string>
+    <string name="go">Go</string>
+    <string name="done">Done</string>
+    <string name="notes">Notes</string>
+
+    <!-- Search & Home -->
+    <string name="note_search">Search notes</string>
+    <string name="menu">Menu</string>
+    <string name="settings">Settings</string>
+    <string name="about_app">About App</string>
+    <string name="rate_app">Rate App</string>
+    <string name="daily_planner">Planner</string>
+    <string name="all_notes">All Notes</string>
+    <string name="empty_notes_list">No notes here yet</string>
+    <string name="empty_notes_description">Empty list</string>
+
+    <!-- Note Editing -->
+    <string name="note_editing">Edit Note</string>
+    <string name="note_add">New Note</string>
     <string name="title">Title</string>
     <string name="desc">Description</string>
-    <string name="remind">Remind 🔔</string>
-    <string name="reminder">Reminder: %s</string>
-    <string name="photos">Photos</string>
     <string name="tasks">Tasks</string>
     <string name="new_task">New task</string>
-    <string name="note_color">Note color</string>
-    <string name="photo_add_ads_promo_title">To add, watch an ad</string>
-    <string name="photo_add_ads_promo_description">To add another photo, watch a short ad</string>
-    <string name="watch_ad">Watch</string>
-    <string name="cancel">Cancel</string>
-    <string name="go">Go</string>
-    <string name="delete">Delete</string>
-    <string name="move_to_folder">Move to folder</string>
+    <string name="photos">Photos</string>
+    <string name="note_color">Color</string>
+    <string name="remind">Remind me</string>
+    <string name="reminder">Reminder: %s</string>
+    <string name="when_to_remind_about_event">When to remind?</string>
+    <string name="select_time">Select time</string>
 
-    <string name="empty_notes_list">The notes list is empty</string>
-    <string name="empty_notes_description">Empty notes list</string>
+    <!-- Folders (Groups) -->
+    <string name="create_group">New Folder</string>
+    <string name="add_group">Add Folder</string>
+    <string name="enter_group_name">Folder Name</string>
+    <string name="group_color">Color</string>
+    <string name="move_to_folder">Move to Folder</string>
 
-    <!--    Filter dialog-->
-    <string name="filter_dialog_title">Show first</string>
-    <string name="filter_option_new">New</string>
-    <string name="filter_option_old">Old</string>
-    <string name="filter_option_with_reminders">With reminders</string>
-    <string name="filter_option_with_photos">With photos</string>
-    <string name="filter_option_with_tasks">With tasks</string>
+    <!-- Filters -->
+    <string name="filter_dialog_title">Sort By</string>
+    <string name="filter_option_new">Newest First</string>
+    <string name="filter_option_old">Oldest First</string>
+    <string name="filter_option_with_reminders">With Reminders</string>
+    <string name="filter_option_with_photos">With Photos</string>
+    <string name="filter_option_with_tasks">With Tasks</string>
 
-    <!--    Menu-->
-    <string name="menu">Menu</string>
-    <string name="about_app">About App</string>
-    <string name="settings">Settings</string>
-    <string name="rate_app">Rate App</string>
-
-    <!--    Tasks-->
-    <string name="add_task">Add task</string>
-    <string name="add_task_placeholder">Enter note text</string>
-    <string name="add">Add</string>
-    <string name="daily_planner">Daily Planner</string>
-
-    <!--    Settings-->
-    <string name="dark_theme">Dark theme</string>
-
-    <!--    Group-->
-    <string name="add_group">Create folder</string>
-    <string name="all">All notes</string>
-    <string name="create_group">Create folder</string>
-    <string name="enter_group_name">Enter name</string>
-    <string name="group_color">Group color</string>
-    <string name="create">Create</string>
-    <string name="clear">Clear</string>
-
-    <!--    Add note content desc-->
-    <string name="back_button">Back</string>
-    <string name="clear_text">Clear text</string>
-    <string name="note_photo">Note photo</string>
-    <string name="delete_photo">Delete photo</string>
-    <string name="add_photo">Add photo</string>
-    <string name="delete_task">Delete task</string>
-
-    <!--    Rate-->
-    <string name="rate_app_title">Rate the app</string>
-
-    <!--    About app-->
-    <string name="app_version_">Version %s</string>
-
-    <!--    Calendar-->
-    <string name="selected_date">selected date</string>
+    <!-- Calendar -->
     <string name="calendar_notes_for_date">Notes for %s</string>
-    <string name="calendar_no_notes_for_date">No notes for %s</string>
-    <string name="calendar_select_date">Select a date to view notes</string>
+    <string name="calendar_no_notes_for_date">No plans for %s</string>
+    <string name="calendar_select_date">Select a date</string>
     <string name="calendar_previous_month">Previous month</string>
     <string name="calendar_next_month">Next month</string>
+
+    <!-- Week Days (Short) -->
     <string name="monday">Mon</string>
     <string name="tuesday">Tue</string>
     <string name="wednesday">Wed</string>
@@ -88,9 +71,8 @@
     <string name="friday">Fri</string>
     <string name="saturday">Sat</string>
     <string name="sunday">Sun</string>
-    <string name="close">Close</string>
 
-    <!-- Months -->
+    <!-- Months (Genitive for formatting like "12 January") -->
     <string name="january">January</string>
     <string name="february">February</string>
     <string name="march">March</string>
@@ -104,36 +86,15 @@
     <string name="november">November</string>
     <string name="december">December</string>
 
-    <!-- Month names for date formatting -->
-    <string name="january_genitive">January</string>
-    <string name="february_genitive">February</string>
-    <string name="march_genitive">March</string>
-    <string name="april_genitive">April</string>
-    <string name="may_genitive">May</string>
-    <string name="june_genitive">June</string>
-    <string name="july_genitive">July</string>
-    <string name="august_genitive">August</string>
-    <string name="september_genitive">September</string>
-    <string name="october_genitive">October</string>
-    <string name="november_genitive">November</string>
-    <string name="december_genitive">December</string>
+    <!-- Other -->
+    <string name="dark_theme">Dark Theme</string>
+    <string name="app_version_">Version %s</string>
+    <string name="rate_app_title">Enjoying the app?</string>
+    <string name="watch_ad">Watch Ad</string>
+    <string name="photo_add_ads_promo_title">Add more photos</string>
+    <string name="photo_add_ads_promo_description">Watch a short video to add more photos to this note.</string>
 
-    <!--    Add note widget-->
-    <string name="widget_add_note_description">Quick note addition</string>
-    <string name="widget_add_note_label">Add Note</string>
-
-    <array name="com_google_android_gms_fonts_certs">
-        <item>@array/com_google_android_gms_fonts_certs_dev</item>
-        <item>@array/com_google_android_gms_fonts_certs_prod</item>
-    </array>
-    <string-array name="com_google_android_gms_fonts_certs_dev">
-        <item>
-            MIIEqDCCA5CgAwIBAgIJANWFuGx90071MA0GCSqGSIb3DQEBBAUAMIGUMQswCQYDVQQGEwJVUzETMBEGA1UECBMKQ2FsaWZvcm5pYTEWMBQGA1UEBxMNTW91bnRhaW4gVmlldzEQMA4GA1UEChMHQW5kcm9pZDEQMA4GA1UECxMHQW5kcm9pZDEQMA4GA1UEAxMHQW5kcm9pZDEiMCAGCSqGSIb3DQEJARYTYW5kcm9pZEBhbmRyb2lkLmNvbTAeFw0wODA0MTUyMzM2NTZaFw0zNTA5MDEyMzM2NTZaMIGUMQswCQYDVQQGEwJVUzETMBEGA1UECBMKQ2FsaWZvcm5pYTEWMBQGA1UEBxMNTW91bnRhaW4gVmlldzEQMA4GA1UEChMHQW5kcm9pZDEQMA4GA1UECxMHQW5kcm9pZDEQMA4GA1UEAxMHQW5kcm9pZDEiMCAGCSqGSIb3DQEJARYTYW5kcm9pZEBhbmRyb2lkLmNvbTCCASAwDQYJKoZIhvcNAQEBBQADggENADCCAQgCggEBANbOLggKv+IxTdGNs8/TGFy0PTP6DHThvbbR24kT9ixcOd9W+EaBPWW+wPPKQmsHxajtWjmQwWfna8mZuSeJS48LIgAZlKkpFeVyxW0qMBujb8X8ETrWy550NaFtI6t9+u7hZeTfHwqNvacKhp1RbE6dBRGWynwMVX8XW8N1+UjFaq6GCJukT4qmpN2afb8sCjUigq0GuMwYXrFVee74bQgLHWGJwPmvmLHC69EH6kWr22ijx4OKXlSIx2xT1AsSHee70w5iDBiK4aph27yH3TxkXy9V89TDdexAcKk/cVHYNnDBapcavl7y0RiQ4biu8ymM8Ga/nmzhRKya6G0cGw8CAQOjgfwwgfkwHQYDVR0OBBYEFI0cxb6VTEM8YYY6FbBMvAPyT+CyMIHJBgNVHSMEgcEwgb6AFI0cxb6VTEM8YYY6FbBMvAPyT+CyoYGapIGXMIGUMQswCQYDVQQGEwJVUzETMBEGA1UECBMKQ2FsaWZvcm5pYTEWMBQGA1UEBxMNTW91bnRhaW4gVmlldzEQMA4GA1UEChMHQW5kcm9pZDEQMA4GA1UECxMHQW5kcm9pZDEQMA4GA1UEAxMHQW5kcm9pZDEiMCAGCSqGSIb3DQEJARYTYW5kcm9pZEBhbmRyb2lkLmNvbYIJANWFuGx90071MAwGA1UdEwQFMAMBAf8wDQYJKoZIhvcNAQEEBQADggEBABnTDPEF+3iSP0wNfdIjIz1AlnrPzgAIHVvXxunW7SBrDhEglQZBbKJEk5kT0mtKoOD1JMrSu1xuTKEBahWRbqHsXclaXjoBADb0kkjVEJu/Lh5hgYZnOjvlba8Ld7HCKePCVePoTJBdI4fvugnL8TsgK05aIskyY0hKI9L8KfqfGTl1lzOv2KoWD0KWwtAWPoGChZxmQ+nBli+gwYMzM1vAkP+aayLe0a1EQimlOalO762r0GXO0ks+UeXde2Z4e+8S/pf7pITEI/tP+MxJTALw9QUWEv9lKTk+jkbqxbsh8nfBUapfKqYn0eidpwq2AzVp3juYl7//fKnaPhJD9gs=
-        </item>
-    </string-array>
-    <string-array name="com_google_android_gms_fonts_certs_prod">
-        <item>
-            MIIEQzCCAyugAwIBAgIJAMLgh0ZkSjCNMA0GCSqGSIb3DQEBBAUAMHQxCzAJBgNVBAYTAlVTMRMwEQYDVQQIEwpDYWxpZm9ybmlhMRYwFAYDVQQHEw1Nb3VudGFpbiBWaWV3MRQwEgYDVQQKEwtHb29nbGUgSW5jLjEQMA4GA1UECxMHQW5kcm9pZDEQMA4GA1UEAxMHQW5kcm9pZDAeFw0wODA4MjEyMzEzMzRaFw0zNjAxMDcyMzEzMzRaMHQxCzAJBgNVBAYTAlVTMRMwEQYDVQQIEwpDYWxpZm9ybmlhMRYwFAYDVQQHEw1Nb3VudGFpbiBWaWV3MRQwEgYDVQQKEwtHb29nbGUgSW5jLjEQMA4GA1UECxMHQW5kcm9pZDEQMA4GA1UEAxMHQW5kcm9pZDCCASAwDQYJKoZIhvcNAQEBBQADggENADCCAQgCggEBAKtWLgDYO6IIrgqWbxJOKdoR8qtW0I9Y4sypEwPpt1TTcvZApxsdyxMJZ2JORland2qSGT2y5b+3JKkedxiLDmpHpDsz2WCbdxgxRczfey5YZnTJ4VZbH0xqWVW/8lGmPav5xVwnIiJS6HXk+BVKZF+JcWjAsb/GEuq/eFdpuzSqeYTcfi6idkyugwfYwXFU1+5fZKUaRKYCwkkFQVfcAs1fXA5V+++FGfvjJ/CxURaSxaBvGdGDhfXE28LWuT9ozCl5xw4Yq5OGazvV24mZVSoOO0yZ31j7kYvtwYK6NeADwbSxDdJEqO4k//0zOHKrUiGYXtqw/A0LFFtqoZKFjnkCAQOjgdkwgdYwHQYDVR0OBBYEFMd9jMIhF1Ylmn/Tgt9r45jk14alMIGmBgNVHSMEgZ4wgZuAFMd9jMIhF1Ylmn/Tgt9r45jk14aloXikdjB0MQswCQYDVQQGEwJVUzETMBEGA1UECBMKQ2FsaWZvcm5pYTEWMBQGA1UEBxMNTW91bnRhaW4gVmlldzEUMBIGA1UEChMLR29vZ2xlIEluYy4xEDAOBgNVBAsTB0FuZHJvaWQxEDAOBgNVBAMTB0FuZHJvaWSCCQDC4IdGZEowjTAMBgNVHRMEBTADAQH/MA0GCSqGSIb3DQEBBAUAA4IBAQBt0lLO74UwLDYKqs6Tm8/yzKkEu116FmH4rkaymUIE0P9KaMftGlMexFlaYjzmB2OxZyl6euNXEsQH8gjwyxCUKRJNexBiGcCEyj6z+a1fuHHvkiaai+KL8W1EyNmgjmyy8AW7P+LLlkR+ho5zEHatRbM/YAnqGcFh5iZBqpknHf1SKMXFh4dd239FJ1jWYfbMDMy3NS5CTMQ2XFI1MvcyUTdZPErjQfTbQe3aDQsQcafEQPD+nqActifKZ0Np0IS9L9kR/wbNvyz6ENwPiTrjV2KRkEjH78ZMcUQXg0L3BYHJ3lc69Vs5Ddf9uUGGMYldX3WfMBEmh/9iFBDAaTCK
-        </item>
-    </string-array>
+    <!-- Widget -->
+    <string name="widget_add_note_label">New Note</string>
+    <string name="widget_add_note_description">Quickly add a new note</string>
 </resources>
