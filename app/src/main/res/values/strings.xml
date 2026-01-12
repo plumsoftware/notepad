@@ -95,6 +95,18 @@
     <string name="photo_add_ads_promo_title">Лимит фото</string>
     <string name="photo_add_ads_promo_description">Посмотрите короткую рекламу, чтобы добавить больше фото.</string>
 
+    <!-- Secure Folder -->
+    <string name="secure_folder">Скрытые</string>
+    <string name="create_pin_title">Придумайте код</string>
+    <string name="confirm_pin_title">Повторите код</string>
+    <string name="enter_pin_title">Введите код</string>
+
+    <!-- Biometrics -->
+    <string name="biometric_title">Вход в скрытую папку</string>
+    <string name="biometric_subtitle">Используйте Touch ID или Face ID</string>
+    <string name="use_code">Использовать код</string>
+    <string name="wrong_pin">Неверный код</string>
+
     <!-- Виджет -->
     <string name="widget_add_note_label">Заметка</string>
     <string name="widget_add_note_description">Быстро создать заметку</string>

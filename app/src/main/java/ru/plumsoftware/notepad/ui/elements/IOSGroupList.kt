@@ -35,6 +35,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -75,13 +76,16 @@ import androidx.compose.ui.window.DialogProperties
 import ru.plumsoftware.notepad.R
 import ru.plumsoftware.notepad.data.database.GroupWithCount
 import ru.plumsoftware.notepad.data.model.Group
+import ru.plumsoftware.notepad.ui.NoteViewModel
 
 @Composable
 fun IOSGroupList(
     groups: List<GroupWithCount>,
     selectedGroupId: String?,
     totalCount: Int,
+    secretCount: Int,
     onGroupSelected: (String) -> Unit,
+    onSecureClick: () -> Unit,
     onCreateGroup: () -> Unit,
     onDeleteGroup: (Group) -> Unit
 ) {
@@ -132,6 +136,18 @@ fun IOSGroupList(
             )
         }
 
+        item {
+            // Используем тот же IOSGroupChip, но с иконкой замка
+            IOSSecureGroupChip(
+                count = secretCount,
+                isSelected = selectedGroupId == NoteViewModel.SECURE_FOLDER_ID,
+                onClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onSecureClick()
+                }
+            )
+        }
+
         // Список папок
         items(groups, key = { it.group.id }) { item ->
             IOSGroupChip(
@@ -147,6 +163,64 @@ fun IOSGroupList(
                     onDeleteGroup(item.group)
                 }
             )
+        }
+    }
+}
+
+@Composable
+fun IOSSecureGroupChip(
+    count: Int,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    // Анимация цветов
+    val backgroundColor by animateColorAsState(
+        targetValue = if (isSelected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+        animationSpec = tween(200)
+    )
+    val contentColor by animateColorAsState(
+        targetValue = if (isSelected) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.onSurface,
+        animationSpec = tween(200)
+    )
+
+    Box(
+        modifier = Modifier
+            .height(36.dp)
+            .clip(CircleShape)
+            .background(backgroundColor)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 14.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            // Иконка Замка (или скрытого глаза)
+            Icon(
+                // R.drawable.lock создай или используй Icons.Default.Lock
+                // Либо vector: Icons.Filled.Lock (или Outlined)
+                imageVector = Icons.Default.Lock,
+                contentDescription = null,
+                tint = if (isSelected) contentColor else MaterialTheme.colorScheme.error.copy(alpha = 0.8f), // Можно сделать красным замочек? Или обычным серым
+                modifier = Modifier.size(14.dp)
+            )
+
+            Spacer(modifier = Modifier.width(6.dp))
+
+            // Название "Скрытые"
+            Text(
+                text = stringResource(R.string.secure_folder), // <-- Добавь строку в strings.xml
+                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
+                color = contentColor
+            )
+
+            // Если заметок нет, все равно показываем папку, но счетчик скрываем
+            if (count > 0) {
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = count.toString(),
+                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                    color = if (isSelected) contentColor.copy(alpha = 0.7f) else contentColor.copy(alpha = 0.5f)
+                )
+            }
         }
     }
 }

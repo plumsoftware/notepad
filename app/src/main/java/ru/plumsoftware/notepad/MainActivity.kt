@@ -52,6 +52,12 @@ import androidx.activity.compose.LocalActivity
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.runtime.collectAsState
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.core.view.ViewCompat
 import com.google.firebase.Firebase
 import com.google.firebase.analytics.FirebaseAnalytics
@@ -262,10 +268,14 @@ class MainActivity : ComponentActivity() {
                             slideOutWithFade()
                         }
                     ) {
+                        val viewModel: NoteViewModel = viewModel(
+                            factory = NoteViewModelFactory(application, false)
+                        )
                         Settings(
                             activity = this@MainActivity,
                             navController = navController,
-                            themeState = themeState
+                            themeState = themeState,
+                            viewModel = viewModel
                         )
                     }
 
@@ -313,9 +323,20 @@ class MainActivity : ComponentActivity() {
                             factory = NoteViewModelFactory(application, openAddNote)
                         )
                         val noteId = backStackEntry.arguments?.getString("noteId")
-                        val note = viewModel.notes.value.find { it.id == noteId }
-                        if (note != null) {
-                            AddNoteScreen(this@MainActivity, navController, viewModel, note)
+
+                        // Получаем заметку реактивно. Пока грузится - показываем лоадер или пустой экран
+                        // collectAsState(initial = null) вернет null сначала.
+                        if (noteId != null) {
+                            val note by viewModel.getNoteById(noteId).collectAsState(initial = null)
+
+                            if (note != null) {
+                                AddNoteScreen(this@MainActivity, navController, viewModel, note)
+                            } else {
+                                // Можно показать индикатор загрузки, пока note == null
+                                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                    CircularProgressIndicator()
+                                }
+                            }
                         }
                     }
                 }

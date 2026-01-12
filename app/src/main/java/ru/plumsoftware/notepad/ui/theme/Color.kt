@@ -2,94 +2,126 @@ package ru.plumsoftware.notepad.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// --- Light Theme Colors ---
-val primaryLight = Color(0xFF1E73FC)
-val onPrimaryLight = Color(0xFFFFFFFF)
-val primaryContainerLight = Color(0xFFD3E4FF)
+// --- ОБЩИЕ АКЦЕНТЫ (Ваш бренд) ---
+// Твой синий для светлой темы
+val AppleBlueLight = Color(0xFF1E73FC)
+// Для темной темы iOS делает цвет чуть светлее, но СОХРАНЯЕТ насыщенность
+// Твой текущий pastel blue (AECBFA) слишком бледный для iOS
+val AppleBlueDark = Color(0xFF0A84FF)
+
+// --- Light Theme Colors (iOS Style) ---
+val primaryLight = AppleBlueLight
+val onPrimaryLight = Color.White
+val primaryContainerLight = Color(0xFFD3E4FF) // Можно оставить для легких подложек
 val onPrimaryContainerLight = Color(0xFF001C38)
 
-val secondaryLight = Color(0xFF545F70)
+// В iOS фон "grouped" экранов (как настройки) - светло-серый
+val backgroundLight = Color(0xFFF2F2F7) // System Gray 6
+val onBackgroundLight = Color.Black
+
+// Карточки, ячейки, диалоги - чисто белые
+val surfaceLight = Color(0xFFFFFFFF)
+val onSurfaceLight = Color.Black
+
+// Вторичные поверхности (например, для search bar)
+val surfaceVariantLight = Color(0xFFE5E5EA) // System Gray 5
+val onSurfaceVariantLight = Color(0xFF8E8E93) // System Gray
+
+// Ошибки
+val errorLight = Color(0xFFFF3B30) // Apple Red
+val onErrorLight = Color.White
+
+// Разделители
+val outlineLight = Color(0xFFC6C6C8) // System Gray 3
+val outlineVariantLight = Color(0xFFD1D1D6) // System Gray 4
+
+// --- Secondary (Вторичный) - Используем System Gray для нейтральности ---
+val secondaryLight = Color(0xFF8E8E93) // System Gray
 val onSecondaryLight = Color(0xFFFFFFFF)
-val secondaryContainerLight = Color(0xFFD7E3F8)
-val onSecondaryContainerLight = Color(0xFF101C2B)
+val secondaryContainerLight = Color(0xFFE5E5EA) // System Gray 5 (светлая подложка)
+val onSecondaryContainerLight = Color(0xFF1C1C1E)
 
-val tertiaryLight = Color(0xFF6C5677)
+// --- Tertiary (Третичный) - Используем System Indigo для акцентов ---
+val tertiaryLight = Color(0xFF5856D6) // System Indigo
 val onTertiaryLight = Color(0xFFFFFFFF)
-val tertiaryContainerLight = Color(0xFFF4D9FF)
-val onTertiaryContainerLight = Color(0xFF250E30)
+val tertiaryContainerLight = Color(0xFFE0E0FF)
+val onTertiaryContainerLight = Color(0xFF24244A)
 
-val errorLight = Color(0xFFBA1A1A)
-val onErrorLight = Color(0xFFFFFFFF)
-val errorContainerLight = Color(0xFFFFDAD6)
-val onErrorContainerLight = Color(0xFF410002)
+// --- Error Containers (Контейнеры ошибок) ---
+val errorContainerLight = Color(0xFFFFE5E5) // Очень светлый красный
+val onErrorContainerLight = Color(0xFF410002) // Темно-красный текст
 
-val backgroundLight = Color(0xFFF9FAFF)
-val onBackgroundLight = Color(0xFF191C20)
-val surfaceLight = Color(0xFFF9FAFF)
-val onSurfaceLight = Color(0xFF191C20)
-
-val surfaceVariantLight = Color(0xFFE0E2EC)
-val onSurfaceVariantLight = Color(0xFF44474E)
-val outlineLight = Color(0xFF73777F)
-
-// --- Недостающие переменные для Light темы ---
-val outlineVariantLight = Color(0xFFC4C6CF)
 val scrimLight = Color(0xFF000000)
 val inverseSurfaceLight = Color(0xFF2F3036)
 val inverseOnSurfaceLight = Color(0xFFF0F0F7)
 val inversePrimaryLight = Color(0xFFAECBFA)
 val surfaceDimLight = Color(0xFFD9D9E0)
 val surfaceBrightLight = Color(0xFFF9FAFF)
+
+
+// --- Dark Theme Colors (iOS Style) ---
+// В iOS акцент остается ярким!
+val primaryDark = AppleBlueDark
+val onPrimaryDark = Color.White // Apple использует белый текст на синих кнопках даже в dark mode
+val primaryContainerDark = Color(0xFF0040DD)
+val onPrimaryContainerDark = Color.White
+
+// В iOS фон темной темы - ИДЕАЛЬНО ЧЕРНЫЙ (для OLED)
+val backgroundDark = Color(0xFF000000)
+val onBackgroundDark = Color.White
+
+// Карточки в темной теме - темно-серые, а не черные
+val surfaceDark = Color(0xFF1C1C1E) // System Gray 6 Dark
+val onSurfaceDark = Color.White
+
+// Вторичные поверхности (search bar dark)
+val surfaceVariantDark = Color(0xFF2C2C2E) // System Gray 5 Dark
+val onSurfaceVariantDark = Color(0xFF8E8E93)
+
+// Ошибки
+val errorDark = Color(0xFFFF453A) // Apple Red Dark
+val onErrorDark = Color.Black
+
+// Разделители
+val outlineDark = Color(0xFF38383A)
+val outlineVariantDark = Color(0xFF48484A)
+
+// --- Цвета контейнеров (для совместимости с Material 3 компонентами) ---
+// В iOS они не используются так активно, но для M3 нужны
 val surfaceContainerLowestLight = Color(0xFFFFFFFF)
-val surfaceContainerLowLight = Color(0xFFF3F3FA)
-val surfaceContainerLight = Color(0xFFEDEDF4)
-val surfaceContainerHighLight = Color(0xFFE7E8EE)
-val surfaceContainerHighestLight = Color(0xFFE1E2E8)
+val surfaceContainerLowLight = Color(0xFFF2F2F7)
+val surfaceContainerLight = Color(0xFFFFFFFF) // Карточки
+val surfaceContainerHighLight = Color(0xFFE5E5EA)
+val surfaceContainerHighestLight = Color(0xFFD1D1D6)
 
+val surfaceContainerLowestDark = Color(0xFF000000)
+val surfaceContainerLowDark = Color(0xFF1C1C1E) // Карточки
+val surfaceContainerDark = Color(0xFF2C2C2E)
+val surfaceContainerHighDark = Color(0xFF3A3A3C)
+val surfaceContainerHighestDark = Color(0xFF48484A)
 
-// --- Dark Theme Colors ---
-val primaryDark = Color(0xFFAECBFA)
-val onPrimaryDark = Color(0xFF002F65)
-val primaryContainerDark = Color(0xFF00458E)
-val onPrimaryContainerDark = Color(0xFFD6E3FF)
+// --- Secondary (Dark) ---
+val secondaryDark = Color(0xFF8E8E93) // System Gray (он универсален)
+val onSecondaryDark = Color(0xFFFFFFFF)
+val secondaryContainerDark = Color(0xFF2C2C2E) // System Gray 5 Dark
+val onSecondaryContainerDark = Color(0xFFE5E5EA)
 
-val secondaryDark = Color(0xFFBBC7DB)
-val onSecondaryDark = Color(0xFF253140)
-val secondaryContainerDark = Color(0xFF3B4858)
-val onSecondaryContainerDark = Color(0xFFD7E3F8)
+// --- Tertiary (Dark) ---
+val tertiaryDark = Color(0xFF5E5CE6) // System Indigo Dark
+val onTertiaryDark = Color(0xFFFFFFFF)
+val tertiaryContainerDark = Color(0xFF3F3F70)
+val onTertiaryContainerDark = Color(0xFFE0E0FF)
 
-val tertiaryDark = Color(0xFFDFC8EB)
-val onTertiaryDark = Color(0xFF3F2D4A)
-val tertiaryContainerDark = Color(0xFF574462)
-val onTertiaryContainerDark = Color(0xFFF6E4FF)
-
-val errorDark = Color(0xFFFFB4AB)
-val onErrorDark = Color(0xFF690005)
+// --- Error Containers (Dark) ---
 val errorContainerDark = Color(0xFF93000A)
 val onErrorContainerDark = Color(0xFFFFDAD6)
 
-val backgroundDark = Color(0xFF121212)
-val onBackgroundDark = Color(0xFFE2E2E6)
-val surfaceDark = Color(0xFF121212)
-val onSurfaceDark = Color(0xFFE2E2E6)
-
-val surfaceVariantDark = Color(0xFF44474E)
-val onSurfaceVariantDark = Color(0xFFC4C6D0)
-val outlineDark = Color(0xFF8D9199)
-
-// --- Недостающие переменные для Dark темы ---
-val outlineVariantDark = Color(0xFF44474E)
 val scrimDark = Color(0xFF000000)
 val inverseSurfaceDark = Color(0xFFE2E2E6)
 val inverseOnSurfaceDark = Color(0xFF2F3036)
 val inversePrimaryDark = Color(0xFF1E73FC)
 val surfaceDimDark = Color(0xFF111318)
 val surfaceBrightDark = Color(0xFF37393E)
-val surfaceContainerLowestDark = Color(0xFF0C0E11)
-val surfaceContainerLowDark = Color(0xFF1C1F25)
-val surfaceContainerDark = Color(0xFF202429)
-val surfaceContainerHighDark = Color(0xFF2B2F35)
-val surfaceContainerHighestDark = Color(0xFF363A41)
 
 
 val deleteColor = Color(0xFFEF5350)

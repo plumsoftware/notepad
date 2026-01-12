@@ -95,6 +95,18 @@
     <string name="photo_add_ads_promo_title">Add more photos</string>
     <string name="photo_add_ads_promo_description">Watch a short video to add more photos to this note.</string>
 
+    <!-- Secure Folder -->
+    <string name="secure_folder">Hidden</string>
+    <string name="create_pin_title">Create passcode</string>
+    <string name="confirm_pin_title">Re-enter passcode</string>
+    <string name="enter_pin_title">Enter passcode</string>
+
+    <!-- Biometrics -->
+    <string name="biometric_title">Authentication required</string>
+    <string name="biometric_subtitle">Use Face ID or Touch ID</string>
+    <string name="use_code">Use Passcode</string>
+    <string name="wrong_pin">Wrong passcode</string>
+
     <!-- Widget -->
     <string name="widget_add_note_label">New Note</string>
     <string name="widget_add_note_description">Quickly add a new note</string>

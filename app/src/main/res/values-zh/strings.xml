@@ -95,6 +95,18 @@
     <string name="photo_add_ads_promo_title">添加更多照片</string>
     <string name="photo_add_ads_promo_description">观看短视频广告以添加更多照片。</string>
 
+    <!-- Secure Folder -->
+    <string name="secure_folder">已隐藏</string>
+    <string name="create_pin_title">创建密码</string>
+    <string name="confirm_pin_title">再次输入密码</string>
+    <string name="enter_pin_title">输入密码</string>
+
+    <!-- Biometrics -->
+    <string name="biometric_title">需要验证</string>
+    <string name="biometric_subtitle">使用面容 ID 或触控 ID</string>
+    <string name="use_code">使用密码</string>
+    <string name="wrong_pin">密码错误</string>
+
     <!-- Widget -->
     <string name="widget_add_note_label">写笔记</string>
     <string name="widget_add_note_description">快速添加新笔记</string>

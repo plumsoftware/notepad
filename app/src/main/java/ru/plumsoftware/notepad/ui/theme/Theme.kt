@@ -8,8 +8,8 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 
 private val lightScheme = lightColorScheme(
-    primary = primaryLight,
-    onPrimary = onPrimaryLight,
+    primary = primaryLight, // Яркий синий (Apple Blue)
+    onPrimary = onPrimaryLight, // Белый текст
     primaryContainer = primaryContainerLight,
     onPrimaryContainer = onPrimaryContainerLight,
     secondary = secondaryLight,
@@ -24,20 +24,26 @@ private val lightScheme = lightColorScheme(
     onError = onErrorLight,
     errorContainer = errorContainerLight,
     onErrorContainer = onErrorContainerLight,
-    background = backgroundLight,
+
+    // --- ВАЖНЫЕ ИЗМЕНЕНИЯ ДЛЯ IOS СТИЛЯ ---
+    background = backgroundLight, // Светло-серый (для фона настроек)
     onBackground = onBackgroundLight,
-    surface = surfaceLight,
+    surface = surfaceLight, // Чисто белый (для карточек и групп настроек)
     onSurface = onSurfaceLight,
-    surfaceVariant = surfaceVariantLight,
+
+    surfaceVariant = surfaceVariantLight, // Серый для SearchBar и подложек
     onSurfaceVariant = onSurfaceVariantLight,
     outline = outlineLight,
     outlineVariant = outlineVariantLight,
+
     scrim = scrimLight,
     inverseSurface = inverseSurfaceLight,
     inverseOnSurface = inverseOnSurfaceLight,
     inversePrimary = inversePrimaryLight,
     surfaceDim = surfaceDimLight,
     surfaceBright = surfaceBrightLight,
+
+    // Контейнеры (Material 3 слоты, используем наши маппинги)
     surfaceContainerLowest = surfaceContainerLowestLight,
     surfaceContainerLow = surfaceContainerLowLight,
     surfaceContainer = surfaceContainerLight,
@@ -46,8 +52,8 @@ private val lightScheme = lightColorScheme(
 )
 
 private val darkScheme = darkColorScheme(
-    primary = primaryDark,
-    onPrimary = onPrimaryDark,
+    primary = primaryDark, // Яркий синий (вместо пастельного)
+    onPrimary = onPrimaryDark, // Белый текст
     primaryContainer = primaryContainerDark,
     onPrimaryContainer = onPrimaryContainerDark,
     secondary = secondaryDark,
@@ -62,20 +68,26 @@ private val darkScheme = darkColorScheme(
     onError = onErrorDark,
     errorContainer = errorContainerDark,
     onErrorContainer = onErrorContainerDark,
-    background = backgroundDark,
+
+    // --- ВАЖНЫЕ ИЗМЕНЕНИЯ ДЛЯ IOS СТИЛЯ ---
+    background = backgroundDark, // Абсолютно черный (#000000)
     onBackground = onBackgroundDark,
-    surface = surfaceDark,
+    surface = surfaceDark, // Темно-серый (#1C1C1E) для карточек
     onSurface = onSurfaceDark,
+
     surfaceVariant = surfaceVariantDark,
     onSurfaceVariant = onSurfaceVariantDark,
     outline = outlineDark,
     outlineVariant = outlineVariantDark,
+
     scrim = scrimDark,
     inverseSurface = inverseSurfaceDark,
     inverseOnSurface = inverseOnSurfaceDark,
     inversePrimary = inversePrimaryDark,
     surfaceDim = surfaceDimDark,
     surfaceBright = surfaceBrightDark,
+
+    // Контейнеры
     surfaceContainerLowest = surfaceContainerLowestDark,
     surfaceContainerLow = surfaceContainerLowDark,
     surfaceContainer = surfaceContainerDark,

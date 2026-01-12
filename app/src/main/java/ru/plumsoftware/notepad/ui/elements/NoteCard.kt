@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -122,7 +123,6 @@ fun IOSNoteCard(
                         text = note.title,
                         style = MaterialTheme.typography.titleMedium, // 20sp SemiBold (из настроек выше)
                         color = contentColor,
-                        maxLines = 2,
                         overflow = TextOverflow.Ellipsis
                     )
                     Spacer(modifier = Modifier.height(4.dp))
@@ -134,7 +134,6 @@ fun IOSNoteCard(
                         text = note.description,
                         style = MaterialTheme.typography.bodyLarge, // 17sp Regular
                         color = secondaryColor, // Серый цвет, как в Notes.app
-                        maxLines = 4,
                         overflow = TextOverflow.Ellipsis
                     )
                     Spacer(modifier = Modifier.height(8.dp))
@@ -171,7 +170,6 @@ fun IOSNoteCard(
                                     style = MaterialTheme.typography.bodyLarge, // 17sp
                                     color = if (task.isChecked) tertiaryColor else contentColor, // Бледнеет при выполнении
                                     textDecoration = if (task.isChecked) TextDecoration.LineThrough else null,
-                                    maxLines = 2,
                                     overflow = TextOverflow.Ellipsis
                                 )
                             }
@@ -187,6 +185,7 @@ fun IOSNoteCard(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
+                        modifier = Modifier.wrapContentWidth(),
                         text = formatDate(note.createdAt),
                         style = MaterialTheme.typography.labelMedium, // 12sp
                         color = tertiaryColor // Самый бледный цвет
@@ -202,6 +201,7 @@ fun IOSNoteCard(
                             )
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(
+                                modifier = Modifier.wrapContentWidth(),
                                 text = groupName,
                                 style = MaterialTheme.typography.labelMedium,
                                 color = tertiaryColor

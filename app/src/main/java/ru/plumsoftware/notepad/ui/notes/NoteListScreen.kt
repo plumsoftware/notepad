@@ -103,9 +103,11 @@ import ru.plumsoftware.notepad.ui.elements.IOSActionSheetOption
 import ru.plumsoftware.notepad.ui.elements.IOSCalendarView
 import ru.plumsoftware.notepad.ui.elements.IOSCreateGroupDialog
 import ru.plumsoftware.notepad.ui.elements.IOSNoteCard
+import ru.plumsoftware.notepad.ui.elements.IOSPinInputScreen
 import ru.plumsoftware.notepad.ui.elements.IOSTopBar
 import ru.plumsoftware.notepad.ui.elements.RateAppBottomSheet
 import ru.plumsoftware.notepad.ui.elements.getNotesForDate
+import ru.plumsoftware.notepad.ui.rememberBiometricPrompt
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -175,6 +177,44 @@ fun NoteListScreen(
 
     // Добавляем FocusManager для управления фокусом
     val focusManager = LocalFocusManager.current
+
+    // Получаем количество секреток из ViewModel
+    val secretCount by viewModel.secretNotesCount.collectAsState()
+    val isSecureUnlocked = viewModel.isSecureFolderUnlocked
+
+    // Состояния для показа экрана ПИН
+    var showPinCreateScreen by remember { mutableStateOf(false) }
+    var showPinConfirmScreen by remember { mutableStateOf(false) }
+    var tempCreatedPin by remember { mutableStateOf("") } // Временный пин для подтверждения
+    var showPinUnlockScreen by remember { mutableStateOf(false) }
+    var isPinError by remember { mutableStateOf(false) }
+
+    // Биометрия
+    val biometricPrompt = rememberBiometricPrompt(
+        onSuccess = { viewModel.unlockSecureFolder() },
+        onFail = { /* Можно показать тост */ }
+    )
+
+    // Функция обработки клика
+    val handleSecureClick = {
+        if (selectedGroupId == NoteViewModel.SECURE_FOLDER_ID) {
+            // Уже в ней
+        } else if (isSecureUnlocked) {
+            // Уже открыто -> переходим
+            viewModel.selectGroup(NoteViewModel.SECURE_FOLDER_ID)
+        } else {
+            // ЗАБЛОКИРОВАНО -> ЗАПУСКАЕМ БИОМЕТРИЮ / ПИН
+            if (viewModel.isPinSet()) {
+                // Пин есть -> сначала Биометрия
+                // biometricPrompt.authenticate() // Если реализовал класс-обертку
+                // или сразу флаг на показ диалога
+                showPinUnlockScreen = true
+            } else {
+                // Пина нет -> создание
+                showPinCreateScreen = true
+            }
+        }
+    }
 
     // ПРОВЕРКА ДЛЯ ПОКАЗА ДИАЛОГА ОЦЕНКИ
     LaunchedEffect(notes.size) {
@@ -446,16 +486,14 @@ fun NoteListScreen(
 
                         //Spacer(modifier = Modifier.height(12.dp))
                         IOSGroupList(
-                            groups = groups, // Теперь тут GroupsWithCounts
+                            groups = groups,
                             selectedGroupId = selectedGroupId,
                             totalCount = totalNotesCount,
+                            secretCount = secretCount,
                             onGroupSelected = { id -> viewModel.selectGroup(id) },
-                            onCreateGroup = {
-                                showCreateGroupDialog = true // Открываем диалог
-                            },
-                            onDeleteGroup = { group ->
-                                viewModel.deleteFolder(group)
-                            }
+                            onSecureClick = { handleSecureClick() },
+                            onCreateGroup = { showCreateGroupDialog = true },
+                            onDeleteGroup = { group -> viewModel.deleteFolder(group) }
                         )
                         //Spacer(modifier = Modifier.height(8.dp))
 
@@ -705,6 +743,55 @@ fun NoteListScreen(
                 showCreateGroupDialog = false
                 viewModel.addFolder(Group(title = title, color = color.toLong()))
             }
+        )
+    }
+    if (showPinCreateScreen) {
+        IOSPinInputScreen(
+            title = "Придумайте код-пароль",
+            onPinEntered = { pin ->
+                tempCreatedPin = pin
+                showPinCreateScreen = false
+                showPinConfirmScreen = true
+            },
+            onCancel = { showPinCreateScreen = false }
+        )
+    }
+    if (showPinConfirmScreen) {
+        IOSPinInputScreen(
+            title = "Повторите код-пароль",
+            onPinEntered = { pin ->
+                if (pin == tempCreatedPin) {
+                    viewModel.savePin(pin)
+                    viewModel.unlockSecureFolder() // Успех
+                    showPinConfirmScreen = false
+                } else {
+                    isPinError = true // Тряска
+                }
+            },
+            onCancel = {
+                showPinConfirmScreen = false
+                showPinCreateScreen = true // Вернуться к созданию
+            },
+            isError = isPinError
+        )
+        // Сброс ошибки при изменении ввода происходит внутри компонента или через delay
+        LaunchedEffect(isPinError) {
+            if(isPinError) { delay(500); isPinError = false }
+        }
+    }
+    if (showPinUnlockScreen && !isSecureUnlocked) { // Показывать только если не разблокировано
+        IOSPinInputScreen(
+            title = "Введите код-пароль",
+            onPinEntered = { pin ->
+                if (viewModel.checkPin(pin)) {
+                    viewModel.unlockSecureFolder()
+                    showPinUnlockScreen = false
+                } else {
+                    isPinError = true
+                }
+            },
+            onCancel = { showPinUnlockScreen = false },
+            isError = isPinError
         )
     }
 }

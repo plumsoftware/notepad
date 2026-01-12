@@ -1,9 +1,13 @@
 package ru.plumsoftware.notepad.ui.settings
 
+import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
+import android.os.Build
 import android.os.PowerManager
 import android.provider.Settings
 import androidx.compose.animation.animateColorAsState
@@ -34,11 +38,16 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBackIos
 import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
 import androidx.compose.material.icons.filled.BatteryStd
 import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.navigation.NavController
@@ -46,14 +55,17 @@ import ru.plumsoftware.notepad.data.theme_saver.ThemeState
 import ru.plumsoftware.notepad.R
 import ru.plumsoftware.notepad.data.theme_saver.saveDarkThemePreference
 import androidx.core.net.toUri
+import ru.plumsoftware.notepad.ui.NoteViewModel
 import ru.plumsoftware.notepad.ui.Screen
+import ru.plumsoftware.notepad.ui.elements.IOSPinInputScreen
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun Settings(
     activity: Activity,
     navController: NavController,
-    themeState: ThemeState
+    themeState: ThemeState,
+    viewModel: NoteViewModel
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -61,18 +73,45 @@ fun Settings(
     // Logic
     var isBatteryUnrestricted by remember { mutableStateOf(checkBatteryOptimization(context)) }
 
+    // Проверка статуса уведомлений (Android 13+)
+    var areNotificationsEnabled by remember {
+        mutableStateOf(
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+            } else {
+                NotificationManagerCompat.from(context).areNotificationsEnabled()
+            }
+        )
+    }
+
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 isBatteryUnrestricted = checkBatteryOptimization(context)
+                // Обновляем статус уведомлений при возврате
+                areNotificationsEnabled = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+                } else {
+                    NotificationManagerCompat.from(context).areNotificationsEnabled()
+                }
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    // Определяем цвета фона как в iOS (Grouped Background)
-    // В светлой теме iOS фон серый, а плашки белые. В темной фон черный, плашки темно-серые.
+    // Состояния для диалогов безопасности
+    var showPinCreateScreen by remember { mutableStateOf(false) } // Для создания/смены
+    var showPinConfirmScreen by remember { mutableStateOf(false) } // Для подтверждения
+    var showOldPinScreen by remember { mutableStateOf(false) } // Ввод старого при смене
+    var tempPin by remember { mutableStateOf("") }
+
+    var showResetDialog by remember { mutableStateOf(false) } // Сброс
+
+    // Проверяем, есть ли уже пароль
+    val isPinSet = viewModel.isPinSet()
+
+    // Логика цвета iOS
     val backgroundColor = if (themeState.isDarkTheme) Color.Black else Color(0xFFF2F2F7)
     val sectionColor = if (themeState.isDarkTheme) Color(0xFF1C1C1E) else Color.White
 
@@ -80,65 +119,22 @@ fun Settings(
         containerColor = backgroundColor,
         topBar = {
             CenterAlignedTopAppBar(
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = backgroundColor // Используем фон экрана
-                ),
-                title = {
-                    Text(
-                        text = stringResource(R.string.settings),
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                        textAlign = TextAlign.Center,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                },
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = backgroundColor),
+                title = { Text(stringResource(R.string.settings), style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)) },
                 navigationIcon = {
-                    // Кнопка Назад (Шеврон + Текст "Назад")
                     Row(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .clickable { navController.navigateUp() }
-                            .padding(start = 8.dp, end = 8.dp, top = 8.dp, bottom = 8.dp),
+                        modifier = Modifier.clip(RoundedCornerShape(8.dp)).clickable { navController.navigateUp() }.padding(8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBackIos,
-                            contentDescription = null, // Декоративный элемент, текст рядом есть
-                            tint = MaterialTheme.colorScheme.primary, // iOS Blue
-                            modifier = Modifier.size(20.dp)
-                        )
-                        // Текст кнопки (обычно "Назад" или название предыдущего экрана)
-                        // В твоем коде настроек использовался "back_button"
-                        Text(
-                            text = stringResource(R.string.back_button),
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                },
-                actions = {
-                    // Невидимая кнопка справа для идеального центрирования заголовка,
-                    // если кнопка "Назад" слева широкая.
-                    IconButton(
-                        onClick = {},
-                        enabled = false,
-                        colors = IconButtonDefaults.iconButtonColors(
-                            disabledContainerColor = Color.Transparent,
-                            disabledContentColor = Color.Transparent
-                        )
-                    ) {
-                        // Размер должен примерно совпадать с иконкой слева, чтобы заголовок не "уезжал"
-                        Box(modifier = Modifier.size(24.dp))
+                        Icon(Icons.AutoMirrored.Filled.ArrowBackIos, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                        Text(stringResource(R.string.back_button), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.primary)
                     }
                 }
             )
         }
     ) { padding ->
         Column(
-            modifier = Modifier
-                .padding(padding)
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
+            modifier = Modifier.padding(padding).fillMaxSize().verticalScroll(rememberScrollState())
         ) {
             Spacer(modifier = Modifier.height(20.dp))
 
@@ -146,27 +142,23 @@ fun Settings(
             IOSSettingsGroup(backgroundColor = sectionColor) {
                 IOSSettingsItem(
                     icon = Icons.Default.DarkMode,
-                    iconColor = Color(0xFF5E5CE6), // iOS Indigo
+                    iconColor = Color(0xFF5E5CE6),
                     title = stringResource(R.string.dark_theme),
-                    showDivider = false, // Единственный элемент, разделитель не нужен
+                    showDivider = false,
                     trailingContent = {
                         IOSSwitch(
                             checked = themeState.isDarkTheme,
                             onCheckedChange = { checked ->
                                 themeState.isDarkTheme = checked
                                 saveDarkThemePreference(checked, context)
-                                if (checked) {
-                                    AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES)
-                                } else {
-                                    AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)
-                                }
+                                if (checked) AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES)
+                                else AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)
                             }
                         )
                     }
                 )
             }
-
-            // Описание секции (Footer text)
+            // Подпись темы
             Text(
                 text = "Измените оформление приложения на темное или светлое.",
                 style = MaterialTheme.typography.bodySmall,
@@ -174,34 +166,104 @@ fun Settings(
                 modifier = Modifier.padding(start = 32.dp, top = 8.dp, bottom = 24.dp, end = 16.dp)
             )
 
-            // --- СЕКЦИЯ 2: СИСТЕМА ---
+            // --- СЕКЦИЯ 2: КОНФИДЕНЦИАЛЬНОСТЬ (БЕЗОПАСНОСТЬ) ---
             IOSSettingsGroup(backgroundColor = sectionColor) {
-                // Фоновая работа
+                // Установить / Сменить пароль
                 IOSSettingsItem(
-                    icon = Icons.Default.BatteryStd,
-                    iconColor = Color(0xFF34C759), // iOS Green
-                    title = "Фоновая работа", // stringResource(R.string.background_mode)
-                    showDivider = true, // Есть элементы ниже (если будут), пока false если последний
-                    onClick = { requestIgnoreBatteryOptimization(context) },
+                    icon = Icons.Default.Lock,
+                    iconColor = Color(0xFFFF9500), // iOS Orange
+                    title = if (isPinSet) "Сменить код-пароль" else "Включить код-пароль",
+                    showDivider = true,
+                    onClick = {
+                        if (isPinSet) {
+                            showOldPinScreen = true // Сначала старый
+                        } else {
+                            showPinCreateScreen = true // Сразу новый
+                        }
+                    },
+                    trailingContent = {
+                        Icon(Icons.AutoMirrored.Filled.ArrowForwardIos, null, tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f), modifier = Modifier.size(14.dp))
+                    }
+                )
+
+                // Восстановить (отправить email)
+                /* // Этот функционал лучше реализовать через нативный почтовик
+                IOSSettingsItem(
+                    icon = Icons.Default.Email,
+                    iconColor = Color(0xFF32ADE6), // iOS Teal
+                    title = "Забыли код?",
+                    showDivider = isPinSet,
+                    onClick = {
+                        sendRecoveryEmail(context) // Функция ниже
+                    },
+                    trailingContent = {
+                        Icon(Icons.AutoMirrored.Filled.ArrowForwardIos, null, tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f), modifier = Modifier.size(14.dp))
+                    }
+                )
+                */
+
+                // Сброс (Показывать, только если есть пароль)
+                if (isPinSet) {
+                    IOSSettingsItem(
+                        icon = Icons.Default.DeleteForever,
+                        iconColor = Color(0xFFFF3B30), // iOS Red
+                        title = "Сбросить код-пароль",
+                        showDivider = false,
+                        onClick = { showResetDialog = true },
+                        trailingContent = {}
+                    )
+                }
+            }
+            Text(
+                text = "Код-пароль используется для доступа к папке «Скрытые». Если вы забудете код, данные будут утеряны, если вы не настроили восстановление.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                modifier = Modifier.padding(start = 32.dp, top = 8.dp, bottom = 24.dp, end = 16.dp)
+            )
+
+            // --- СЕКЦИЯ 3: СИСТЕМА ---
+            IOSSettingsGroup(backgroundColor = sectionColor) {
+                // Уведомления
+                IOSSettingsItem(
+                    icon = Icons.Default.Notifications,
+                    iconColor = Color(0xFFFF2D55), // iOS Pink
+                    title = "Уведомления",
+                    showDivider = true,
+                    onClick = { openNotificationSettings(context) },
                     trailingContent = {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
-                                text = if (isBatteryUnrestricted) "Вкл" else "Выкл",
+                                text = if (areNotificationsEnabled) "Вкл" else "Выкл",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowForwardIos,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
-                                modifier = Modifier.size(14.dp)
-                            )
+                            Icon(Icons.AutoMirrored.Filled.ArrowForwardIos, null, tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f), modifier = Modifier.size(14.dp))
                         }
                     }
                 )
 
-                // Версия (просто для инфо)
+                // Оптимизация батареи
+                IOSSettingsItem(
+                    icon = Icons.Default.BatteryStd,
+                    iconColor = Color(0xFF34C759), // iOS Green
+                    title = "Фоновая работа",
+                    showDivider = true,
+                    onClick = { requestIgnoreBatteryOptimization(context) },
+                    trailingContent = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = if (isBatteryUnrestricted) "Разрешено" else "Ограничено", // Для краткости
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Icon(Icons.AutoMirrored.Filled.ArrowForwardIos, null, tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f), modifier = Modifier.size(14.dp))
+                        }
+                    }
+                )
+
+                // О приложении
                 IOSSettingsItem(
                     icon = Icons.Default.Info,
                     iconColor = Color(0xFF007AFF), // iOS Blue
@@ -209,16 +271,111 @@ fun Settings(
                     showDivider = false,
                     onClick = { navController.navigate(Screen.AboutApp.route) },
                     trailingContent = {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowForwardIos,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
-                            modifier = Modifier.size(14.dp)
-                        )
+                        Icon(Icons.AutoMirrored.Filled.ArrowForwardIos, null, tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f), modifier = Modifier.size(14.dp))
                     }
                 )
             }
         }
+    }
+
+    // --- ЛОГИКА ЭКРАНОВ ПАРОЛЯ (Переиспользование компонента IOSPinInput) ---
+
+    // 1. Создание нового пароля
+    if (showPinCreateScreen) {
+        IOSPinInputScreen(
+            title = "Придумайте новый код",
+            onPinEntered = { pin ->
+                tempPin = pin
+                showPinCreateScreen = false
+                showPinConfirmScreen = true // Переход к подтверждению
+            },
+            onCancel = { showPinCreateScreen = false }
+        )
+    }
+
+    // 2. Подтверждение пароля
+    if (showPinConfirmScreen) {
+        var isError by remember { mutableStateOf(false) }
+        IOSPinInputScreen(
+            title = "Повторите новый код",
+            onPinEntered = { pin ->
+                if (pin == tempPin) {
+                    viewModel.savePin(pin) // Сохраняем в VM
+                    showPinConfirmScreen = false
+                } else {
+                    isError = true // Тряска
+                }
+            },
+            onCancel = { showPinConfirmScreen = false; showPinCreateScreen = true },
+            isError = isError
+        )
+    }
+
+    // 3. Ввод СТАРОГО пароля (для смены)
+    if (showOldPinScreen) {
+        var isError by remember { mutableStateOf(false) }
+        IOSPinInputScreen(
+            title = "Введите старый код",
+            onPinEntered = { pin ->
+                if (viewModel.checkPin(pin)) {
+                    showOldPinScreen = false
+                    showPinCreateScreen = true // Старый верный -> создаем новый
+                } else {
+                    isError = true
+                }
+            },
+            onCancel = { showOldPinScreen = false },
+            isError = isError
+        )
+    }
+
+    // 4. Диалог СБРОСА
+    if (showResetDialog) {
+        AlertDialog(
+            onDismissRequest = { showResetDialog = false },
+            containerColor = sectionColor,
+            title = { Text("Сброс код-пароля") },
+            text = { Text("Вы уверены? Защита с папки «Скрытые» будет снята, и пароль будет удален.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.resetPin()
+                    showResetDialog = false
+                }) {
+                    Text("Сбросить", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showResetDialog = false }) { Text("Отмена") }
+            }
+        )
+    }
+}
+
+// Вспомогательная функция: Открыть настройки уведомлений приложения
+fun openNotificationSettings(context: Context) {
+    val intent = Intent()
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        intent.action = Settings.ACTION_APP_NOTIFICATION_SETTINGS
+        intent.putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+    } else {
+        intent.action = Settings.ACTION_APPLICATION_DETAILS_SETTINGS
+        intent.data = "package:${context.packageName}".toUri()
+    }
+    context.startActivity(intent)
+}
+
+// Вспомогательная: Отправить письмо для восстановления (Опционально)
+fun sendRecoveryEmail(context: Context) {
+    val intent = Intent(Intent.ACTION_SENDTO).apply {
+        data = Uri.parse("mailto:")
+        putExtra(Intent.EXTRA_EMAIL, arrayOf("support@example.com")) // Твой email
+        putExtra(Intent.EXTRA_SUBJECT, "Восстановление пароля Notepad")
+        putExtra(Intent.EXTRA_TEXT, "Здравствуйте, я забыл код-пароль от скрытой папки...")
+    }
+    try {
+        context.startActivity(intent)
+    } catch (e: Exception) {
+        // Нет почтового клиента
     }
 }
 

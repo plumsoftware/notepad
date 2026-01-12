@@ -102,4 +102,7 @@ dependencies {
     implementation(libs.analytics)
 
     implementation(libs.androidx.compose.material.icons.extended)
+
+    //Biometric
+    implementation(libs.androidx.biometric)
 }
