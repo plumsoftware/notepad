@@ -441,6 +441,7 @@ fun NoteListScreen(
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.surface)
                 .padding(padding)
+                .padding(top = 12.dp)
                 .clickable(
                     indication = null,
                     interactionSource = remember { MutableInteractionSource() }

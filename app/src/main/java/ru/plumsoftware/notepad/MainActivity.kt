@@ -49,6 +49,7 @@ import ru.plumsoftware.notepad.ui.notes.NoteListScreen
 import ru.plumsoftware.notepad.ui.theme.NotepadTheme
 import androidx.compose.ui.platform.LocalView
 import androidx.activity.compose.LocalActivity
+import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
@@ -84,6 +85,10 @@ class MainActivity : ComponentActivity() {
 
     @SuppressLint("StateFlowValueCalledInComposition")
     override fun onCreate(savedInstanceState: Bundle?) {
+        // 1. Включаем режим Edge-to-Edge ДО super.onCreate (и до setContent)
+        // Это делает статус бар и нав бар прозрачными и расширяет окно на весь экран
+        enableEdgeToEdge()
+
         super.onCreate(savedInstanceState)
 
         // События от виджета
@@ -114,29 +119,27 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             val window = LocalActivity.current?.window
-            val resources = LocalActivity.current?.resources
             val view = LocalView.current
 
-            // Создаем состояние темы, которое можно передавать между компонентами
+            // Создаем состояние темы
             val themeState = remember { ThemeState(isDarkTheme) }
 
-            SideEffect {
-                setupEdgeToEdge(window = window, resources = resources)
+            // 2. Управление цветом иконок в статус баре и навигации
+            if (!view.isInEditMode) {
+                SideEffect {
+                    val window = (view.context as Activity).window
+                    // Получаем контроллер для управления внешним видом системных баров
+                    val insetsController = WindowCompat.getInsetsController(window, view)
 
-                if (!view.isInEditMode) {
-                    val w = view.context as? Activity ?: return@SideEffect
-                    WindowCompat.setDecorFitsSystemWindows(w.window, false)
+                    // Логика:
+                    // Если тема Светлая (!isDarkTheme), иконки должны быть ТЕМНЫМИ (isAppearanceLight... = true)
+                    // Если тема Темная (isDarkTheme), иконки должны быть СВЕТЛЫМИ (isAppearanceLight... = false)
 
-                    val insetsController = ViewCompat.getWindowInsetsController(view)
-                    insetsController?.isAppearanceLightStatusBars = !themeState.isDarkTheme
-                    insetsController?.isAppearanceLightNavigationBars = !themeState.isDarkTheme
-                }
+                    // Управление иконками статус бара (часы, зарядка)
+                    insetsController.isAppearanceLightStatusBars = !themeState.isDarkTheme
 
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                    view.windowInsetsController?.hide(WindowInsets.Type.navigationBars())
-                } else {
-                    @Suppress("DEPRECATION")
-                    view.systemUiVisibility = View.SYSTEM_UI_FLAG_FULLSCREEN
+                    // Управление иконками нижнего бара навигации (кнопки назад/домой)
+                    insetsController.isAppearanceLightNavigationBars = !themeState.isDarkTheme
                 }
             }
 
@@ -147,7 +150,7 @@ class MainActivity : ComponentActivity() {
                 val noteId = intent.getStringExtra("noteId")
                 var showPermissionRationale by remember { mutableStateOf<String?>(null) }
 
-                // Request initial permissions
+                // --- Permissions Logic ---
                 val requestPermissions =
                     rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
                         permissions.entries.forEach { (permission, granted) ->
@@ -158,38 +161,34 @@ class MainActivity : ComponentActivity() {
                         }
                     }
 
-                // Define permissions to request
                 val permissionsToRequest = remember {
                     mutableListOf<String>().apply {
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                             add(Manifest.permission.POST_NOTIFICATIONS)
                         }
+                        // Для Android 12 и ниже нужны разрешения на память
                         if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.S_V2) {
                             add(Manifest.permission.WRITE_EXTERNAL_STORAGE)
-                        }
-                        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.S_V2) {
                             add(Manifest.permission.READ_EXTERNAL_STORAGE)
                         }
                     }.toTypedArray()
                 }
 
-                // Request permissions on start
                 LaunchedEffect(Unit) {
-                    requestPermissions.launch(permissionsToRequest)
+                    if (permissionsToRequest.isNotEmpty()) {
+                        requestPermissions.launch(permissionsToRequest)
+                    }
 
-                    // Показываем рекламу только после 5-го входа
-                    println ("opensForAd: $opensForAd")
                     if (opensForAd == 5) {
                         if (showOpenAdsCounter == 0) {
                             showOpenAds()
                         }
                     } else {
-                        opensForAd ++
+                        opensForAd++
                         sharedPreferences.edit { putInt("open_counter", opensForAd) }
                     }
                 }
 
-                // Permission Rationale Dialog
                 showPermissionRationale?.let { permission ->
                     PermissionRationaleDialog(
                         permission = permission,
@@ -197,6 +196,9 @@ class MainActivity : ComponentActivity() {
                         onDismiss = { showPermissionRationale = null }
                     )
                 }
+
+                // --- Navigation Host ---
+                // Здесь ничего менять не нужно, Scaffold внутри экранов сам обработает отступы
                 NavHost(
                     navController = navController,
                     startDestination = Screen.NoteList.route,
@@ -205,33 +207,7 @@ class MainActivity : ComponentActivity() {
                     popEnterTransition = { horizontalSlideOutEnter() },
                     popExitTransition = { horizontalSlideOutExit() }
                 ) {
-                    composable(
-                        Screen.NoteList.route,
-                        enterTransition = {
-                            fadeInEnter() + slideInHorizontally(
-                                initialOffsetX = { -it / 4 },
-                                animationSpec = tween(400)
-                            )
-                        },
-                        exitTransition = {
-                            fadeOutExit() + slideOutHorizontally(
-                                targetOffsetX = { it / 4 },
-                                animationSpec = tween(400)
-                            )
-                        },
-                        popEnterTransition = {
-                            fadeInEnter() + slideInHorizontally(
-                                initialOffsetX = { it / 4 },
-                                animationSpec = tween(400)
-                            )
-                        },
-                        popExitTransition = {
-                            fadeOutExit() + slideOutHorizontally(
-                                targetOffsetX = { -it / 4 },
-                                animationSpec = tween(400)
-                            )
-                        }
-                    ) {
+                    composable(Screen.NoteList.route) {
                         val viewModel: NoteViewModel = viewModel(
                             factory = NoteViewModelFactory(application, openAddNote)
                         )
@@ -240,18 +216,10 @@ class MainActivity : ComponentActivity() {
 
                     composable(
                         Screen.AddNote.route,
-                        enterTransition = {
-                            verticalSlideInEnter()
-                        },
-                        exitTransition = {
-                            fadeOutExit()
-                        },
-                        popEnterTransition = {
-                            fadeInEnter()
-                        },
-                        popExitTransition = {
-                            verticalSlideInExit()
-                        }
+                        enterTransition = { verticalSlideInEnter() },
+                        exitTransition = { fadeOutExit() },
+                        popEnterTransition = { fadeInEnter() },
+                        popExitTransition = { verticalSlideInExit() }
                     ) {
                         val viewModel: NoteViewModel = viewModel(
                             factory = NoteViewModelFactory(application, openAddNote)
@@ -259,15 +227,7 @@ class MainActivity : ComponentActivity() {
                         AddNoteScreen(this@MainActivity, navController, viewModel)
                     }
 
-                    composable(
-                        Screen.Settings.route,
-                        enterTransition = {
-                            slideInWithFade()
-                        },
-                        exitTransition = {
-                            slideOutWithFade()
-                        }
-                    ) {
+                    composable(Screen.Settings.route) {
                         val viewModel: NoteViewModel = viewModel(
                             factory = NoteViewModelFactory(application, false)
                         )
@@ -279,60 +239,24 @@ class MainActivity : ComponentActivity() {
                         )
                     }
 
-                    composable(
-                        Screen.AboutApp.route,
-                        enterTransition = {
-                            fadeInEnter()
-                        },
-                        exitTransition = {
-                            fadeOutExit()
-                        }
-                    ) {
+                    composable(Screen.AboutApp.route) {
                         AboutAppScreen(navController)
                     }
 
                     composable(
                         route = Screen.EditNote.route,
-                        arguments = listOf(navArgument("noteId") { type = NavType.StringType }),
-                        enterTransition = {
-                            slideInHorizontally(
-                                initialOffsetX = { fullWidth -> fullWidth },
-                                animationSpec = tween(400)
-                            )
-                        },
-                        exitTransition = {
-                            slideOutHorizontally(
-                                targetOffsetX = { fullWidth -> -fullWidth / 2 },
-                                animationSpec = tween(400)
-                            )
-                        },
-                        popEnterTransition = {
-                            slideInHorizontally(
-                                initialOffsetX = { fullWidth -> -fullWidth / 2 },
-                                animationSpec = tween(400)
-                            )
-                        },
-                        popExitTransition = {
-                            slideOutHorizontally(
-                                targetOffsetX = { fullWidth -> fullWidth },
-                                animationSpec = tween(400)
-                            )
-                        }
+                        arguments = listOf(navArgument("noteId") { type = NavType.StringType })
                     ) { backStackEntry ->
                         val viewModel: NoteViewModel = viewModel(
                             factory = NoteViewModelFactory(application, openAddNote)
                         )
                         val noteId = backStackEntry.arguments?.getString("noteId")
 
-                        // Получаем заметку реактивно. Пока грузится - показываем лоадер или пустой экран
-                        // collectAsState(initial = null) вернет null сначала.
                         if (noteId != null) {
                             val note by viewModel.getNoteById(noteId).collectAsState(initial = null)
-
                             if (note != null) {
                                 AddNoteScreen(this@MainActivity, navController, viewModel, note)
                             } else {
-                                // Можно показать индикатор загрузки, пока note == null
                                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                                     CircularProgressIndicator()
                                 }
@@ -349,30 +273,16 @@ class MainActivity : ComponentActivity() {
         val adRequestConfiguration =
             AdRequestConfiguration.Builder(App.platformConfig.adsConfig.openAdsId).build()
 
-        val appOpenAdEventListener: AppOpenAdEventListener = object : AppOpenAdEventListener {
-            override fun onAdShown() {
-            }
-
-            override fun onAdDismissed() {
-
-            }
-
-            override fun onAdFailedToShow(adError: AdError) {
-
-            }
-
-            override fun onAdClicked() {
-
-            }
-
-            override fun onAdImpression(impressionData: ImpressionData?) {
-            }
+        val appOpenAdEventListener = object : AppOpenAdEventListener {
+            override fun onAdShown() {}
+            override fun onAdDismissed() {}
+            override fun onAdFailedToShow(adError: AdError) {}
+            override fun onAdClicked() {}
+            override fun onAdImpression(impressionData: ImpressionData?) {}
         }
 
-        val appOpenAdLoadListener: AppOpenAdLoadListener = object : AppOpenAdLoadListener {
-            override fun onAdFailedToLoad(error: AdRequestError) {
-            }
-
+        val appOpenAdLoadListener = object : AppOpenAdLoadListener {
+            override fun onAdFailedToLoad(error: AdRequestError) {}
             override fun onAdLoaded(appOpenAd: AppOpenAd) {
                 appOpenAd.setAdEventListener(appOpenAdEventListener)
                 appOpenAd.show(this@MainActivity)
@@ -381,84 +291,5 @@ class MainActivity : ComponentActivity() {
 
         appOpenLoader.setAdLoadListener(appOpenAdLoadListener)
         appOpenLoader.loadAd(adRequestConfiguration)
-    }
-
-
-    private fun setupEdgeToEdge(window: Window?, resources: Resources?) {
-        WindowCompat.setDecorFitsSystemWindows(window, false)
-        val window = window
-
-        // Определяем текущую тему (светлая/темная)
-        val nightModeFlags = resources?.configuration?.uiMode?.and(Configuration.UI_MODE_NIGHT_MASK)
-        val isDarkTheme = nightModeFlags == Configuration.UI_MODE_NIGHT_YES
-
-        var systemUiVisibilityFlags = (
-                View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                        or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                        or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                )
-
-        // Делаем статус бар и нав бар прозрачными
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            // Настройка цвета иконок для Android 5–10
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                if (!isDarkTheme) {
-                    // СВЕТЛАЯ ТЕМА — ТЁМНЫЕ ИКОНКИ
-                    systemUiVisibilityFlags = systemUiVisibilityFlags or View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
-                }
-                // Для тёмной темы оставляем светлые иконки (по умолчанию)
-            }
-
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                if (!isDarkTheme) {
-                    // СВЕТЛАЯ ТЕМА — ТЁМНЫЕ ИКОНКИ НАВИГАЦИИ
-                    systemUiVisibilityFlags = systemUiVisibilityFlags or View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
-                }
-                // Для тёмной темы оставляем светлые иконки (по умолчанию)
-            }
-
-            @Suppress("DEPRECATION")
-            window?.decorView?.systemUiVisibility = systemUiVisibilityFlags
-            @Suppress("DEPRECATION")
-            window?.statusBarColor = Color.TRANSPARENT
-            @Suppress("DEPRECATION")
-            window?.navigationBarColor = Color.TRANSPARENT
-        }
-
-        // Для Android 10+ убираем затемнение под нав баром
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            @Suppress("DEPRECATION")
-            window?.isNavigationBarContrastEnforced = false
-        }
-
-        // Для Android 11+ используем новый API
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            window?.setDecorFitsSystemWindows(false)
-
-            val controller = window?.insetsController
-            controller?.let {
-                // Убеждаемся, что нав бар остаётся видимым
-                it.systemBarsBehavior = WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-
-                // Настройка цвета иконок для Android 11+
-                if (isDarkTheme) {
-                    // ТЁМНАЯ ТЕМА — СВЕТЛЫЕ ИКОНКИ
-                    // Убираем все флаги светлых иконок (0 означает светлые иконки в темной теме)
-                    it.setSystemBarsAppearance(
-                        0, // Никаких флагов светлых иконок - будут светлые иконки
-                        WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS or
-                                WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS
-                    )
-                } else {
-                    // СВЕТЛАЯ ТЕМА — ТЁМНЫЕ ИКОНКИ
-                    it.setSystemBarsAppearance(
-                        WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS or
-                                WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS,
-                        WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS or
-                                WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS
-                    )
-                }
-            }
-        }
     }
 }

@@ -4,9 +4,11 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -32,6 +34,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
@@ -61,23 +64,28 @@ fun IOSNoteCard(
         else groups.find { it.id == note.groupId }?.title
     }
 
+    val isSystemInDarkTheme = isSystemInDarkTheme()
+
     val backgroundColor = Color(note.color.toULong())
     val isLight = backgroundColor.luminance() > 0.5f
 
-    // --- ЦВЕТА TEKSTA (iOS System Colors) ---
-    // Primary Label
+    // --- ЦВЕТА TEXTA ---
     val contentColor = if (isLight) Color.Black.copy(alpha = 0.87f) else Color.White
-    // Secondary Label (для описания и задач) - серый, но читаемый
     val secondaryColor = if (isLight) Color(0xFF3C3C43).copy(alpha = 0.6f) else Color(0xFFEBEBF5).copy(alpha = 0.6f)
-    // Tertiary Label (для даты) - еще светлее
     val tertiaryColor = if (isLight) Color(0xFF3C3C43).copy(alpha = 0.3f) else Color(0xFFEBEBF5).copy(alpha = 0.3f)
+
+    val displayedBackgroundColor = if (note.color == 0xFFFFFFFF.toLong() && isSystemInDarkTheme) {
+        Color(0xFF1C1C1E) // Цвет iOS карточки в dark mode
+    } else {
+        backgroundColor
+    }
 
     Card(
         modifier = modifier
             .fillMaxWidth()
             .shadow(
-                elevation = 2.dp, // Очень легкая тень
-                shape = RoundedCornerShape(14.dp), // Squircle
+                elevation = 2.dp,
+                shape = RoundedCornerShape(14.dp),
                 spotColor = Color.Black.copy(alpha = 0.1f)
             )
             .pointerInput(Unit) {
@@ -87,18 +95,22 @@ fun IOSNoteCard(
                 )
             },
         shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.cardColors(containerColor = backgroundColor)
+        colors = CardDefaults.cardColors(containerColor = displayedBackgroundColor)
     ) {
         Column(
-            modifier = Modifier.padding(top = 0.dp) // Обнуляем верхний отступ для фото
+            modifier = Modifier.padding(top = 0.dp)
         ) {
-            // ФОТО (если есть) - На всю ширину (Full Bleed)
+            // ФОТО
             if (note.photos.isNotEmpty()) {
                 LazyRow(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(180.dp), // Делаем фото крупнее, как обложку
-                    horizontalArrangement = Arrangement.spacedBy(0.dp)
+                        // Немного уменьшил высоту, так как теперь есть padding вокруг фото
+                        .height(190.dp),
+                    // Добавляем отступы между элементами
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    // Добавляем отступы содержимого от краев карточки (14dp, как у текста ниже)
+                    contentPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 14.dp, bottom = 0.dp)
                 ) {
                     items(note.photos) { photoPath ->
                         AsyncImage(
@@ -106,34 +118,34 @@ fun IOSNoteCard(
                             contentDescription = null,
                             contentScale = ContentScale.Crop,
                             modifier = Modifier
-                                .width(200.dp) // Фиксированная ширина одного фото
+                                .width(200.dp)
                                 .fillMaxHeight()
+                                // Скругляем углы у самой картинки
+                                .clip(RoundedCornerShape(12.dp))
                                 .clickable { onImageClick(photoPath) }
                         )
-                        // Тонкий разделитель между фото
-                        Box(modifier = Modifier.width(1.dp).fillMaxHeight().background(Color.White.copy(0.2f)))
                     }
                 }
             }
 
-            Column(modifier = Modifier.padding(14.dp)) { // Внутренний паддинг контента
-                // ЗАГОЛОВОК (Title 3 / Headline)
+            Column(modifier = Modifier.padding(14.dp)) {
+                // ЗАГОЛОВОК
                 if (note.title.isNotBlank()) {
                     Text(
                         text = note.title,
-                        style = MaterialTheme.typography.titleMedium, // 20sp SemiBold (из настроек выше)
+                        style = MaterialTheme.typography.titleMedium,
                         color = contentColor,
                         overflow = TextOverflow.Ellipsis
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                 }
 
-                // ОПИСАНИЕ (Body)
+                // ОПИСАНИЕ
                 if (note.description.isNotBlank()) {
                     Text(
                         text = note.description,
-                        style = MaterialTheme.typography.bodyLarge, // 17sp Regular
-                        color = secondaryColor, // Серый цвет, как в Notes.app
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = secondaryColor,
                         overflow = TextOverflow.Ellipsis
                     )
                     Spacer(modifier = Modifier.height(8.dp))
@@ -146,7 +158,7 @@ fun IOSNoteCard(
                             Row(
                                 verticalAlignment = Alignment.Top,
                                 modifier = Modifier
-                                    .fillMaxWidth(0.6f)
+                                    .fillMaxWidth() // Можно оставить 0.6f, если хочешь короткие
                                     .clickable(
                                         interactionSource = remember { MutableInteractionSource() },
                                         indication = null
@@ -159,7 +171,7 @@ fun IOSNoteCard(
                                     }
                             ) {
                                 Icon(
-                                    imageVector = if (task.isChecked) Icons.Default.CheckCircle else Icons.Outlined.Circle, // Круглый контур или залитый круг
+                                    imageVector = if (task.isChecked) Icons.Default.CheckCircle else Icons.Outlined.Circle,
                                     contentDescription = null,
                                     tint = if (task.isChecked) secondaryColor else contentColor.copy(alpha = 0.4f),
                                     modifier = Modifier.size(22.dp)
@@ -167,8 +179,8 @@ fun IOSNoteCard(
                                 Spacer(modifier = Modifier.width(10.dp))
                                 Text(
                                     text = task.text,
-                                    style = MaterialTheme.typography.bodyLarge, // 17sp
-                                    color = if (task.isChecked) tertiaryColor else contentColor, // Бледнеет при выполнении
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = if (task.isChecked) tertiaryColor else contentColor,
                                     textDecoration = if (task.isChecked) TextDecoration.LineThrough else null,
                                     overflow = TextOverflow.Ellipsis
                                 )
@@ -178,7 +190,7 @@ fun IOSNoteCard(
                     Spacer(modifier = Modifier.height(12.dp))
                 }
 
-                // ФУТЕР (Caption)
+                // ФУТЕР
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -187,13 +199,14 @@ fun IOSNoteCard(
                     Text(
                         modifier = Modifier.wrapContentWidth(),
                         text = formatDate(note.createdAt),
-                        style = MaterialTheme.typography.labelMedium, // 12sp
-                        color = tertiaryColor // Самый бледный цвет
+                        style = MaterialTheme.typography.labelMedium,
+                        color = tertiaryColor
                     )
 
                     if (groupName != null) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
+                                // Вектор или painterResource
                                 imageVector = Icons.Outlined.Folder,
                                 contentDescription = null,
                                 tint = tertiaryColor,

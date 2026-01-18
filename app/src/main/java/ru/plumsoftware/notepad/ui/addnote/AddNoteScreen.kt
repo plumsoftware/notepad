@@ -154,7 +154,7 @@ fun AddNoteScreen(
         })
     }
     val adRequestConfiguration = AdRequestConfiguration.Builder(App.platformConfig.adsConfig.rewardedAdsId).build()
-    rewardedAdLoader?.loadAd(adRequestConfiguration)
+    rewardedAdLoader.loadAd(adRequestConfiguration)
 
     var myInterstitialAds: InterstitialAd? = null
     val interstitialAdsLoader = InterstitialAdLoader(activity).apply {
@@ -198,13 +198,28 @@ fun AddNoteScreen(
 
     // Colors
     // Цвета в виде объектов Color для удобства
+    // Пастельная палитра в стиле iOS Notes / Reminders
+// Оптимизирована для черного текста (luminance > 0.5)
     val availableColors = listOf(
-        Color(0xFF81C784), Color(0xFF4DB6AC), Color(0xFFF48FB1),
-        Color(0xFFFF8A65), Color(0xFF64B5F6), Color(0xFF7986CB),
-        Color(0xFFAB47BC), Color(0xFF9575CD), Color(0xFFFFCA28),
-        Color(0xFFF9A825), Color(0xFF90A4AE), Color(0xFFD7CCC8),
-        Color(0xFF283593), Color(0xFF37474F), Color(0xFF1A237E),
-        Color.White // Добавил белый для чистого iOS стиля
+        Color(0xFFFFFFFF), // White (Default) - Чистый белый
+        Color(0xFFEBEBF5), // System Gray 6 (Light) - Нейтральный серый
+
+        Color(0xFFFFB3AC), // Soft Red (iOS Red Tint)
+        Color(0xFFFFDCA8), // Soft Orange (iOS Orange Tint)
+        Color(0xFFFFF0A6), // Soft Yellow (iOS Yellow Tint)
+        Color(0xFFC7F0BD), // Soft Green (iOS Green Tint)
+        Color(0xFFB5EAD7), // Mint (Popular Aesthetic)
+        Color(0xFFBCE9FF), // Soft Teal / Cyan
+        Color(0xFFA8D3FF), // Soft Blue (iOS Blue Tint)
+        Color(0xFFC4D9FF), // Periwinkle (Indigo Tint)
+        Color(0xFFE4C2FA), // Soft Purple (iOS Purple Tint)
+        Color(0xFFFFC2D1), // Soft Pink (iOS Pink Tint)
+        Color(0xFFE6BEB3), // Soft Brown
+
+        // Более насыщенные, но безопасные варианты (если хочется цвета поярче)
+        Color(0xFF81D4FA), // Sky Blue
+        Color(0xFFC5E1A5), // Light Green
+        Color(0xFFFFCC80)  // Orange Peel
     )
 
     var selectedColor by remember { mutableStateOf(note?.color?.let { Color(it.toULong()) } ?: availableColors.last()) }
@@ -217,7 +232,23 @@ fun AddNoteScreen(
     )
 
     // Контраст: Если фон темный -> текст белый, иначе -> черный
+    // Яркость фона
     val isLightBg = luminance(selectedColor.toArgb()) > 0.5f
+
+    // Проверка: Является ли фон "нейтральным" (белый/черный)
+    // Если да - используем Primary (синий), иначе - контрастный (Ч/Б)
+    val isNeutralBg = selectedColor == Color.White || selectedColor == Color.Black || selectedColor == Color.Transparent
+
+    // Цвет КНОПОК и ИКОНОК (Navigation, Action Icons)
+    val actionItemsColor = if (isNeutralBg) {
+        MaterialTheme.colorScheme.primary // Синий на белом/черном
+    } else {
+        if (isLightBg) Color.Black else Color.White // Черный на светлом, Белый на темном (цветном)
+    }
+
+    // На белом - черный, на черном - белый, на цветном - по яркости
+    val contentTextColor = if (isLightBg) Color.Black else Color.White
+
     val contentColor = if (isLightBg) Color.Black else Color.White
     val placeholderColor = contentColor.copy(alpha = 0.4f)
     val dividerColor = contentColor.copy(alpha = 0.1f)
@@ -394,21 +425,43 @@ fun AddNoteScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Кнопка НАЗАД (Шеврон)
-                TextButton(
-                    onClick = onSaveClick,
-                    colors = ButtonDefaults.textButtonColors(contentColor = contentColor)
+                // Кнопка Назад (Шеврон + Текст "Назад")
+                Row(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable { onSaveClick() }
+                        .padding(start = 8.dp, end = 8.dp, top = 8.dp, bottom = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBackIos,
-                        contentDescription = null,
+                        contentDescription = null, // Декоративный элемент, текст рядом есть
+                        tint = actionItemsColor , // iOS Blue
                         modifier = Modifier.size(20.dp)
                     )
+                    // Текст кнопки (обычно "Назад" или название предыдущего экрана)
+                    // В твоем коде настроек использовался "back_button"
                     Text(
-                        text = stringResource(R.string.notes),
-                        style = MaterialTheme.typography.bodyLarge
+                        text = stringResource(R.string.back_button),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = actionItemsColor
                     )
                 }
+//                // Кнопка НАЗАД (Шеврон)
+//                TextButton(
+//                    onClick = onSaveClick,
+//                    colors = ButtonDefaults.textButtonColors(contentColor = contentColor)
+//                ) {
+//                    Icon(
+//                        imageVector = Icons.AutoMirrored.Filled.ArrowBackIos,
+//                        contentDescription = null,
+//                        modifier = Modifier.size(20.dp)
+//                    )
+//                    Text(
+//                        text = stringResource(R.string.notes),
+//                        style = MaterialTheme.typography.bodyLarge
+//                    )
+//                }
 
                 // Кнопка СОХРАНИТЬ (Готово)
                 // Показываем более ярко, если есть изменения (здесь упрощенно всегда "Готово")
@@ -490,6 +543,7 @@ fun AddNoteScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
+                .padding(top = 12.dp)
                 .verticalScroll(scrollState)
         ) {
             // Дата создания (сверху, серая)

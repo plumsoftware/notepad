@@ -53,6 +53,11 @@
         <meta-data
             android:name="com.yandex.mobile.ads.AUTOMATIC_SDK_INITIALIZATION"
             android:value="false" />
+
+        <!-- Иконка по умолчанию (силуэт) -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@drawable/ic_stat_name" />
     </application>
 
 </manifest>

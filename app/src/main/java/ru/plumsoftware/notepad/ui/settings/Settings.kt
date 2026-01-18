@@ -77,7 +77,10 @@ fun Settings(
     var areNotificationsEnabled by remember {
         mutableStateOf(
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+                ContextCompat.checkSelfPermission(
+                    context,
+                    Manifest.permission.POST_NOTIFICATIONS
+                ) == PackageManager.PERMISSION_GRANTED
             } else {
                 NotificationManagerCompat.from(context).areNotificationsEnabled()
             }
@@ -89,11 +92,15 @@ fun Settings(
             if (event == Lifecycle.Event.ON_RESUME) {
                 isBatteryUnrestricted = checkBatteryOptimization(context)
                 // Обновляем статус уведомлений при возврате
-                areNotificationsEnabled = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
-                } else {
-                    NotificationManagerCompat.from(context).areNotificationsEnabled()
-                }
+                areNotificationsEnabled =
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        ContextCompat.checkSelfPermission(
+                            context,
+                            Manifest.permission.POST_NOTIFICATIONS
+                        ) == PackageManager.PERMISSION_GRANTED
+                    } else {
+                        NotificationManagerCompat.from(context).areNotificationsEnabled()
+                    }
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -120,21 +127,44 @@ fun Settings(
         topBar = {
             CenterAlignedTopAppBar(
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = backgroundColor),
-                title = { Text(stringResource(R.string.settings), style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)) },
+                title = {
+                    Text(
+                        stringResource(R.string.settings),
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                    )
+                },
                 navigationIcon = {
                     Row(
-                        modifier = Modifier.clip(RoundedCornerShape(8.dp)).clickable { navController.navigateUp() }.padding(8.dp),
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .clickable { navController.navigateUp() }
+                            .padding(8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBackIos, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
-                        Text(stringResource(R.string.back_button), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.primary)
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBackIos,
+                            null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Text(
+                            stringResource(R.string.back_button),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.primary
+                        )
                     }
                 }
             )
         }
     ) { padding ->
         Column(
-            modifier = Modifier.padding(padding).fillMaxSize().verticalScroll(rememberScrollState())
+            modifier = Modifier
+                .padding(padding)
+                .fillMaxSize()
+                .verticalScroll(
+                    rememberScrollState()
+                )
+                .padding(top = 12.dp)
         ) {
             Spacer(modifier = Modifier.height(20.dp))
 
@@ -182,7 +212,12 @@ fun Settings(
                         }
                     },
                     trailingContent = {
-                        Icon(Icons.AutoMirrored.Filled.ArrowForwardIos, null, tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f), modifier = Modifier.size(14.dp))
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowForwardIos,
+                            null,
+                            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
+                            modifier = Modifier.size(14.dp)
+                        )
                     }
                 )
 
@@ -238,7 +273,12 @@ fun Settings(
                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                            Icon(Icons.AutoMirrored.Filled.ArrowForwardIos, null, tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f), modifier = Modifier.size(14.dp))
+                            Icon(
+                                Icons.AutoMirrored.Filled.ArrowForwardIos,
+                                null,
+                                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
+                                modifier = Modifier.size(14.dp)
+                            )
                         }
                     }
                 )
@@ -258,7 +298,12 @@ fun Settings(
                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                            Icon(Icons.AutoMirrored.Filled.ArrowForwardIos, null, tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f), modifier = Modifier.size(14.dp))
+                            Icon(
+                                Icons.AutoMirrored.Filled.ArrowForwardIos,
+                                null,
+                                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
+                                modifier = Modifier.size(14.dp)
+                            )
                         }
                     }
                 )
@@ -271,7 +316,12 @@ fun Settings(
                     showDivider = false,
                     onClick = { navController.navigate(Screen.AboutApp.route) },
                     trailingContent = {
-                        Icon(Icons.AutoMirrored.Filled.ArrowForwardIos, null, tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f), modifier = Modifier.size(14.dp))
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowForwardIos,
+                            null,
+                            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
+                            modifier = Modifier.size(14.dp)
+                        )
                     }
                 )
             }
