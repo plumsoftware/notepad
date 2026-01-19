@@ -78,6 +78,7 @@ import ru.plumsoftware.notepad.ui.slideOutWithFade
 import ru.plumsoftware.notepad.ui.verticalSlideInEnter
 import ru.plumsoftware.notepad.ui.verticalSlideInExit
 import androidx.core.content.edit
+import ru.plumsoftware.notepad.ui.habit.add_habit.AddHabitScreen
 
 class MainActivity : ComponentActivity() {
     private var showOpenAdsCounter = 0
@@ -262,6 +263,42 @@ class MainActivity : ComponentActivity() {
                                 }
                             }
                         }
+                    }
+
+                    composable(
+                        route = Screen.AddHabit.route,
+                        enterTransition = { verticalSlideInEnter() },
+                        exitTransition = { fadeOutExit() },
+                        popEnterTransition = { fadeInEnter() },
+                        popExitTransition = { verticalSlideInExit() }
+                    ) {
+                        val viewModel: NoteViewModel = viewModel(
+                            factory = NoteViewModelFactory(application, false) // openAddNote false тут
+                        )
+
+                        // Вызываем экран создания привычки (код ниже)
+                        AddHabitScreen(
+                            navController = navController,
+                            viewModel = viewModel
+                        )
+                    }
+
+                    composable(
+                        route = "edit_habit/{habitId}", // Или Screen.EditHabit.route
+                        arguments = listOf(navArgument("habitId") { type = NavType.StringType }),
+                        enterTransition = { verticalSlideInEnter() }, // Тоже снизу вверх
+                        exitTransition = { fadeOutExit() },
+                        popEnterTransition = { fadeInEnter() },
+                        popExitTransition = { verticalSlideInExit() }
+                    ) { backStackEntry ->
+                        val viewModel: NoteViewModel = viewModel(factory = NoteViewModelFactory(application, false))
+                        val habitId = backStackEntry.arguments?.getString("habitId")
+
+                        AddHabitScreen(
+                            navController = navController,
+                            viewModel = viewModel,
+                            habitId = habitId
+                        )
                     }
                 }
             }

@@ -38,6 +38,11 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.withContext
 import ru.plumsoftware.notepad.data.database.GroupWithCount
+import ru.plumsoftware.notepad.data.database.habit.HabitRepository
+import ru.plumsoftware.notepad.data.model.habit.Habit
+import ru.plumsoftware.notepad.data.model.habit.HabitFrequency
+import ru.plumsoftware.notepad.data.model.habit.HabitWithHistory
+import ru.plumsoftware.notepad.data.worker.HabitAlarmScheduler
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -130,6 +135,16 @@ class NoteViewModel(application: Application, openAddNote: Boolean) : ViewModel(
     // --- Rating Logic Vars ---
     private val lastRateDialogShownTime = MutableStateFlow(0L)
     private val hasRatedApp = MutableStateFlow(false)
+
+    // --- Repository for habits ---
+    private val habitRepository = HabitRepository(db.habitDao())
+    val habits: StateFlow<List<HabitWithHistory>> = habitRepository.getAllHabits()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+    private val habitScheduler = HabitAlarmScheduler(appContext)
 
     init {
         loadRatePreferences()
@@ -344,6 +359,76 @@ class NoteViewModel(application: Application, openAddNote: Boolean) : ViewModel(
         }
         return false
     }
+
+    //    region::Habits
+    fun createHabit(
+        title: String,
+        color: Long,
+        emoji: String,
+        isDaily: Boolean,
+        days: Set<Int>, // Твой UI возвращает 1..7
+        hasReminder: Boolean,
+        hour: Int,
+        minute: Int
+    ) {
+        viewModelScope.launch {
+            // Конвертируем дни в Calendar константы, если у тебя свой формат
+            // Например: если в UI (Пн=1), а в Calendar (Вс=1, Пн=2).
+            // Допустим, ты используешь формат Java Calendar везде:
+            val repeatDaysList = if (isDaily) emptyList() else days.toList()
+
+            val habit = Habit(
+                title = title,
+                color = color,
+                emoji = emoji,
+                frequency = if (isDaily) HabitFrequency.DAILY else HabitFrequency.SPECIFIC_DAYS,
+                repeatDays = repeatDaysList,
+                isReminderEnabled = hasReminder,
+                reminderHour = if (hasReminder) hour else null,
+                reminderMinute = if (hasReminder) minute else null
+            )
+
+            habitRepository.createHabit(habit)
+
+            if (hasReminder) {
+                scheduleHabitReminder(habit)
+            }
+        }
+    }
+
+
+    fun deleteHabit(habit: Habit) {
+        viewModelScope.launch {
+            habitRepository.deleteHabit(habit)
+            // Отменяем будильник
+            habitScheduler.cancelReminder(habit)
+        }
+    }
+
+    fun updateHabit(habit: Habit) {
+        viewModelScope.launch {
+            habitRepository.updateHabit(habit)
+            // Перезапускаем будильник (старый отменится, новый поставится)
+            habitScheduler.cancelReminder(habit)
+            if (habit.isReminderEnabled) {
+                scheduleHabitReminder(habit)
+            }
+        }
+    }
+
+    private fun scheduleHabitReminder(habit: Habit) {
+        // Делегируем логику планировщику
+        habitScheduler.scheduleNextReminder(habit)
+    }
+
+    // Переключение состояния (Выполнено/Нет)
+    fun toggleHabit(habitId: String) {
+        viewModelScope.launch {
+            habitRepository.toggleHabitCompletion(habitId)
+            // Здесь можно проиграть звук успеха или вибрацию, если передать context или callback
+        }
+    }
+//    endregion
 
     companion object {
         const val SECURE_FOLDER_ID = "-1"

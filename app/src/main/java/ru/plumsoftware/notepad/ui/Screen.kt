@@ -8,4 +8,6 @@ sealed class Screen(val route: String) {
     data object EditNote : Screen("edit_note/{noteId}") {
         fun createRoute(noteId: String) = "edit_note/$noteId"
     }
+
+    data object AddHabit : Screen("add_habit")
 }

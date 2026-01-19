@@ -111,6 +111,17 @@
     <string name="widget_add_note_label">Заметка</string>
     <string name="widget_add_note_description">Быстро создать заметку</string>
 
+    <!-- Habits-->
+    <string name="habits_title">Привычки</string>
+    <string name="habit_new">Создать</string>
+    <string name="habit_empty_title">Начните новые привычки</string>
+    <string name="habit_empty_desc">Маленькие шаги ведут к большим переменам</string>
+    <string name="habit_goals">Мои цели</string>
+    <string name="today">Сегодня</string>
+    <string name="streak_days">%d дн.</string>
+    <string name="all_done_title">Все цели достигнуты! 🎉</string>
+    <string name="progress_status">%d из %d выполнено</string>
+
     <!-- Google Fonts Certs configuration -->
     <array name="com_google_android_gms_fonts_certs">
         <item>@array/com_google_android_gms_fonts_certs_dev</item>

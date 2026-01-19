@@ -26,8 +26,11 @@ import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Home
+import androidx.compose.material.icons.rounded.TaskAlt
 import androidx.compose.material3.Divider
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -44,6 +47,8 @@ import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
@@ -54,107 +59,158 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import ru.plumsoftware.notepad.R
+import ru.plumsoftware.notepad.ui.MainScreenRouteState
 import ru.plumsoftware.notepad.ui.Screen
 
 @Composable
 fun BottomBar(
     navController: NavController,
+    currentScreen: MainScreenRouteState, // Текущий экран
     onHomeClick: () -> Unit,
+    onHabitsClick: () -> Unit,
     onCalendarClick: () -> Unit
 ) {
-    var selected by remember { mutableIntStateOf(0) }
-
-    // Эффект нажатия (вибрация)
     val haptic = LocalHapticFeedback.current
 
-    LaunchedEffect(key1 = selected) {
-        when (selected) {
-            0 -> onHomeClick()
-            1 -> onCalendarClick()
-        }
-    }
+    // Цвета для iOS стиля
+    val activeColor = MaterialTheme.colorScheme.primary
+    val inactiveColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
 
-    // 1. Контейнер Бара
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.95f)) // Почти непрозрачный фон
-            // В iOS тапбар учитывает системные отступы (Navigation Bar)
-            .navigationBarsPadding()
+            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.95f)) // Матовый фон
+            .navigationBarsPadding() // Учитываем системную полоску
     ) {
-        // 2. Разделитель (Hairline)
+        // Тонкий разделитель сверху (Hairline)
         HorizontalDivider(
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f), // Чуть темнее чем было
-            thickness = 0.5.dp, // Очень тонкая линия
-            modifier = Modifier.fillMaxWidth()
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f),
+            thickness = 0.5.dp
         )
 
-        // 3. Ряд Иконок
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(70.dp) // Стандартная высота iOS TabBar (49pt)
-                .padding(horizontal = 16.dp),
-            horizontalArrangement = Arrangement.SpaceAround, // Равномерное распределение
+                .height(49.dp) // Стандарт iOS
+                .padding(horizontal = 4.dp), // Отступы по краям
             verticalAlignment = Alignment.CenterVertically
         ) {
-
-            // --- ТАБ 1: ГЛАВНАЯ ---
-            IOSTabItem(
-                iconRes = R.drawable.house_fill, // Замени на контурную house, если не выбран (для полного iOS)
-                label = stringResource(R.string.menu),
-                isSelected = selected == 0,
+            // --- 1. ЗАМЕТКИ ---
+            BottomTabItem(
+                icon = painterResource(R.drawable.house_fill), // Или иконка House
+                isSelected = currentScreen == MainScreenRouteState.Main,
+                activeColor = activeColor,
+                inactiveColor = inactiveColor,
                 onClick = {
-                    selected = 0
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onHomeClick()
                 }
             )
 
-            // --- ЦЕНТРАЛЬНАЯ КНОПКА (Добавить) ---
-            // В iOS приложениях (Instagram, TikTok) центральная кнопка создания
-            // стоит в общем ряду, не имеет фона, но выделяется цветом или размером.
+            // --- 2. ПРИВЫЧКИ (НОВОЕ) ---
+            // Используем иконку галочки или списка (например, TaskAlt или Bookmark)
+            BottomTabItem(
+                // Убедись, что иконка есть, или используй Icons.Rounded.TaskAlt
+                icon = rememberVectorPainter(Icons.Rounded.TaskAlt),
+                isSelected = currentScreen == MainScreenRouteState.Habits,
+                activeColor = activeColor,
+                inactiveColor = inactiveColor,
+                onClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onHabitsClick()
+                }
+            )
+
+            // --- 3. ЦЕНТРАЛЬНАЯ КНОПКА (+) ---
             Box(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxHeight()
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
-                        indication = null // Без волны при нажатии (iOS style)
+                        indication = null
                     ) {
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                         navController.navigate(Screen.AddNote.route)
                     },
                 contentAlignment = Alignment.Center
             ) {
-                // В iOS часто кнопку "Создать" делают чуть жирнее или в рамке
+                // Стиль кнопки "Добавить"
                 Box(
                     modifier = Modifier
-                        .size(32.dp) // Размер кнопки
-                        .border(2.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(8.dp)) // Стиль "Кнопка"
-                    // Или просто иконка, если хочешь минимализм, убери border и radius
+                        .size(38.dp)
+                        .background(MaterialTheme.colorScheme.primary, CircleShape),
+                    contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        painter = painterResource(R.drawable.plus),
+                        imageVector = Icons.Rounded.Add,
                         contentDescription = stringResource(R.string.add),
-                        tint = MaterialTheme.colorScheme.primary, // Всегда акцентный цвет
-                        modifier = Modifier
-                            .size(16.dp)
-                            .align(Alignment.Center)
+                        tint = Color.White,
+                        modifier = Modifier.size(22.dp)
                     )
                 }
             }
 
-            // --- ТАБ 2: КАЛЕНДАРЬ ---
-            IOSTabItem(
-                iconRes = R.drawable.calendar2_week_fill,
-                label = stringResource(R.string.daily_planner),
-                isSelected = selected == 1,
+            // --- 4. КАЛЕНДАРЬ ---
+            BottomTabItem(
+                icon = painterResource(R.drawable.calendar2_week_fill),
+                isSelected = currentScreen == MainScreenRouteState.Calendar,
+                activeColor = activeColor,
+                inactiveColor = inactiveColor,
                 onClick = {
-                    selected = 1
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onCalendarClick()
+                }
+            )
+
+            // --- 5. ПУСТЫШКА или НАСТРОЙКИ (Для симметрии 5 слотов) ---
+            // Чтобы + был по центру, нужно 5 элементов.
+            // Либо мы делаем Spacer, либо добавляем Настройки сюда (что логичнее для iOS)
+            BottomTabItem(
+                icon = rememberVectorPainter(Icons.Default.Settings),
+                isSelected = false, // Настройки открываются отдельным экраном, таб не подсвечиваем
+                activeColor = activeColor,
+                inactiveColor = inactiveColor,
+                onClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    navController.navigate(Screen.Settings.route)
                 }
             )
         }
+    }
+}
+
+// Вспомогательный компонент для одной иконки
+@Composable
+fun RowScope.BottomTabItem(
+    icon: Painter,
+    isSelected: Boolean,
+    activeColor: Color,
+    inactiveColor: Color,
+    onClick: () -> Unit
+) {
+    // Анимация цвета
+    val tint by animateColorAsState(
+        targetValue = if (isSelected) activeColor else inactiveColor,
+        animationSpec = tween(200)
+    )
+
+    Box(
+        modifier = Modifier
+            .weight(1f)
+            .fillMaxHeight()
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null // Убираем ripple как в iOS
+            ) { onClick() },
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            painter = icon,
+            contentDescription = null,
+            tint = tint,
+            modifier = Modifier.size(26.dp)
+        )
     }
 }
 
@@ -168,7 +224,9 @@ fun RowScope.IOSTabItem(
 ) {
     // Анимация цвета
     val tabColor by animateColorAsState(
-        targetValue = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
+        targetValue = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(
+            alpha = 0.4f
+        ),
         animationSpec = tween(durationMillis = 200), label = "tabColor"
     )
 
@@ -202,24 +260,3 @@ fun RowScope.IOSTabItem(
     }
 }
 
-// Preview функция
-@Preview(showBackground = true)
-@Composable
-fun BottomBarPreview() {
-    // Создаем mock NavController для Preview
-    val mockNavController = rememberNavController()
-
-    MaterialTheme {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color.LightGray)
-        ) {
-            BottomBar(
-                navController = mockNavController,
-                onHomeClick = { println("Home clicked") },
-                onCalendarClick = { println("Calendar clicked") }
-            )
-        }
-    }
-}

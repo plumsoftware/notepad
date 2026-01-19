@@ -40,6 +40,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells.*
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -107,6 +108,7 @@ import ru.plumsoftware.notepad.ui.elements.IOSPinInputScreen
 import ru.plumsoftware.notepad.ui.elements.IOSTopBar
 import ru.plumsoftware.notepad.ui.elements.RateAppBottomSheet
 import ru.plumsoftware.notepad.ui.elements.getNotesForDate
+import ru.plumsoftware.notepad.ui.habit.HabitsContent
 import ru.plumsoftware.notepad.ui.rememberBiometricPrompt
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -164,7 +166,7 @@ fun NoteListScreen(
     var selectedFilter by remember { mutableStateOf(0) }
     val previousNotesCount = remember { mutableStateOf(0) }
     val selectedGroupId by viewModel.selectedGroupId.collectAsState() // "0" = "All"
-    var mainScreenState by remember { mutableStateOf (MainScreenRouteState.Main) }
+    var mainScreenState by remember { mutableStateOf(MainScreenRouteState.Main) }
     val instaOpenAddNoteScreen = viewModel.openAddNoteScreen.collectAsState()
     val totalNotesCount by viewModel.totalNotesCount.collectAsState()
 
@@ -423,12 +425,10 @@ fun NoteListScreen(
         bottomBar = {
             BottomBar(
                 navController = navController,
-                onHomeClick = {
-                    mainScreenState = MainScreenRouteState.Main
-                },
-                onCalendarClick = {
-                    mainScreenState = MainScreenRouteState.Calendar
-                }
+                currentScreen = mainScreenState,
+                onHomeClick = { mainScreenState = MainScreenRouteState.Main },
+                onHabitsClick = { mainScreenState = MainScreenRouteState.Habits }, // Переход
+                onCalendarClick = { mainScreenState = MainScreenRouteState.Calendar }
             )
         },
         floatingActionButton = {
@@ -512,13 +512,16 @@ fun NoteListScreen(
                                 if (listType == 1) {
                                     // Две колонки
                                     LazyVerticalStaggeredGrid(
-                                        columns = StaggeredGridCells.Fixed(2),
+                                        columns = Fixed(2),
                                         modifier = Modifier
                                             .fillMaxSize()
                                             .padding(top = 10.dp),
                                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                                         verticalItemSpacing = 8.dp,
-                                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+                                        contentPadding = PaddingValues(
+                                            horizontal = 16.dp,
+                                            vertical = 8.dp
+                                        )
                                     ) {
                                         items(displayedNotes, key = { it.id }) { note ->
                                             // Логика удаления (оставляем твою анимацию)
@@ -533,18 +536,30 @@ fun NoteListScreen(
                                                         groups = groups.map { it.group },
                                                         modifier = Modifier.fillMaxWidth(), // Для списка и грида работает
                                                         onClick = {
-                                                            navController.navigate(Screen.EditNote.createRoute(note.id))
+                                                            navController.navigate(
+                                                                Screen.EditNote.createRoute(
+                                                                    note.id
+                                                                )
+                                                            )
                                                         },
                                                         onLongClick = {
                                                             showNoteMenu = true
-                                                            playSound(context, exoPlayer, R.raw.note_create)
+                                                            playSound(
+                                                                context,
+                                                                exoPlayer,
+                                                                R.raw.note_create
+                                                            )
                                                         },
                                                         onImageClick = { path ->
-                                                            fullscreenImagePath = path // Восстановили полный экран
+                                                            fullscreenImagePath =
+                                                                path // Восстановили полный экран
                                                         },
                                                         onNoteUpdated = { updatedNote ->
                                                             // Обновляем заметку через ViewModel (сохраняем галочку)
-                                                            viewModel.updateNote(updatedNote, context)
+                                                            viewModel.updateNote(
+                                                                updatedNote,
+                                                                context
+                                                            )
                                                             // Если хочешь звук при нажатии галочки:
                                                             // playSound(context, exoPlayer, R.raw.note_create)
                                                         }
@@ -568,22 +583,46 @@ fun NoteListScreen(
                                                                 // Тебе нужно будет поднять state showMoveToFolderDialog на уровень выше
                                                                 // или сделать callback onShowMoveDialog(note)
                                                             },
-                                                            leadingIcon = { Icon(Icons.Default.FolderOpen, null) }
+                                                            leadingIcon = {
+                                                                Icon(
+                                                                    Icons.Default.FolderOpen,
+                                                                    null
+                                                                )
+                                                            }
                                                         )
 
                                                         // Удалить
                                                         DropdownMenuItem(
-                                                            text = { Text("Удалить", color = MaterialTheme.colorScheme.error) },
+                                                            text = {
+                                                                Text(
+                                                                    "Удалить",
+                                                                    color = MaterialTheme.colorScheme.error
+                                                                )
+                                                            },
                                                             onClick = {
                                                                 showNoteMenu = false
-                                                                notesToDelete[note.id] = true // Запуск твоей анимации удаления
-                                                                playSound(context, exoPlayer, R.raw.note_delete)
+                                                                notesToDelete[note.id] =
+                                                                    true // Запуск твоей анимации удаления
+                                                                playSound(
+                                                                    context,
+                                                                    exoPlayer,
+                                                                    R.raw.note_delete
+                                                                )
                                                                 coroutineScope.launch {
                                                                     delay(400)
-                                                                    viewModel.deleteNote(note, context)
+                                                                    viewModel.deleteNote(
+                                                                        note,
+                                                                        context
+                                                                    )
                                                                 }
                                                             },
-                                                            leadingIcon = { Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error) }
+                                                            leadingIcon = {
+                                                                Icon(
+                                                                    Icons.Default.Delete,
+                                                                    null,
+                                                                    tint = MaterialTheme.colorScheme.error
+                                                                )
+                                                            }
                                                         )
                                                     }
                                                 }
@@ -599,7 +638,12 @@ fun NoteListScreen(
                                     LazyColumn(
                                         state = lazyListState,
                                         verticalArrangement = Arrangement.spacedBy(12.dp),
-                                        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 8.dp),
+                                        contentPadding = PaddingValues(
+                                            start = 16.dp,
+                                            end = 16.dp,
+                                            top = 16.dp,
+                                            bottom = 8.dp
+                                        ),
                                         modifier = Modifier
                                             .fillMaxSize()
                                             .padding(top = 10.dp)
@@ -617,18 +661,30 @@ fun NoteListScreen(
                                                         groups = groups.map { it.group },
                                                         modifier = Modifier.fillMaxWidth(), // Для списка и грида работает
                                                         onClick = {
-                                                            navController.navigate(Screen.EditNote.createRoute(note.id))
+                                                            navController.navigate(
+                                                                Screen.EditNote.createRoute(
+                                                                    note.id
+                                                                )
+                                                            )
                                                         },
                                                         onLongClick = {
                                                             showNoteMenu = true
-                                                            playSound(context, exoPlayer, R.raw.note_create)
+                                                            playSound(
+                                                                context,
+                                                                exoPlayer,
+                                                                R.raw.note_create
+                                                            )
                                                         },
                                                         onImageClick = { path ->
-                                                            fullscreenImagePath = path // Восстановили полный экран
+                                                            fullscreenImagePath =
+                                                                path // Восстановили полный экран
                                                         },
                                                         onNoteUpdated = { updatedNote ->
                                                             // Обновляем заметку через ViewModel (сохраняем галочку)
-                                                            viewModel.updateNote(updatedNote, context)
+                                                            viewModel.updateNote(
+                                                                updatedNote,
+                                                                context
+                                                            )
                                                             // Если хочешь звук при нажатии галочки:
                                                             // playSound(context, exoPlayer, R.raw.note_create)
                                                         }
@@ -652,22 +708,46 @@ fun NoteListScreen(
                                                                 // Тебе нужно будет поднять state showMoveToFolderDialog на уровень выше
                                                                 // или сделать callback onShowMoveDialog(note)
                                                             },
-                                                            leadingIcon = { Icon(Icons.Default.FolderOpen, null) }
+                                                            leadingIcon = {
+                                                                Icon(
+                                                                    Icons.Default.FolderOpen,
+                                                                    null
+                                                                )
+                                                            }
                                                         )
 
                                                         // Удалить
                                                         DropdownMenuItem(
-                                                            text = { Text("Удалить", color = MaterialTheme.colorScheme.error) },
+                                                            text = {
+                                                                Text(
+                                                                    "Удалить",
+                                                                    color = MaterialTheme.colorScheme.error
+                                                                )
+                                                            },
                                                             onClick = {
                                                                 showNoteMenu = false
-                                                                notesToDelete[note.id] = true // Запуск твоей анимации удаления
-                                                                playSound(context, exoPlayer, R.raw.note_delete)
+                                                                notesToDelete[note.id] =
+                                                                    true // Запуск твоей анимации удаления
+                                                                playSound(
+                                                                    context,
+                                                                    exoPlayer,
+                                                                    R.raw.note_delete
+                                                                )
                                                                 coroutineScope.launch {
                                                                     delay(400)
-                                                                    viewModel.deleteNote(note, context)
+                                                                    viewModel.deleteNote(
+                                                                        note,
+                                                                        context
+                                                                    )
                                                                 }
                                                             },
-                                                            leadingIcon = { Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error) }
+                                                            leadingIcon = {
+                                                                Icon(
+                                                                    Icons.Default.Delete,
+                                                                    null,
+                                                                    tint = MaterialTheme.colorScheme.error
+                                                                )
+                                                            }
                                                         )
                                                     }
                                                 }
@@ -679,6 +759,7 @@ fun NoteListScreen(
                         }
                     }
                 }
+
                 MainScreenRouteState.Calendar -> {
                     CalendarContent(
                         notes = notes,
@@ -695,6 +776,13 @@ fun NoteListScreen(
                             }
                         },
                         onImageClick = { path -> fullscreenImagePath = path }
+                    )
+                }
+
+                MainScreenRouteState.Habits -> {
+                    HabitsContent(
+                        viewModel = viewModel,
+                        navController = navController
                     )
                 }
             }
@@ -777,7 +865,9 @@ fun NoteListScreen(
         )
         // Сброс ошибки при изменении ввода происходит внутри компонента или через delay
         LaunchedEffect(isPinError) {
-            if(isPinError) { delay(500); isPinError = false }
+            if (isPinError) {
+                delay(500); isPinError = false
+            }
         }
     }
     if (showPinUnlockScreen && !isSecureUnlocked) { // Показывать только если не разблокировано
@@ -941,11 +1031,22 @@ private fun CalendarContent(
                                     leadingIcon = { Icon(Icons.Default.FolderOpen, null) }
                                 )
                                 DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error) },
+                                    text = {
+                                        Text(
+                                            stringResource(R.string.delete),
+                                            color = MaterialTheme.colorScheme.error
+                                        )
+                                    },
                                     onClick = {
                                         showNoteMenu = false; onDelete(note)
                                     },
-                                    leadingIcon = { Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error) }
+                                    leadingIcon = {
+                                        Icon(
+                                            Icons.Default.Delete,
+                                            null,
+                                            tint = MaterialTheme.colorScheme.error
+                                        )
+                                    }
                                 )
                             }
                         }

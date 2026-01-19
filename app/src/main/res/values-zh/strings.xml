@@ -111,6 +111,17 @@
     <string name="widget_add_note_label">写笔记</string>
     <string name="widget_add_note_description">快速添加新笔记</string>
 
+    <!-- Habits -->
+    <string name="habits_title">习惯</string>
+    <string name="habit_new">创建</string>
+    <string name="habit_empty_title">开始新习惯</string>
+    <string name="habit_empty_desc">积跬步以至千里</string>
+    <string name="habit_goals">我的目标</string>
+    <string name="today">今天</string>
+    <string name="streak_days">%d 天</string>
+    <string name="all_done_title">目标达成！🎉</string>
+    <string name="progress_status">已完成 %d / %d</string>
+
     <!-- Google Fonts Certs configuration -->
     <array name="com_google_android_gms_fonts_certs">
         <item>@array/com_google_android_gms_fonts_certs_dev</item>
