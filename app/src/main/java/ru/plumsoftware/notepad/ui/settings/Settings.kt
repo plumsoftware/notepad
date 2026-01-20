@@ -62,7 +62,6 @@ import ru.plumsoftware.notepad.ui.elements.IOSPinInputScreen
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun Settings(
-    activity: Activity,
     navController: NavController,
     themeState: ThemeState,
     viewModel: NoteViewModel
@@ -133,27 +132,7 @@ fun Settings(
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
                     )
                 },
-                navigationIcon = {
-                    Row(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .clickable { navController.navigateUp() }
-                            .padding(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowBackIos,
-                            null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Text(
-                            stringResource(R.string.back_button),
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                }
+                navigationIcon = {}
             )
         }
     ) { padding ->

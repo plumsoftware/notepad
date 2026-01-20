@@ -12,6 +12,7 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import ru.plumsoftware.notepad.data.theme_saver.ThemeState
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -26,11 +27,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
-import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
-import androidx.compose.foundation.lazy.staggeredgrid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
@@ -110,6 +108,7 @@ import ru.plumsoftware.notepad.ui.elements.RateAppBottomSheet
 import ru.plumsoftware.notepad.ui.elements.getNotesForDate
 import ru.plumsoftware.notepad.ui.habit.HabitsContent
 import ru.plumsoftware.notepad.ui.rememberBiometricPrompt
+import ru.plumsoftware.notepad.ui.settings.Settings
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -120,7 +119,8 @@ import java.util.Locale
 fun NoteListScreen(
     navController: NavController,
     viewModel: NoteViewModel,
-    scrollToNoteId: String? = null
+    scrollToNoteId: String? = null,
+    themeState: ThemeState
 ) {
     var searchQuery by remember { mutableStateOf("") }
     val notes by viewModel.notes.collectAsState()
@@ -428,7 +428,8 @@ fun NoteListScreen(
                 currentScreen = mainScreenState,
                 onHomeClick = { mainScreenState = MainScreenRouteState.Main },
                 onHabitsClick = { mainScreenState = MainScreenRouteState.Habits }, // Переход
-                onCalendarClick = { mainScreenState = MainScreenRouteState.Calendar }
+                onCalendarClick = { mainScreenState = MainScreenRouteState.Calendar },
+                onSettingsClick = { mainScreenState = MainScreenRouteState.Settings }
             )
         },
         floatingActionButton = {
@@ -776,6 +777,14 @@ fun NoteListScreen(
                             }
                         },
                         onImageClick = { path -> fullscreenImagePath = path }
+                    )
+                }
+
+                MainScreenRouteState.Settings -> {
+                    Settings(
+                        navController = navController,
+                        themeState = themeState,
+                        viewModel = viewModel
                     )
                 }
 

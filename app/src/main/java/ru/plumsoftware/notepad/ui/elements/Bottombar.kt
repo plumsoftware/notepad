@@ -65,10 +65,11 @@ import ru.plumsoftware.notepad.ui.Screen
 @Composable
 fun BottomBar(
     navController: NavController,
-    currentScreen: MainScreenRouteState, // Текущий экран
+    currentScreen: MainScreenRouteState, // Мы знаем, где находимся
     onHomeClick: () -> Unit,
     onHabitsClick: () -> Unit,
-    onCalendarClick: () -> Unit
+    onCalendarClick: () -> Unit,
+    onSettingsClick: () -> Unit
 ) {
     val haptic = LocalHapticFeedback.current
 
@@ -79,10 +80,9 @@ fun BottomBar(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.95f)) // Матовый фон
-            .navigationBarsPadding() // Учитываем системную полоску
+            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.95f))
+            .navigationBarsPadding()
     ) {
-        // Тонкий разделитель сверху (Hairline)
         HorizontalDivider(
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f),
             thickness = 0.5.dp
@@ -91,13 +91,13 @@ fun BottomBar(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(49.dp) // Стандарт iOS
-                .padding(horizontal = 4.dp), // Отступы по краям
+                .height(49.dp)
+                .padding(horizontal = 4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // --- 1. ЗАМЕТКИ ---
+            // 1. ЗАМЕТКИ
             BottomTabItem(
-                icon = painterResource(R.drawable.house_fill), // Или иконка House
+                icon = painterResource(R.drawable.house_fill),
                 isSelected = currentScreen == MainScreenRouteState.Main,
                 activeColor = activeColor,
                 inactiveColor = inactiveColor,
@@ -107,10 +107,8 @@ fun BottomBar(
                 }
             )
 
-            // --- 2. ПРИВЫЧКИ (НОВОЕ) ---
-            // Используем иконку галочки или списка (например, TaskAlt или Bookmark)
+            // 2. ПРИВЫЧКИ
             BottomTabItem(
-                // Убедись, что иконка есть, или используй Icons.Rounded.TaskAlt
                 icon = rememberVectorPainter(Icons.Rounded.TaskAlt),
                 isSelected = currentScreen == MainScreenRouteState.Habits,
                 activeColor = activeColor,
@@ -121,7 +119,7 @@ fun BottomBar(
                 }
             )
 
-            // --- 3. ЦЕНТРАЛЬНАЯ КНОПКА (+) ---
+            // 3. ЦЕНТРАЛЬНАЯ КНОПКА (+) — ВОТ ЗДЕСЬ ИЗМЕНЕНИЯ
             Box(
                 modifier = Modifier
                     .weight(1f)
@@ -131,11 +129,21 @@ fun BottomBar(
                         indication = null
                     ) {
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        navController.navigate(Screen.AddNote.route)
+
+                        // 🔥 ЛОГИКА ПЕРЕХОДА 🔥
+                        when (currentScreen) {
+                            MainScreenRouteState.Habits -> {
+                                // Если мы в привычках -> Создаем привычку
+                                navController.navigate(Screen.AddHabit.route)
+                            }
+                            else -> {
+                                // Если мы в заметках или календаре -> Создаем заметку
+                                navController.navigate(Screen.AddNote.route)
+                            }
+                        }
                     },
                 contentAlignment = Alignment.Center
             ) {
-                // Стиль кнопки "Добавить"
                 Box(
                     modifier = Modifier
                         .size(38.dp)
@@ -151,7 +159,7 @@ fun BottomBar(
                 }
             }
 
-            // --- 4. КАЛЕНДАРЬ ---
+            // 4. КАЛЕНДАРЬ
             BottomTabItem(
                 icon = painterResource(R.drawable.calendar2_week_fill),
                 isSelected = currentScreen == MainScreenRouteState.Calendar,
@@ -163,17 +171,15 @@ fun BottomBar(
                 }
             )
 
-            // --- 5. ПУСТЫШКА или НАСТРОЙКИ (Для симметрии 5 слотов) ---
-            // Чтобы + был по центру, нужно 5 элементов.
-            // Либо мы делаем Spacer, либо добавляем Настройки сюда (что логичнее для iOS)
+            // 5. НАСТРОЙКИ
             BottomTabItem(
                 icon = rememberVectorPainter(Icons.Default.Settings),
-                isSelected = false, // Настройки открываются отдельным экраном, таб не подсвечиваем
+                isSelected = false,
                 activeColor = activeColor,
                 inactiveColor = inactiveColor,
                 onClick = {
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                    navController.navigate(Screen.Settings.route)
+                    onSettingsClick()
                 }
             )
         }

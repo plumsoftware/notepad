@@ -219,19 +219,6 @@ fun HabitsContent(
                 }
             }
         }
-
-        // FAB для добавления (если список не пустой)
-        if (habitsWithHistory.isNotEmpty()) {
-            FloatingActionButton(
-                onClick = { navController.navigate("add_habit") },
-                containerColor = MaterialTheme.colorScheme.primary,
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(bottom = 100.dp, end = 20.dp) // Поднимаем над BottomBar
-            ) {
-                Icon(Icons.Default.Add, contentDescription = null, tint = Color.White)
-            }
-        }
     }
 }
 

@@ -5,15 +5,8 @@ import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.NotificationChannel
 import android.app.NotificationManager
-import android.content.res.Configuration
-import android.content.res.Resources
-import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
-import android.view.View
-import android.view.Window
-import android.view.WindowInsets
-import android.view.WindowInsetsController
 import androidx.core.view.WindowCompat
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -50,16 +43,12 @@ import ru.plumsoftware.notepad.ui.theme.NotepadTheme
 import androidx.compose.ui.platform.LocalView
 import androidx.activity.compose.LocalActivity
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.core.view.ViewCompat
 import com.google.firebase.Firebase
 import com.google.firebase.analytics.FirebaseAnalytics
 import com.google.firebase.analytics.analytics
@@ -73,8 +62,6 @@ import ru.plumsoftware.notepad.ui.horizontalSlideInExit
 import ru.plumsoftware.notepad.ui.horizontalSlideOutEnter
 import ru.plumsoftware.notepad.ui.horizontalSlideOutExit
 import ru.plumsoftware.notepad.ui.settings.Settings
-import ru.plumsoftware.notepad.ui.slideInWithFade
-import ru.plumsoftware.notepad.ui.slideOutWithFade
 import ru.plumsoftware.notepad.ui.verticalSlideInEnter
 import ru.plumsoftware.notepad.ui.verticalSlideInExit
 import androidx.core.content.edit
@@ -212,7 +199,7 @@ class MainActivity : ComponentActivity() {
                         val viewModel: NoteViewModel = viewModel(
                             factory = NoteViewModelFactory(application, openAddNote)
                         )
-                        NoteListScreen(navController, viewModel, scrollToNoteId = noteId)
+                        NoteListScreen(navController, viewModel, scrollToNoteId = noteId, themeState = themeState)
                     }
 
                     composable(
@@ -233,7 +220,6 @@ class MainActivity : ComponentActivity() {
                             factory = NoteViewModelFactory(application, false)
                         )
                         Settings(
-                            activity = this@MainActivity,
                             navController = navController,
                             themeState = themeState,
                             viewModel = viewModel
