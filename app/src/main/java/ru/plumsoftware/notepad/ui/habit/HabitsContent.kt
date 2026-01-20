@@ -58,7 +58,7 @@ import ru.plumsoftware.notepad.R
 import ru.plumsoftware.notepad.data.model.habit.HabitEntry
 import ru.plumsoftware.notepad.data.model.habit.HabitWithHistory
 import ru.plumsoftware.notepad.ui.NoteViewModel
-import ru.plumsoftware.notepad.ui.elements.HabitCard
+import ru.plumsoftware.notepad.ui.elements.habits.HabitCard
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable

@@ -39,36 +39,47 @@ import ru.plumsoftware.notepad.ui.settings.IOSSwitch
 fun AddHabitScreen(
     navController: NavController,
     viewModel: NoteViewModel,
-    habitId: String? = null // Принимаем ID, если редактируем
+    habitId: String? = null
 ) {
     val habits by viewModel.habits.collectAsState()
-    val editingHabit = remember(habitId) { habits.find { it.habit.id == habitId }?.habit }
-    val isEditing = editingHabit != null
 
-    // Данные формы
+    // 1. Используем derivedStateOf для реактивного поиска привычки
+    // Это гарантирует, что как только список привычек загрузится из БД, editingHabit обновится.
+    val editingHabit by remember(habits, habitId) {
+        derivedStateOf {
+            if (habitId == null) null
+            else habits.find { it.habit.id == habitId }?.habit
+        }
+    }
+
+    val isEditing = habitId != null
+
+    // 2. Инициализируем стейты (пустыми)
     var title by remember { mutableStateOf("") }
     var emoji by remember { mutableStateOf("🔥") }
-    val defaultColor = Color(0xFF007AFF)
+    var selectedColor by remember { mutableStateOf(Color(0xFF007AFF)) }
+    var isDaily by remember { mutableStateOf(true) }
+    var selectedDays by remember { mutableStateOf(setOf(2, 3, 4, 5, 6)) }
+    var hasReminder by remember { mutableStateOf(false) }
+    var reminderHour by remember { mutableIntStateOf(9) }
+    var reminderMinute by remember { mutableIntStateOf(0) }
+
+    // 3. Следим за editingHabit и обновляем стейты при его появлении
+    LaunchedEffect(editingHabit) {
+        editingHabit?.let { habit ->
+            title = habit.title
+            emoji = habit.emoji
+            selectedColor = Color(habit.color.toULong())
+            isDaily = habit.frequency == HabitFrequency.DAILY
+            selectedDays = if (habit.repeatDays.isNotEmpty()) habit.repeatDays.toSet() else setOf(2, 3, 4, 5, 6)
+            hasReminder = habit.isReminderEnabled
+            reminderHour = habit.reminderHour ?: 9
+            reminderMinute = habit.reminderMinute ?: 0
+        }
+    }
 
     // Цвета iOS
     val colors = listOf(Color(0xFF007AFF), Color(0xFF34C759), Color(0xFFFF9500), Color(0xFFFF2D55), Color(0xFF5856D6), Color(0xFF5AC8FA))
-
-    var selectedColor by remember {
-        mutableStateOf(editingHabit?.color?.let { Color(it.toULong()) } ?: defaultColor)
-    }
-
-    // Расписание
-    var isDaily by remember {
-        mutableStateOf(if (isEditing) editingHabit.frequency == HabitFrequency.DAILY else true)
-    }
-    var selectedDays by remember {
-        mutableStateOf(if (isEditing && editingHabit.repeatDays.isNotEmpty()) editingHabit.repeatDays.toSet() else setOf(2,3,4,5,6))
-    }
-
-    // Напоминание
-    var hasReminder by remember { mutableStateOf(editingHabit?.isReminderEnabled ?: false) }
-    var reminderHour by remember { mutableIntStateOf(editingHabit?.reminderHour ?: 9) }
-    var reminderMinute by remember { mutableIntStateOf(editingHabit?.reminderMinute ?: 0) }
 
     // Диалоги
     var showTimePicker by remember { mutableStateOf(false) }
