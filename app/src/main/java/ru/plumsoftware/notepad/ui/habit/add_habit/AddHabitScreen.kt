@@ -123,7 +123,7 @@ fun AddHabitScreen(
 
                 // Заголовок
                 Text(
-                    text = if (isEditing) "Изменить" else "Новая привычка",
+                    text = if (isEditing) stringResource(R.string.habit_edit_title) else stringResource(R.string.habit_new_title),
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                     color = MaterialTheme.colorScheme.onBackground
                 )
@@ -189,32 +189,32 @@ fun AddHabitScreen(
                         value = title, onValueChange = { title = it },
                         textStyle = MaterialTheme.typography.titleLarge.copy(color = MaterialTheme.colorScheme.onSurface),
                         cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-                        decorationBox = { if(title.isEmpty()) Text("Название", color = Color.Gray, style = MaterialTheme.typography.titleLarge) else it() }
+                        decorationBox = { if(title.isEmpty()) Text(text = stringResource(R.string.habit_name_hint), color = Color.Gray, style = MaterialTheme.typography.titleLarge) else it() }
                     )
                 }
             }
 
             // 2. РАСПИСАНИЕ
-            IOSSectionHeader("Частота")
+            IOSSectionHeader(text = stringResource(R.string.habit_frequency))
             IOSSettingsGroup(backgroundColor = sectionColor) {
-                IOSSettingsItem(icon = Icons.Default.Repeat, iconColor = Color.Gray, title = "Ежедневно", showDivider = !isDaily, trailingContent = { IOSSwitch(isDaily, { isDaily = it }) })
+                IOSSettingsItem(icon = Icons.Default.Repeat, iconColor = Color.Gray, title = stringResource(R.string.habit_daily), showDivider = !isDaily, trailingContent = { IOSSwitch(isDaily, { isDaily = it }) })
                 if (!isDaily) WeekDaySelector(selectedDays, { d -> selectedDays = if (selectedDays.contains(d)) selectedDays - d else selectedDays + d }, selectedColor)
             }
 
             // 3. НАПОМИНАНИЕ
-            IOSSectionHeader("Напоминание")
+            IOSSectionHeader(text = stringResource(R.string.habit_reminder))
             IOSSettingsGroup(backgroundColor = sectionColor) {
-                IOSSettingsItem(icon = Icons.Default.Notifications, iconColor = Color(0xFFFF2D55), title = "Напоминание", showDivider = hasReminder, trailingContent = { IOSSwitch(hasReminder, { hasReminder = it }) })
+                IOSSettingsItem(icon = Icons.Default.Notifications, iconColor = Color(0xFFFF2D55), title = stringResource(R.string.habit_reminder), showDivider = hasReminder, trailingContent = { IOSSwitch(hasReminder, { hasReminder = it }) })
                 if (hasReminder) {
                     Row(modifier = Modifier.fillMaxWidth().clickable { showTimePicker = true }.padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("Время", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
+                        Text(text = stringResource(R.string.habit_time), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
                         Text(String.format("%02d:%02d", reminderHour, reminderMinute), style = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold))
                     }
                 }
             }
 
             // 4. ЦВЕТ
-            IOSSectionHeader("Цвет")
+            IOSSectionHeader(text = stringResource(R.string.habit_color_label))
             IOSSettingsGroup(backgroundColor = sectionColor) { ColorSelectorRow(selectedColor, { selectedColor = it }) }
 
             Spacer(modifier = Modifier.height(50.dp))

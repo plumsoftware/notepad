@@ -62,7 +62,7 @@ class HabitReminderReceiver : BroadcastReceiver() {
         val notification = NotificationCompat.Builder(context, channelId)
             .setSmallIcon(R.drawable.full_icon) // Твоя иконка
             .setContentTitle(title)
-            .setContentText("Время выполнить привычку!")
+            .setContentText(context.getString(R.string.habit_notification_text))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setContentIntent(pendingIntent)
             .setAutoCancel(true)

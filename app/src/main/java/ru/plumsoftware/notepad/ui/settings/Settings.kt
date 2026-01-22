@@ -118,7 +118,7 @@ fun Settings(
     val isPinSet = viewModel.isPinSet()
 
     // Логика цвета iOS
-    val backgroundColor = if (themeState.isDarkTheme) Color.Black else Color(0xFFF2F2F7)
+    val backgroundColor = if (themeState.isDarkTheme) Color.Black else MaterialTheme.colorScheme.surface
     val sectionColor = if (themeState.isDarkTheme) Color(0xFF1C1C1E) else Color.White
 
     Scaffold(
@@ -143,7 +143,6 @@ fun Settings(
                 .verticalScroll(
                     rememberScrollState()
                 )
-                .padding(top = 12.dp)
         ) {
             Spacer(modifier = Modifier.height(20.dp))
 

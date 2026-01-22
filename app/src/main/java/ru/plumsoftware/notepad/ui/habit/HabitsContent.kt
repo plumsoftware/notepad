@@ -87,7 +87,7 @@ fun HabitsContent(
         /* AddHabitDialog(onDismiss = { showCreateHabitScreen = false }) */
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface)) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -98,8 +98,7 @@ fun HabitsContent(
                 text = stringResource(R.string.habits_title), // "Привычки"
                 style = MaterialTheme.typography.displaySmall.copy(fontWeight = FontWeight.Bold),
                 modifier = Modifier
-                    .statusBarsPadding()
-                    .padding(horizontal = 20.dp, vertical = 12.dp)
+                    .padding(horizontal = 20.dp, vertical = 8.dp)
             )
 
             if (habitsWithHistory.isEmpty()) {

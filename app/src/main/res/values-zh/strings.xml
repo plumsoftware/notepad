@@ -121,6 +121,15 @@
     <string name="streak_days">%d 天</string>
     <string name="all_done_title">目标达成！🎉</string>
     <string name="progress_status">已完成 %d / %d</string>
+    <string name="habit_new_title">新建习惯</string>
+    <string name="habit_edit_title">编辑习惯</string>
+    <string name="habit_name_hint">名称（例如：喝水）</string>
+    <string name="habit_frequency">频率</string>
+    <string name="habit_daily">每天</string>
+    <string name="habit_reminder">提醒</string>
+    <string name="habit_time">时间</string>
+    <string name="habit_color_label">标签颜色</string>
+    <string name="habit_notification_text">该完成习惯了！</string>
 
     <!-- Google Fonts Certs configuration -->
     <array name="com_google_android_gms_fonts_certs">

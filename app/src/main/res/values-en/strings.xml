@@ -121,6 +121,15 @@
     <string name="streak_days">%d days</string>
     <string name="all_done_title">All goals reached! 🎉</string>
     <string name="progress_status">%d of %d done</string>
+    <string name="habit_new_title">New Habit</string>
+    <string name="habit_edit_title">Edit Habit</string>
+    <string name="habit_name_hint">Name (e.g. Water)</string>
+    <string name="habit_frequency">Frequency</string>
+    <string name="habit_daily">Daily</string>
+    <string name="habit_reminder">Reminder</string>
+    <string name="habit_time">Time</string>
+    <string name="habit_color_label">Label Color</string>
+    <string name="habit_notification_text">Time to do your habit!</string>
 
     <!-- Google Fonts Certs configuration -->
     <array name="com_google_android_gms_fonts_certs">

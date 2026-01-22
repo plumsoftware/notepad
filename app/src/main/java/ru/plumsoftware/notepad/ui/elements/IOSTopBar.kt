@@ -1,8 +1,10 @@
 package ru.plumsoftware.notepad.ui.elements
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
@@ -53,16 +55,13 @@ fun IOSTopBar(
     onSearchQueryChange: (String) -> Unit,
     isSearchFocused: Boolean,
     onFocusChange: (Boolean) -> Unit,
-    onSettingsClick: () -> Unit,
+    onSettingsClick: () -> Unit, // Если вдруг решишь вернуть настройки слева
     onFilterClick: () -> Unit,
     onLayoutToggle: () -> Unit,
-    listType: Int, // 0 - List, 1 - Grid
+    listType: Int,
     modifier: Modifier = Modifier
 ) {
-    // Анимация цвета фона поля поиска
     val searchBarColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
-
-    // Focus Requester для управления клавиатурой
     val focusRequester = remember { FocusRequester() }
     val focusManager = LocalFocusManager.current
 
@@ -72,37 +71,25 @@ fun IOSTopBar(
             .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // 1. ЛЕВАЯ КНОПКА (МЕНЮ / НАСТРОЙКИ)
+
+        // 1. ЛЕВЫЙ ОТСТУП (Spacer)
+        // Мы оборачиваем его в AnimatedVisibility, чтобы он исчезал ПЛАВНО (сжимаясь),
+        // а не исчезал рывком.
         AnimatedVisibility(
             visible = !isSearchFocused,
-            enter = fadeIn() + slideInHorizontally { -it },
-            exit = fadeOut() + slideOutHorizontally { -it }
+            enter = expandHorizontally(expandFrom = Alignment.Start) + fadeIn(),
+            exit = shrinkHorizontally(shrinkTowards = Alignment.Start) + fadeOut()
         ) {
-            Box(
-                modifier = Modifier
-                    .wrapContentSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Settings,
-                    // "Меню"
-                    contentDescription = stringResource(R.string.menu),
-                    tint = MaterialTheme.colorScheme.primary, // Синий цвет как в iOS
-                    modifier = Modifier
-                        .size(24.dp)
-                        .clip(CircleShape)
-                        .clickable(onClick = onSettingsClick)
-                )
-            }
+            Spacer(modifier = Modifier.width(0.dp)) // Если нужен отступ, поставь 8.dp, но сейчас у нас padding у Row
         }
 
-        if (!isSearchFocused) Spacer(modifier = Modifier.width(8.dp))
-
-        // 2. ПОЛЕ ПОИСКА (РАСТЯГИВАЕТСЯ)
+        // 2. ПОЛЕ ПОИСКА
+        // Оно имеет weight(1f), поэтому оно будет плавно занимать место,
+        // которое освобождают соседние элементы благодаря их анимации shrinkHorizontally.
         Box(
             modifier = Modifier
                 .weight(1f)
-                .height(38.dp) // Стандартная высота в iOS
+                .height(36.dp) // Чуть компактнее, как в iOS
                 .clip(RoundedCornerShape(10.dp))
                 .background(searchBarColor)
         ) {
@@ -124,7 +111,6 @@ fun IOSTopBar(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.padding(horizontal = 8.dp)
                     ) {
-                        // Лупа
                         Icon(
                             imageVector = Icons.Default.Search,
                             contentDescription = null,
@@ -137,7 +123,6 @@ fun IOSTopBar(
                         Box(modifier = Modifier.weight(1f)) {
                             if (searchQuery.isEmpty()) {
                                 Text(
-                                    // "Поиск заметок"
                                     text = stringResource(R.string.note_search),
                                     style = MaterialTheme.typography.bodyLarge,
                                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
@@ -146,11 +131,9 @@ fun IOSTopBar(
                             innerTextField()
                         }
 
-                        // Кнопка очистки (крестик внутри поля)
                         if (searchQuery.isNotEmpty()) {
                             Icon(
                                 imageVector = Icons.Default.Cancel,
-                                // "Очистить"
                                 contentDescription = stringResource(R.string.clear),
                                 tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
                                 modifier = Modifier
@@ -163,94 +146,80 @@ fun IOSTopBar(
             )
         }
 
-        // 3. ПРАВЫЕ КНОПКИ (ФИЛЬТР И ЛЭИАУТ) - ИСЧЕЗАЮТ ПРИ ПОИСКЕ
+        // 3. ПРАВЫЕ КНОПКИ (Фильтр и Вид)
+        // Используем shrinkHorizontally, чтобы они "схлопывались", освобождая место для поиска
         AnimatedVisibility(
             visible = !isSearchFocused,
-            enter = fadeIn() + slideInHorizontally { it },
-            exit = fadeOut() + slideOutHorizontally { it }
+            enter = expandHorizontally(expandFrom = Alignment.Start) + fadeIn(),
+            exit = shrinkHorizontally(shrinkTowards = Alignment.Start) + fadeOut()
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.padding(start = 12.dp)
+                modifier = Modifier.padding(start = 12.dp) // Отступ от поиска
             ) {
                 // Фильтр
                 Box(
                     modifier = Modifier
-                        .wrapContentSize(),
+                        .size(36.dp) // Увеличиваем область клика
+                        .clip(CircleShape)
+                        .clickable(onClick = onFilterClick),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         painter = painterResource(R.drawable.filter),
-                        // "Сортировка" (используем заголовок диалога как описание)
                         contentDescription = stringResource(R.string.filter_dialog_title),
                         tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier
-                            .size(24.dp)
-                            .clickable(
-                                onClick = onFilterClick,
-                                enabled = true,
-                                role = Role.Button,
-                                indication = null,
-                                interactionSource = remember { MutableInteractionSource() }
-                            )
+                        modifier = Modifier.size(24.dp)
                     )
                 }
 
                 Spacer(modifier = Modifier.width(4.dp))
 
-                // Переключение списка (Grid/List)
+                // Переключение вида
                 Box(
                     modifier = Modifier
-                        .wrapContentSize(),
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .clickable(onClick = onLayoutToggle),
                     contentAlignment = Alignment.Center
                 ) {
-                    // Рисуем иконку программно или используем ресурс
-                    if (listType == 0) { // Сейчас СПИСОК -> Показать иконку СЕТКИ
-                        Icon(
-                            modifier = Modifier
-                                .size(24.dp)
-                                .clip(CircleShape)
-                                .clickable(onClick = onLayoutToggle),
-                            imageVector = Icons.Default.GridView,
-                            contentDescription = "Grid",
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                    } else { // Сейчас СЕТКА -> Показать иконку СПИСКА
-                        Icon(
-                            modifier = Modifier
-                                .size(24.dp)
-                                .clip(CircleShape)
-                                .clickable(onClick = onLayoutToggle),
-                            imageVector = Icons.AutoMirrored.Filled.List,
-                            contentDescription = "List",
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                    }
+                    Icon(
+                        imageVector = if (listType == 0) Icons.Default.GridView else Icons.AutoMirrored.Filled.List,
+                        contentDescription = "View Toggle",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(24.dp)
+                    )
                 }
             }
         }
 
-        // 4. КНОПКА "ОТМЕНА" (ПОЯВЛЯЕТСЯ ПРИ ПОИСКЕ)
+        // 4. КНОПКА "ОТМЕНА"
+        // Используем expandHorizontally, чтобы она "расталкивала" место для себя
         AnimatedVisibility(
             visible = isSearchFocused,
-            enter = fadeIn() + slideInHorizontally { it },
-            exit = fadeOut() + slideOutHorizontally { it }
+            enter = expandHorizontally(expandFrom = Alignment.Start) + fadeIn(),
+            exit = shrinkHorizontally(shrinkTowards = Alignment.Start) + fadeOut()
         ) {
-            Text(
-                // "Отмена"
-                text = stringResource(R.string.cancel),
-                color = MaterialTheme.colorScheme.primary,
-                style = MaterialTheme.typography.bodyLarge,
+            Box(
                 modifier = Modifier
                     .padding(start = 12.dp)
-                    .clip(RoundedCornerShape(4.dp))
-                    .clickable {
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null // Убираем ripple эффект как в iOS
+                    ) {
                         onSearchQueryChange("")
                         onFocusChange(false)
-                        focusManager.clearFocus() // Скрыть клавиатуру
-                    }
-                    .padding(4.dp)
-            )
+                        focusManager.clearFocus()
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = stringResource(R.string.cancel),
+                    color = MaterialTheme.colorScheme.primary,
+                    style = MaterialTheme.typography.bodyLarge,
+                    modifier = Modifier.padding(vertical = 4.dp) // Увеличиваем высоту клика
+                )
+            }
         }
     }
 }
