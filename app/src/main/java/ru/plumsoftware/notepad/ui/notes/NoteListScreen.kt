@@ -193,6 +193,8 @@ fun NoteListScreen(
     var showPinUnlockScreen by remember { mutableStateOf(false) }
     var isPinError by remember { mutableStateOf(false) }
 
+    val backgroundColor = if (themeState.isDarkTheme) Color.Black else MaterialTheme.colorScheme.surface
+
     // Биометрия
     val biometricPrompt = rememberBiometricPrompt(
         onSuccess = { viewModel.unlockSecureFolder() },
@@ -420,7 +422,7 @@ fun NoteListScreen(
     }
 
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.surface,
+        containerColor = MaterialTheme.colorScheme.background,
         modifier = Modifier.blur(
             radius = if (needToBlur) 10.dp else 0.dp
         ),
@@ -428,6 +430,7 @@ fun NoteListScreen(
             BottomBar(
                 navController = navController,
                 currentScreen = mainScreenState,
+                themeState = themeState,
                 onHomeClick = { mainScreenState = MainScreenRouteState.Main },
                 onHabitsClick = { mainScreenState = MainScreenRouteState.Habits }, // Переход
                 onCalendarClick = { mainScreenState = MainScreenRouteState.Calendar },
@@ -442,7 +445,7 @@ fun NoteListScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(MaterialTheme.colorScheme.surface)
+                .background(MaterialTheme.colorScheme.background)
                 .padding(padding)
                 .padding(top = 12.dp)
                 .clickable(
@@ -793,7 +796,8 @@ fun NoteListScreen(
                 MainScreenRouteState.Habits -> {
                     HabitsContent(
                         viewModel = viewModel,
-                        navController = navController
+                        navController = navController,
+                        themeState = themeState
                     )
                 }
             }
@@ -980,7 +984,7 @@ private fun CalendarContent(
             },
             modifier = Modifier
                 .fillMaxWidth()
-                .background(MaterialTheme.colorScheme.surface)
+                .background(MaterialTheme.colorScheme.background)
                 // Тень в стиле iOS
                 .shadow(4.dp, spotColor = Color.Black.copy(alpha = 0.05f))
                 .padding(bottom = 8.dp)

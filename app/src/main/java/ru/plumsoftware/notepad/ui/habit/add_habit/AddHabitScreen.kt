@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import ru.plumsoftware.notepad.R
 import ru.plumsoftware.notepad.data.model.habit.HabitFrequency
+import ru.plumsoftware.notepad.data.theme_saver.ThemeState
 import ru.plumsoftware.notepad.ui.NoteViewModel
 import ru.plumsoftware.notepad.ui.elements.habits.ColorSelectorRow
 import ru.plumsoftware.notepad.ui.elements.habits.EmojiPickerDialog
@@ -39,6 +40,7 @@ import ru.plumsoftware.notepad.ui.settings.IOSSwitch
 fun AddHabitScreen(
     navController: NavController,
     viewModel: NoteViewModel,
+    themeState: ThemeState,
     habitId: String? = null
 ) {
     val habits by viewModel.habits.collectAsState()
@@ -85,8 +87,8 @@ fun AddHabitScreen(
     var showTimePicker by remember { mutableStateOf(false) }
     var showEmojiPicker by remember { mutableStateOf(false) }
 
-    val backgroundColor = MaterialTheme.colorScheme.background
-    val sectionColor = MaterialTheme.colorScheme.surface
+    val backgroundColor = if (themeState.isDarkTheme) Color.Black else MaterialTheme.colorScheme.surface
+    val sectionColor = if (themeState.isDarkTheme) Color(0xFF1C1C1E) else Color(0xFFF2F2F7)
 
     Scaffold(
         containerColor = backgroundColor,

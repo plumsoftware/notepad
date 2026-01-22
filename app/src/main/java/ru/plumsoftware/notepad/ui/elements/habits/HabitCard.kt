@@ -47,6 +47,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import ru.plumsoftware.notepad.data.theme_saver.ThemeState
 
 @Composable
 fun HabitCard(
@@ -55,6 +56,7 @@ fun HabitCard(
     streak: Int, // Серия дней
     color: Color,
     isCompletedToday: Boolean,
+    themeState: ThemeState,
     onToggle: () -> Unit,
     onLongClick: () -> Unit, // <-- Обязательно для меню
     onClick: () -> Unit
@@ -64,7 +66,10 @@ fun HabitCard(
     // Анимация масштаба кнопки при нажатии
     val scale by animateFloatAsState(
         targetValue = if (isCompletedToday) 1.1f else 1f,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessLow
+        ),
         label = "scale"
     )
 
@@ -74,6 +79,8 @@ fun HabitCard(
         animationSpec = tween(300),
         label = "color"
     )
+
+    val sectionColor = MaterialTheme.colorScheme.surface
 
     // Карточка (Белая / Темная)
     Card(
@@ -91,7 +98,7 @@ fun HabitCard(
                 )
             },
         shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        colors = CardDefaults.cardColors(containerColor = sectionColor)
     ) {
         Row(
             modifier = Modifier
@@ -160,7 +167,11 @@ fun HabitCard(
                     .background(buttonColor) // Анимированный фон
                     .then(
                         // Если НЕ выполнено - рисуем цветную рамку
-                        if (!isCompletedToday) Modifier.border(2.dp, MaterialTheme.colorScheme.surfaceVariant, CircleShape)
+                        if (!isCompletedToday) Modifier.border(
+                            2.dp,
+                            MaterialTheme.colorScheme.surfaceVariant,
+                            CircleShape
+                        )
                         else Modifier
                     )
                     .clickable(
@@ -183,7 +194,9 @@ fun HabitCard(
                         imageVector = Icons.Rounded.Check,
                         contentDescription = null,
                         tint = Color.White,
-                        modifier = Modifier.size(20.dp).padding(1.dp) // Делаем визуально жирнее
+                        modifier = Modifier
+                            .size(20.dp)
+                            .padding(1.dp) // Делаем визуально жирнее
                     )
                 }
             }

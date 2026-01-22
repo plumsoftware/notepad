@@ -59,7 +59,7 @@ fun IOSPinInputScreen(
 
     Surface(
         modifier = Modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.background // Можно сделать .surface для контраста
+        color = MaterialTheme.colorScheme.surface // Можно сделать .surface для контраста
     ) {
         Column(
             modifier = Modifier

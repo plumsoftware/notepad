@@ -30,12 +30,16 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -51,28 +55,38 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import ru.plumsoftware.notepad.R
 import ru.plumsoftware.notepad.data.model.habit.HabitEntry
 import ru.plumsoftware.notepad.data.model.habit.HabitWithHistory
+import ru.plumsoftware.notepad.data.theme_saver.ThemeState
 import ru.plumsoftware.notepad.ui.NoteViewModel
+import ru.plumsoftware.notepad.ui.elements.IOSCalendarView
 import ru.plumsoftware.notepad.ui.elements.habits.HabitCard
+import java.util.Date
 
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun HabitsContent(
     viewModel: NoteViewModel,
-    navController: NavController
+    navController: NavController,
+    themeState: ThemeState
 ) {
-    // Подписываемся на список привычек
     val habitsWithHistory by viewModel.habits.collectAsState()
-
-    // Стейт для диалога создания
     var showCreateHabitScreen by remember { mutableStateOf(false) }
 
+    // Календарь
+    var selectedHabitDate by remember { mutableStateOf(Date()) }
+    var isCalendarExpanded by remember { mutableStateOf(false) } // По умолчанию свернут
+
     val haptic = LocalHapticFeedback.current
+
+    // Цвет фона (чтобы совпадал с настройками)
+    // Можно взять из темы или хардкодом под iOS
+    val backgroundColor = MaterialTheme.colorScheme.background
 
     // Если открыт экран создания, показываем его поверх
     if (showCreateHabitScreen) {
@@ -87,18 +101,36 @@ fun HabitsContent(
         /* AddHabitDialog(onDismiss = { showCreateHabitScreen = false }) */
     }
 
-    Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface)) {
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(backgroundColor)
+    ) {
+        // Заголовок по центру
+//        Text(
+//            stringResource(R.string.habits_title),
+//            textAlign = TextAlign.Center,
+//            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+//            modifier = Modifier
+//                .fillMaxWidth()
+//                .padding(vertical = 4.dp)
+//        )
         Column(
             modifier = Modifier
                 .fillMaxSize()
         ) {
-            // ЗАГОЛОВОК (IOS Large Title)
-            // Мы не используем стандартный TopAppBar здесь, чтобы был "прозрачный" стиль
-            Text(
-                text = stringResource(R.string.habits_title), // "Привычки"
-                style = MaterialTheme.typography.displaySmall.copy(fontWeight = FontWeight.Bold),
+            IOSCalendarView(
+                notes = emptyList(),
+                selectedDate = selectedHabitDate,
+                isMonthExpanded = isCalendarExpanded,
+                onDateSelected = { date -> selectedHabitDate = date },
+                onExpandChange = { isCalendarExpanded = it },
                 modifier = Modifier
-                    .padding(horizontal = 20.dp, vertical = 8.dp)
+                    .fillMaxWidth()
+                    .padding(bottom = 8.dp)
+                    // Можно убрать тень или фон, чтобы он сливался, или оставить как карточку
+                    .background(backgroundColor)
             )
 
             if (habitsWithHistory.isEmpty()) {
@@ -142,7 +174,7 @@ fun HabitsContent(
                     // 1. ВИДЖЕТ ПРОГРЕССА
                     item {
                         // Подсчет статистики "на лету"
-                        IOSHabitProgressWidget(habits = habitsWithHistory)
+                        IOSHabitProgressWidget(habits = habitsWithHistory, themeState = themeState)
                     }
 
                     item {
@@ -162,7 +194,8 @@ fun HabitsContent(
                         var showHabitMenu by remember { mutableStateOf(false) }
 
                         val history = item.history
-                        val isCompletedToday = remember(history) { checkIfCompletedToday(history) }
+                        val isCompletedToday =
+                            remember(history) { checkIfCompletedToday(history) }
                         val streak = remember(history) { calculateStreak(history) }
 
                         Box(modifier = Modifier.animateItem()) {
@@ -172,6 +205,7 @@ fun HabitsContent(
                                 streak = streak,
                                 color = Color(habit.color.toULong()),
                                 isCompletedToday = isCompletedToday,
+                                themeState = themeState,
                                 onToggle = {
                                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                     viewModel.toggleHabit(habit.id)
@@ -202,19 +236,30 @@ fun HabitsContent(
                                     leadingIcon = { Icon(Icons.Default.Edit, null) }
                                 )
                                 DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error) },
+                                    text = {
+                                        Text(
+                                            stringResource(R.string.delete),
+                                            color = MaterialTheme.colorScheme.error
+                                        )
+                                    },
                                     onClick = {
                                         showHabitMenu = false
                                         viewModel.deleteHabit(habit)
                                     },
-                                    leadingIcon = { Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error) }
+                                    leadingIcon = {
+                                        Icon(
+                                            Icons.Default.Delete,
+                                            null,
+                                            tint = MaterialTheme.colorScheme.error
+                                        )
+                                    }
                                 )
                             }
                         }
                     }
 
-                    // Отступ под бар
-                    item { Spacer(modifier = Modifier.height(100.dp)) }
+                    // Отступ
+                    item { Spacer(modifier = Modifier.height(70.dp)) }
                 }
             }
         }
@@ -223,7 +268,7 @@ fun HabitsContent(
 
 // Хелпер: Виджет прогресса для реальных данных
 @Composable
-fun IOSHabitProgressWidget(habits: List<HabitWithHistory>) {
+fun IOSHabitProgressWidget(habits: List<HabitWithHistory>, themeState: ThemeState) {
     // Считаем сколько выполнено СЕГОДНЯ
     val total = habits.size
     val done = habits.count { checkIfCompletedToday(it.history) }
@@ -232,20 +277,20 @@ fun IOSHabitProgressWidget(habits: List<HabitWithHistory>) {
     // (Используем тот же код дизайна, что я давал ранее, но с реальными данными)
     // ... [См. код IOSHabitProgressHeader из предыдущих ответов, он идеально подходит] ...
     // Вставь сюда вызов того же UI кода
-    IOSHabitProgressHeaderInternal(progress, done, total)
+    IOSHabitProgressHeaderInternal(progress, done, total, themeState = themeState)
 }
 
 // Вспомогательная функция (UI виджета прогресса)
 @Composable
-fun IOSHabitProgressHeaderInternal(progress: Float, done: Int, total: Int) {
+fun IOSHabitProgressHeaderInternal(progress: Float, done: Int, total: Int, themeState: ThemeState) {
     val animatedProgress by animateFloatAsState(targetValue = progress, animationSpec = tween(800))
-
+    val sectionColor = MaterialTheme.colorScheme.surface
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .shadow(4.dp, RoundedCornerShape(22.dp), spotColor = Color.Black.copy(0.05f)),
         shape = RoundedCornerShape(22.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        colors = CardDefaults.cardColors(containerColor = sectionColor)
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
             Row(

@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.rounded.Add
@@ -59,13 +60,15 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import ru.plumsoftware.notepad.R
+import ru.plumsoftware.notepad.data.theme_saver.ThemeState
 import ru.plumsoftware.notepad.ui.MainScreenRouteState
 import ru.plumsoftware.notepad.ui.Screen
 
 @Composable
 fun BottomBar(
     navController: NavController,
-    currentScreen: MainScreenRouteState, // Мы знаем, где находимся
+    currentScreen: MainScreenRouteState,
+    themeState: ThemeState,
     onHomeClick: () -> Unit,
     onHabitsClick: () -> Unit,
     onCalendarClick: () -> Unit,
@@ -80,7 +83,7 @@ fun BottomBar(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.95f))
+            .background(MaterialTheme.colorScheme.background.copy(alpha = 0.95f))
             .navigationBarsPadding()
     ) {
         HorizontalDivider(
@@ -161,7 +164,7 @@ fun BottomBar(
 
             // 4. КАЛЕНДАРЬ
             BottomTabItem(
-                icon = painterResource(R.drawable.calendar2_week_fill),
+                icon = rememberVectorPainter(Icons.Filled.CalendarMonth),
                 isSelected = currentScreen == MainScreenRouteState.Calendar,
                 activeColor = activeColor,
                 inactiveColor = inactiveColor,
@@ -174,7 +177,7 @@ fun BottomBar(
             // 5. НАСТРОЙКИ
             BottomTabItem(
                 icon = rememberVectorPainter(Icons.Default.Settings),
-                isSelected = false,
+                isSelected = currentScreen == MainScreenRouteState.Settings,
                 activeColor = activeColor,
                 inactiveColor = inactiveColor,
                 onClick = {

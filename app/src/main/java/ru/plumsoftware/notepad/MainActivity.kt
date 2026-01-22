@@ -46,9 +46,11 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.toArgb
 import com.google.firebase.Firebase
 import com.google.firebase.analytics.FirebaseAnalytics
 import com.google.firebase.analytics.analytics
@@ -135,6 +137,8 @@ class MainActivity : ComponentActivity() {
                 darkTheme = themeState.isDarkTheme
             ) {
                 val navController = rememberNavController()
+                val surfaceColor = MaterialTheme.colorScheme.surface.toArgb()
+                val navBarColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f).toArgb()
                 val noteId = intent.getStringExtra("noteId")
                 var showPermissionRationale by remember { mutableStateOf<String?>(null) }
 
@@ -160,6 +164,32 @@ class MainActivity : ComponentActivity() {
                             add(Manifest.permission.READ_EXTERNAL_STORAGE)
                         }
                     }.toTypedArray()
+                }
+
+                if (!view.isInEditMode) {
+                    SideEffect {
+                        val window = (view.context as Activity).window
+                        val insetsController = WindowCompat.getInsetsController(window, view)
+
+                        // Иконки
+                        insetsController.isAppearanceLightStatusBars = !themeState.isDarkTheme
+                        insetsController.isAppearanceLightNavigationBars = !themeState.isDarkTheme
+
+                        // Цвет статус бара (обычно прозрачный для Edge-to-Edge)
+                        window.statusBarColor = android.graphics.Color.TRANSPARENT
+
+                        // 🔥 ЦВЕТ НАВИГАЦИИ 🔥
+                        // Если ты хочешь цвет Surface:
+                        window.navigationBarColor = navBarColor
+
+                        // НО! Если ты включил enableEdgeToEdge(), Android 10+ (Q) и выше
+                        // могут игнорировать этот цвет и делать бар прозрачным/полупрозрачным.
+                        // Для Android 15 (V) это вообще дефолт.
+                        // Чтобы вернуть непрозрачность, нужно отключить enforce contrast (для API 29+).
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                            window.isNavigationBarContrastEnforced = false
+                        }
+                    }
                 }
 
                 LaunchedEffect(Unit) {
@@ -215,16 +245,16 @@ class MainActivity : ComponentActivity() {
                         AddNoteScreen(this@MainActivity, navController, viewModel)
                     }
 
-                    composable(Screen.Settings.route) {
-                        val viewModel: NoteViewModel = viewModel(
-                            factory = NoteViewModelFactory(application, false)
-                        )
-                        Settings(
-                            navController = navController,
-                            themeState = themeState,
-                            viewModel = viewModel
-                        )
-                    }
+//                    composable(Screen.Settings.route) {
+//                        val viewModel: NoteViewModel = viewModel(
+//                            factory = NoteViewModelFactory(application, false)
+//                        )
+//                        Settings(
+//                            navController = navController,
+//                            themeState = themeState,
+//                            viewModel = viewModel
+//                        )
+//                    }
 
                     composable(Screen.AboutApp.route) {
                         AboutAppScreen(navController)
@@ -265,6 +295,7 @@ class MainActivity : ComponentActivity() {
                         // Вызываем экран создания привычки (код ниже)
                         AddHabitScreen(
                             navController = navController,
+                            themeState = themeState,
                             viewModel = viewModel
                         )
                     }
@@ -283,6 +314,7 @@ class MainActivity : ComponentActivity() {
                         AddHabitScreen(
                             navController = navController,
                             viewModel = viewModel,
+                            themeState = themeState,
                             habitId = habitId
                         )
                     }
