@@ -1,5 +1,6 @@
 package ru.plumsoftware.notepad.ui.habit.add_habit
 
+import android.app.Activity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -24,6 +25,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.yandex.mobile.ads.common.AdError
+import com.yandex.mobile.ads.common.AdRequestConfiguration
+import com.yandex.mobile.ads.common.AdRequestError
+import com.yandex.mobile.ads.common.ImpressionData
+import com.yandex.mobile.ads.interstitial.InterstitialAd
+import com.yandex.mobile.ads.interstitial.InterstitialAdEventListener
+import com.yandex.mobile.ads.interstitial.InterstitialAdLoadListener
+import com.yandex.mobile.ads.interstitial.InterstitialAdLoader
+import ru.plumsoftware.notepad.App
 import ru.plumsoftware.notepad.R
 import ru.plumsoftware.notepad.data.model.habit.HabitFrequency
 import ru.plumsoftware.notepad.data.theme_saver.ThemeState
@@ -38,15 +48,55 @@ import ru.plumsoftware.notepad.ui.settings.IOSSwitch
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddHabitScreen(
+    activity: Activity,
     navController: NavController,
     viewModel: NoteViewModel,
     themeState: ThemeState,
     habitId: String? = null
 ) {
+    // --- ADS SETUP ---
+    var myInterstitialAds: InterstitialAd? = null
+    val interstitialAdsLoader = remember { InterstitialAdLoader(activity) }
+
+    LaunchedEffect(key1 = Unit) {
+        // Загружаем рекламу при запуске экрана
+        interstitialAdsLoader.setAdLoadListener(object : InterstitialAdLoadListener {
+            override fun onAdLoaded(interstitialAd: InterstitialAd) {
+                myInterstitialAds = interstitialAd
+                myInterstitialAds.setAdEventListener(object : InterstitialAdEventListener {
+                    override fun onAdClicked() {
+
+                    }
+
+                    override fun onAdDismissed() {
+                        navController.navigateUp()
+                    }
+
+                    override fun onAdFailedToShow(adError: AdError) {
+                        navController.navigateUp()
+                    }
+
+                    override fun onAdImpression(impressionData: ImpressionData?) {
+
+                    }
+
+                    override fun onAdShown() {
+
+                    }
+                })
+            }
+
+            override fun onAdFailedToLoad(error: AdRequestError) {}
+        })
+
+        val interstitialConfig =
+            AdRequestConfiguration.Builder(App.platformConfig.adsConfig.interstitialAdsId).build()
+        interstitialAdsLoader.loadAd(interstitialConfig)
+    }
+
+    // --- ЛОГИКА ЭКРАНА ---
     val habits by viewModel.habits.collectAsState()
 
-    // 1. Используем derivedStateOf для реактивного поиска привычки
-    // Это гарантирует, что как только список привычек загрузится из БД, editingHabit обновится.
     val editingHabit by remember(habits, habitId) {
         derivedStateOf {
             if (habitId == null) null
@@ -56,7 +106,7 @@ fun AddHabitScreen(
 
     val isEditing = habitId != null
 
-    // 2. Инициализируем стейты (пустыми)
+    // States
     var title by remember { mutableStateOf("") }
     var emoji by remember { mutableStateOf("🔥") }
     var selectedColor by remember { mutableStateOf(Color(0xFF007AFF)) }
@@ -66,34 +116,36 @@ fun AddHabitScreen(
     var reminderHour by remember { mutableIntStateOf(9) }
     var reminderMinute by remember { mutableIntStateOf(0) }
 
-    // 3. Следим за editingHabit и обновляем стейты при его появлении
     LaunchedEffect(editingHabit) {
         editingHabit?.let { habit ->
             title = habit.title
             emoji = habit.emoji
             selectedColor = Color(habit.color.toULong())
             isDaily = habit.frequency == HabitFrequency.DAILY
-            selectedDays = if (habit.repeatDays.isNotEmpty()) habit.repeatDays.toSet() else setOf(2, 3, 4, 5, 6)
+            selectedDays = if (habit.repeatDays.isNotEmpty()) habit.repeatDays.toSet() else setOf(
+                2,
+                3,
+                4,
+                5,
+                6
+            )
             hasReminder = habit.isReminderEnabled
             reminderHour = habit.reminderHour ?: 9
             reminderMinute = habit.reminderMinute ?: 0
         }
     }
 
-    // Цвета iOS
-    val colors = listOf(Color(0xFF007AFF), Color(0xFF34C759), Color(0xFFFF9500), Color(0xFFFF2D55), Color(0xFF5856D6), Color(0xFF5AC8FA))
+    val backgroundColor =
+        if (themeState.isDarkTheme) Color.Black else MaterialTheme.colorScheme.surface
+    val sectionColor = if (themeState.isDarkTheme) Color(0xFF1C1C1E) else Color(0xFFF2F2F7)
 
-    // Диалоги
+    // Dialogs
     var showTimePicker by remember { mutableStateOf(false) }
     var showEmojiPicker by remember { mutableStateOf(false) }
-
-    val backgroundColor = if (themeState.isDarkTheme) Color.Black else MaterialTheme.colorScheme.surface
-    val sectionColor = if (themeState.isDarkTheme) Color(0xFF1C1C1E) else Color(0xFFF2F2F7)
 
     Scaffold(
         containerColor = backgroundColor,
         topBar = {
-            // --- IOS STYLE TOP BAR ---
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -102,7 +154,7 @@ fun AddHabitScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Кнопка Назад (вместо Отмена)
+                // Кнопка Назад
                 Row(
                     modifier = Modifier
                         .clip(RoundedCornerShape(8.dp))
@@ -125,7 +177,9 @@ fun AddHabitScreen(
 
                 // Заголовок
                 Text(
-                    text = if (isEditing) stringResource(R.string.habit_edit_title) else stringResource(R.string.habit_new_title),
+                    text = if (isEditing) stringResource(R.string.habit_edit_title) else stringResource(
+                        R.string.habit_new_title
+                    ),
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                     color = MaterialTheme.colorScheme.onBackground
                 )
@@ -133,19 +187,18 @@ fun AddHabitScreen(
                 // Кнопка Сохранить
                 Text(
                     text = stringResource(R.string.save),
-                    color = if(title.isNotBlank()) MaterialTheme.colorScheme.primary else Color.Gray,
+                    color = if (title.isNotBlank()) MaterialTheme.colorScheme.primary else Color.Gray,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier
                         .clickable(enabled = title.isNotBlank()) {
                             if (title.isNotBlank()) {
                                 if (isEditing) {
-                                    // ОБНОВЛЕНИЕ
                                     viewModel.updateHabit(
                                         editingHabit!!.copy(
                                             title = title,
                                             color = selectedColor.value.toLong(),
                                             emoji = emoji,
-                                            frequency = if(isDaily) HabitFrequency.DAILY else HabitFrequency.SPECIFIC_DAYS,
+                                            frequency = if (isDaily) HabitFrequency.DAILY else HabitFrequency.SPECIFIC_DAYS,
                                             repeatDays = if (isDaily) emptyList() else selectedDays.toList(),
                                             isReminderEnabled = hasReminder,
                                             reminderHour = if (hasReminder) reminderHour else null,
@@ -153,7 +206,6 @@ fun AddHabitScreen(
                                         )
                                     )
                                 } else {
-                                    // СОЗДАНИЕ
                                     viewModel.createHabit(
                                         title = title,
                                         color = selectedColor.value.toLong(),
@@ -165,7 +217,13 @@ fun AddHabitScreen(
                                         minute = reminderMinute
                                     )
                                 }
-                                navController.popBackStack()
+
+                                // 🔥 ПОКАЗ РЕКЛАМЫ ПОСЛЕ СОХРАНЕНИЯ 🔥
+                                if (habits.isNotEmpty() && myInterstitialAds != null) {
+                                    myInterstitialAds.show(activity)
+                                } else {
+                                    navController.navigateUp()
+                                }
                             }
                         }
                         .padding(8.dp),
@@ -180,10 +238,21 @@ fun AddHabitScreen(
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
         ) {
+            // ... (ВЕСЬ ОСТАЛЬНОЙ UI БЕЗ ИЗМЕНЕНИЙ) ...
             // 1. ПРЕВЬЮ
             IOSSettingsGroup(backgroundColor = sectionColor) {
-                Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Box(modifier = Modifier.size(60.dp).clip(CircleShape).background(selectedColor.copy(0.2f)).clickable{showEmojiPicker=true}, contentAlignment = Alignment.Center) {
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(60.dp)
+                            .clip(CircleShape)
+                            .background(selectedColor.copy(0.2f))
+                            .clickable { showEmojiPicker = true },
+                        contentAlignment = Alignment.Center
+                    ) {
                         Text(text = emoji, fontSize = 32.sp)
                     }
                     Spacer(modifier = Modifier.width(16.dp))
@@ -191,7 +260,13 @@ fun AddHabitScreen(
                         value = title, onValueChange = { title = it },
                         textStyle = MaterialTheme.typography.titleLarge.copy(color = MaterialTheme.colorScheme.onSurface),
                         cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-                        decorationBox = { if(title.isEmpty()) Text(text = stringResource(R.string.habit_name_hint), color = Color.Gray, style = MaterialTheme.typography.titleLarge) else it() }
+                        decorationBox = {
+                            if (title.isEmpty()) Text(
+                                text = stringResource(R.string.habit_name_hint),
+                                color = Color.Gray,
+                                style = MaterialTheme.typography.titleLarge
+                            ) else it()
+                        }
                     )
                 }
             }
@@ -199,42 +274,81 @@ fun AddHabitScreen(
             // 2. РАСПИСАНИЕ
             IOSSectionHeader(text = stringResource(R.string.habit_frequency))
             IOSSettingsGroup(backgroundColor = sectionColor) {
-                IOSSettingsItem(icon = Icons.Default.Repeat, iconColor = Color.Gray, title = stringResource(R.string.habit_daily), showDivider = !isDaily, trailingContent = { IOSSwitch(isDaily, { isDaily = it }) })
-                if (!isDaily) WeekDaySelector(selectedDays, { d -> selectedDays = if (selectedDays.contains(d)) selectedDays - d else selectedDays + d }, selectedColor)
+                IOSSettingsItem(
+                    icon = Icons.Default.Repeat,
+                    iconColor = Color.Gray,
+                    title = stringResource(R.string.habit_daily),
+                    showDivider = !isDaily,
+                    trailingContent = { IOSSwitch(isDaily, { isDaily = it }) })
+                if (!isDaily) WeekDaySelector(
+                    selectedDays,
+                    { d ->
+                        selectedDays =
+                            if (selectedDays.contains(d)) selectedDays - d else selectedDays + d
+                    },
+                    selectedColor
+                )
             }
 
             // 3. НАПОМИНАНИЕ
             IOSSectionHeader(text = stringResource(R.string.habit_reminder))
             IOSSettingsGroup(backgroundColor = sectionColor) {
-                IOSSettingsItem(icon = Icons.Default.Notifications, iconColor = Color(0xFFFF2D55), title = stringResource(R.string.habit_reminder), showDivider = hasReminder, trailingContent = { IOSSwitch(hasReminder, { hasReminder = it }) })
+                IOSSettingsItem(
+                    icon = Icons.Default.Notifications,
+                    iconColor = Color(0xFFFF2D55),
+                    title = stringResource(R.string.habit_reminder),
+                    showDivider = hasReminder,
+                    trailingContent = { IOSSwitch(hasReminder, { hasReminder = it }) })
                 if (hasReminder) {
-                    Row(modifier = Modifier.fillMaxWidth().clickable { showTimePicker = true }.padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text(text = stringResource(R.string.habit_time), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
-                        Text(String.format("%02d:%02d", reminderHour, reminderMinute), style = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold))
+                    Row(modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { showTimePicker = true }
+                        .padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text(
+                            text = stringResource(R.string.habit_time),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            String.format("%02d:%02d", reminderHour, reminderMinute),
+                            style = MaterialTheme.typography.bodyLarge.copy(
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.Bold
+                            )
+                        )
                     }
                 }
             }
 
             // 4. ЦВЕТ
             IOSSectionHeader(text = stringResource(R.string.habit_color_label))
-            IOSSettingsGroup(backgroundColor = sectionColor) { ColorSelectorRow(selectedColor, { selectedColor = it }) }
+            IOSSettingsGroup(backgroundColor = sectionColor) {
+                ColorSelectorRow(
+                    selectedColor,
+                    { selectedColor = it })
+            }
 
             Spacer(modifier = Modifier.height(50.dp))
         }
     }
 
-    // Dialogs
     if (showTimePicker) {
         val timeState = rememberTimePickerState(reminderHour, reminderMinute, is24Hour = true)
         AlertDialog(
             onDismissRequest = { showTimePicker = false },
-            confirmButton = { TextButton(onClick = { reminderHour = timeState.hour; reminderMinute = timeState.minute; showTimePicker = false }) { Text("OK") } },
+            confirmButton = {
+                TextButton(onClick = {
+                    reminderHour = timeState.hour; reminderMinute =
+                    timeState.minute; showTimePicker = false
+                }) { Text("OK") }
+            },
             dismissButton = { TextButton(onClick = { showTimePicker = false }) { Text("Отмена") } },
             text = { TimePicker(state = timeState) }
         )
     }
-
-    if (showEmojiPicker) EmojiPickerDialog({ showEmojiPicker = false }, { emoji = it; showEmojiPicker = false })
+    if (showEmojiPicker) EmojiPickerDialog(
+        { showEmojiPicker = false },
+        { emoji = it; showEmojiPicker = false })
 }
 
 // Компоненты UI (Те, что я давал раньше, на всякий случай повторю кратко)

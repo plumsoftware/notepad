@@ -294,6 +294,7 @@ class MainActivity : ComponentActivity() {
 
                         // Вызываем экран создания привычки (код ниже)
                         AddHabitScreen(
+                            activity = this@MainActivity,
                             navController = navController,
                             themeState = themeState,
                             viewModel = viewModel
@@ -312,6 +313,7 @@ class MainActivity : ComponentActivity() {
                         val habitId = backStackEntry.arguments?.getString("habitId")
 
                         AddHabitScreen(
+                            activity = this@MainActivity,
                             navController = navController,
                             viewModel = viewModel,
                             themeState = themeState,

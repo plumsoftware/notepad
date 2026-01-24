@@ -123,6 +123,7 @@ import com.yandex.mobile.ads.common.AdError
 import com.yandex.mobile.ads.common.AdRequestConfiguration
 import com.yandex.mobile.ads.common.AdRequestError
 import com.yandex.mobile.ads.common.ImpressionData
+import com.yandex.mobile.ads.interstitial.InterstitialAdEventListener
 import com.yandex.mobile.ads.rewarded.Reward
 import com.yandex.mobile.ads.rewarded.RewardedAd
 import com.yandex.mobile.ads.rewarded.RewardedAdEventListener
@@ -149,22 +150,54 @@ fun AddNoteScreen(
     var rewardedAdLoader: RewardedAdLoader? = null
     rewardedAdLoader = RewardedAdLoader(LocalContext.current).apply {
         setAdLoadListener(object : RewardedAdLoadListener {
-            override fun onAdLoaded(rewarded: RewardedAd) { rewardedAd = rewarded }
-            override fun onAdFailedToLoad(error: AdRequestError) {}
-        })
-    }
-    val adRequestConfiguration = AdRequestConfiguration.Builder(App.platformConfig.adsConfig.rewardedAdsId).build()
-    rewardedAdLoader.loadAd(adRequestConfiguration)
+            override fun onAdLoaded(rewarded: RewardedAd) {
+                rewardedAd = rewarded
+            }
 
-    var myInterstitialAds: InterstitialAd? = null
-    val interstitialAdsLoader = InterstitialAdLoader(activity).apply {
-        setAdLoadListener(object : InterstitialAdLoadListener {
-            override fun onAdLoaded(interstitialAd: InterstitialAd) { myInterstitialAds = interstitialAd }
             override fun onAdFailedToLoad(error: AdRequestError) {}
         })
     }
-    val interstitialConfig = AdRequestConfiguration.Builder(App.platformConfig.adsConfig.interstitialAdsId).build()
-    interstitialAdsLoader.loadAd(interstitialConfig)
+    val adRequestConfiguration =
+        AdRequestConfiguration.Builder(App.platformConfig.adsConfig.rewardedAdsId).build()
+    var myInterstitialAds: InterstitialAd? = null
+    val interstitialAdsLoader = remember { InterstitialAdLoader(activity) }
+
+    LaunchedEffect(key1 = Unit) {
+        rewardedAdLoader.loadAd(adRequestConfiguration)
+        interstitialAdsLoader.apply {
+            setAdLoadListener(object : InterstitialAdLoadListener {
+                override fun onAdLoaded(interstitialAd: InterstitialAd) {
+                    myInterstitialAds = interstitialAd
+                    myInterstitialAds.setAdEventListener(object : InterstitialAdEventListener {
+                        override fun onAdClicked() {
+
+                        }
+
+                        override fun onAdDismissed() {
+                            navController.navigateUp()
+                        }
+
+                        override fun onAdFailedToShow(adError: AdError) {
+                            navController.navigateUp()
+                        }
+
+                        override fun onAdImpression(impressionData: ImpressionData?) {
+
+                        }
+
+                        override fun onAdShown() {
+
+                        }
+                    })
+                }
+
+                override fun onAdFailedToLoad(error: AdRequestError) {}
+            })
+        }
+        val interstitialConfig =
+            AdRequestConfiguration.Builder(App.platformConfig.adsConfig.interstitialAdsId).build()
+        interstitialAdsLoader.loadAd(interstitialConfig)
+    }
 
     // --- State ---
     val context = LocalContext.current
@@ -175,7 +208,11 @@ fun AddNoteScreen(
     // Data States
     var title by remember { mutableStateOf(note?.title ?: "") }
     var description by remember { mutableStateOf(note?.description ?: "") }
-    var tasks by remember { mutableStateOf<MutableList<Task>>(note?.tasks?.toMutableList() ?: mutableListOf()) }
+    var tasks by remember {
+        mutableStateOf<MutableList<Task>>(
+            note?.tasks?.toMutableList() ?: mutableListOf()
+        )
+    }
     var photos by remember { mutableStateOf<List<String>>(note?.photos ?: emptyList()) }
 
     // UI Logic
@@ -222,7 +259,9 @@ fun AddNoteScreen(
         Color(0xFFFFCC80)  // Orange Peel
     )
 
-    var selectedColor by remember { mutableStateOf(note?.color?.let { Color(it.toULong()) } ?: availableColors.last()) }
+    var selectedColor by remember {
+        mutableStateOf(note?.color?.let { Color(it.toULong()) } ?: availableColors.last())
+    }
 
     // --- Animation & Contrast ---
     val animatedBackgroundColor by animateColorAsState(
@@ -237,7 +276,8 @@ fun AddNoteScreen(
 
     // Проверка: Является ли фон "нейтральным" (белый/черный)
     // Если да - используем Primary (синий), иначе - контрастный (Ч/Б)
-    val isNeutralBg = selectedColor == Color.White || selectedColor == Color.Black || selectedColor == Color.Transparent
+    val isNeutralBg =
+        selectedColor == Color.White || selectedColor == Color.Black || selectedColor == Color.Transparent
 
     // Цвет КНОПОК и ИКОНОК (Navigation, Action Icons)
     val actionItemsColor = if (isNeutralBg) {
@@ -254,15 +294,16 @@ fun AddNoteScreen(
     val dividerColor = contentColor.copy(alpha = 0.1f)
 
     // Helpers
-    val pickImages = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
-        uri?.let {
-            if (photos.size < 5) {
-                photos = photos.toMutableList().apply {
-                    saveImageToInternalStorage(context, it)?.let { path -> add(path) }
+    val pickImages =
+        rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+            uri?.let {
+                if (photos.size < 5) {
+                    photos = photos.toMutableList().apply {
+                        saveImageToInternalStorage(context, it)?.let { path -> add(path) }
+                    }
                 }
             }
         }
-    }
 
     // --- Функция сохранения ---
     // Добавляем явное указание типа : () -> Unit или Unit в конце
@@ -293,8 +334,9 @@ fun AddNoteScreen(
 
             if (notes.size >= 5 && myInterstitialAds != null) {
                 myInterstitialAds.show(activity)
+            } else {
+                navController.navigateUp()
             }
-            navController.navigateUp()
         } else {
             navController.navigateUp()
         }
@@ -308,9 +350,25 @@ fun AddNoteScreen(
         ModalBottomSheet(
             onDismissRequest = { showColorSheet = false },
             containerColor = if (isLightBg) Color(0xFFF2F2F7) else Color(0xFF1C1C1E), // iOS system bg
-            dragHandle = { Box(modifier = Modifier.padding(top = 8.dp).width(36.dp).height(5.dp).clip(CircleShape).background(Color.Gray.copy(0.4f))) }
+            dragHandle = {
+                Box(
+                    modifier = Modifier
+                        .padding(top = 8.dp)
+                        .width(36.dp)
+                        .height(5.dp)
+                        .clip(CircleShape)
+                        .background(Color.Gray.copy(0.4f))
+                )
+            }
         ) {
-            Column(modifier = Modifier.padding(bottom = 40.dp, start = 16.dp, end = 16.dp, top = 16.dp)) {
+            Column(
+                modifier = Modifier.padding(
+                    bottom = 40.dp,
+                    start = 16.dp,
+                    end = 16.dp,
+                    top = 16.dp
+                )
+            ) {
                 Text(
                     text = stringResource(R.string.note_color),
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
@@ -326,7 +384,9 @@ fun AddNoteScreen(
                                 .background(color)
                                 .border(
                                     width = if (selectedColor == color) 3.dp else 1.dp,
-                                    color = if (selectedColor == color) MaterialTheme.colorScheme.primary else Color.Gray.copy(0.3f),
+                                    color = if (selectedColor == color) MaterialTheme.colorScheme.primary else Color.Gray.copy(
+                                        0.3f
+                                    ),
                                     shape = CircleShape
                                 )
                                 .clickable { selectedColor = color }
@@ -367,7 +427,9 @@ fun AddNoteScreen(
 
     // System Date Pickers (как просил - системные)
     if (showDatePicker) {
-        val datePickerState = rememberDatePickerState(initialSelectedDateMillis = reminderDate ?: System.currentTimeMillis())
+        val datePickerState = rememberDatePickerState(
+            initialSelectedDateMillis = reminderDate ?: System.currentTimeMillis()
+        )
         DatePickerDialog(
             onDismissRequest = { showDatePicker = false },
             confirmButton = {
@@ -378,7 +440,11 @@ fun AddNoteScreen(
                 }) { Text(stringResource(R.string.ok_)) }
             },
             dismissButton = {
-                TextButton(onClick = { showDatePicker = false; isReminder = false }) { Text(stringResource(R.string.cancel)) }
+                TextButton(onClick = { showDatePicker = false; isReminder = false }) {
+                    Text(
+                        stringResource(R.string.cancel)
+                    )
+                }
             }
         ) { DatePicker(state = datePickerState) }
     }
@@ -436,7 +502,7 @@ fun AddNoteScreen(
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBackIos,
                         contentDescription = null, // Декоративный элемент, текст рядом есть
-                        tint = actionItemsColor , // iOS Blue
+                        tint = actionItemsColor, // iOS Blue
                         modifier = Modifier.size(20.dp)
                     )
                     // Текст кнопки (обычно "Назад" или название предыдущего экрана)
@@ -501,11 +567,16 @@ fun AddNoteScreen(
                 // 2. Фото
                 IconButton(onClick = {
                     if (photos.size < 5) {
-                        if (photos.size == 4) showAddPhotoDialog = true else pickImages.launch("image/*")
+                        if (photos.size == 4) showAddPhotoDialog =
+                            true else pickImages.launch("image/*")
                     }
                 }) {
                     if (isAdsLoading) {
-                        CircularProgressIndicator(modifier = Modifier.size(20.dp), color = contentColor, strokeWidth = 2.dp)
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            color = contentColor,
+                            strokeWidth = 2.dp
+                        )
                     } else {
                         Icon(
                             imageVector = Icons.Default.Image,
@@ -581,11 +652,16 @@ fun AddNoteScreen(
             Spacer(modifier = Modifier.height(12.dp))
 
             // ТЕКСТ (Body)
-            Box(modifier = Modifier.padding(horizontal = 20.dp).fillMaxWidth()) {
+            Box(modifier = Modifier
+                .padding(horizontal = 20.dp)
+                .fillMaxWidth()) {
                 if (description.isEmpty() && tasks.isEmpty()) {
                     Text(
                         text = stringResource(R.string.desc),
-                        style = MaterialTheme.typography.bodyLarge.copy(fontSize = 17.sp, lineHeight = 24.sp),
+                        style = MaterialTheme.typography.bodyLarge.copy(
+                            fontSize = 17.sp,
+                            lineHeight = 24.sp
+                        ),
                         color = placeholderColor
                     )
                 }
@@ -615,7 +691,12 @@ fun AddNoteScreen(
                         .padding(horizontal = 12.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(Icons.Default.Notifications, null, tint = contentColor, modifier = Modifier.size(16.dp))
+                    Icon(
+                        Icons.Default.Notifications,
+                        null,
+                        tint = contentColor,
+                        modifier = Modifier.size(16.dp)
+                    )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = formatDate(reminderDate!!),
@@ -623,7 +704,12 @@ fun AddNoteScreen(
                         color = contentColor
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Icon(Icons.Default.Close, null, tint = contentColor.copy(0.6f), modifier = Modifier.size(16.dp))
+                    Icon(
+                        Icons.Default.Close,
+                        null,
+                        tint = contentColor.copy(0.6f),
+                        modifier = Modifier.size(16.dp)
+                    )
                 }
                 Spacer(modifier = Modifier.height(24.dp))
             }
@@ -645,7 +731,8 @@ fun AddNoteScreen(
                                 .size(24.dp)
                                 .clickable {
                                     val isCh = !task.isChecked
-                                    tasks = tasks.toMutableList().apply { this[index] = task.copy(isChecked = isCh) }
+                                    tasks = tasks.toMutableList()
+                                        .apply { this[index] = task.copy(isChecked = isCh) }
                                 }
                         )
                         Spacer(modifier = Modifier.width(12.dp))
@@ -662,7 +749,9 @@ fun AddNoteScreen(
                             tint = contentColor.copy(0.3f),
                             modifier = Modifier
                                 .size(20.dp)
-                                .clickable { tasks = tasks.toMutableList().apply { removeAt(index) } }
+                                .clickable {
+                                    tasks = tasks.toMutableList().apply { removeAt(index) }
+                                }
                         )
                     }
                 }
@@ -700,7 +789,12 @@ fun AddNoteScreen(
                                     .align(Alignment.TopEnd),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Icon(Icons.Default.Close, null, tint = Color.White, modifier = Modifier.size(14.dp))
+                                Icon(
+                                    Icons.Default.Close,
+                                    null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(14.dp)
+                                )
                             }
                         }
                     }
@@ -721,21 +815,77 @@ fun IOSAddTaskDialog(onDismiss: () -> Unit, onAdd: (String) -> Unit) {
     val focusRequester = remember { FocusRequester() }
     LaunchedEffect(Unit) { focusRequester.requestFocus() }
 
-    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-        Box(modifier = Modifier.fillMaxSize().clickable(interactionSource = remember{MutableInteractionSource()}, indication=null){onDismiss()}, contentAlignment = Alignment.Center) {
-            Column(modifier = Modifier.width(280.dp).clip(RoundedCornerShape(14.dp)).background(MaterialTheme.colorScheme.surface.copy(alpha=0.95f)).clickable(enabled=false){}) {
-                Text(stringResource(R.string.new_task), fontWeight=FontWeight.Bold, modifier=Modifier.padding(16.dp).align(Alignment.CenterHorizontally), style=MaterialTheme.typography.titleMedium)
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null
+                ) { onDismiss() }, contentAlignment = Alignment.Center
+        ) {
+            Column(
+                modifier = Modifier
+                    .width(280.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.95f))
+                    .clickable(enabled = false) {}) {
+                Text(
+                    stringResource(R.string.new_task),
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier
+                        .padding(16.dp)
+                        .align(Alignment.CenterHorizontally),
+                    style = MaterialTheme.typography.titleMedium
+                )
                 BasicTextField(
                     value = text, onValueChange = { text = it },
-                    modifier = Modifier.padding(horizontal=16.dp).fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(Color.Gray.copy(0.1f)).padding(12.dp).focusRequester(focusRequester)
+                    modifier = Modifier
+                        .padding(horizontal = 16.dp)
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(Color.Gray.copy(0.1f))
+                        .padding(12.dp)
+                        .focusRequester(focusRequester)
                 )
-                Row(modifier = Modifier.padding(top=16.dp).height(44.dp)) {
-                    Box(modifier = Modifier.weight(1f).fillMaxHeight().clickable{onDismiss()}, contentAlignment=Alignment.Center) {
-                        Text(stringResource(R.string.cancel), color=MaterialTheme.colorScheme.primary)
+                Row(modifier = Modifier
+                    .padding(top = 16.dp)
+                    .height(44.dp)) {
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
+                            .clickable { onDismiss() },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            stringResource(R.string.cancel),
+                            color = MaterialTheme.colorScheme.primary
+                        )
                     }
-                    Box(modifier = Modifier.width(0.5.dp).fillMaxHeight().background(Color.Gray.copy(0.3f)))
-                    Box(modifier = Modifier.weight(1f).fillMaxHeight().clickable(enabled=text.isNotBlank()){ if(text.isNotBlank()) onAdd(text)}, contentAlignment=Alignment.Center) {
-                        Text(stringResource(R.string.add), fontWeight=FontWeight.Bold, color=if(text.isNotBlank()) MaterialTheme.colorScheme.primary else Color.Gray)
+                    Box(
+                        modifier = Modifier
+                            .width(0.5.dp)
+                            .fillMaxHeight()
+                            .background(Color.Gray.copy(0.3f))
+                    )
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
+                            .clickable(enabled = text.isNotBlank()) {
+                                if (text.isNotBlank()) onAdd(text)
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            stringResource(R.string.add),
+                            fontWeight = FontWeight.Bold,
+                            color = if (text.isNotBlank()) MaterialTheme.colorScheme.primary else Color.Gray
+                        )
                     }
                 }
             }
@@ -745,19 +895,73 @@ fun IOSAddTaskDialog(onDismiss: () -> Unit, onAdd: (String) -> Unit) {
 
 @Composable
 fun IOSAdsDialog(onDismiss: () -> Unit, onWatch: () -> Unit) {
-    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-        Box(modifier = Modifier.fillMaxSize().clickable(interactionSource = remember{MutableInteractionSource()}, indication=null){onDismiss()}, contentAlignment = Alignment.Center) {
-            Column(modifier = Modifier.width(280.dp).clip(RoundedCornerShape(14.dp)).background(MaterialTheme.colorScheme.surface.copy(alpha=0.95f)).clickable(enabled=false){}, horizontalAlignment=Alignment.CenterHorizontally) {
-                Text(stringResource(R.string.photo_add_ads_promo_title), fontWeight=FontWeight.Bold, modifier=Modifier.padding(top=16.dp, bottom=4.dp), style=MaterialTheme.typography.titleMedium)
-                Text(stringResource(R.string.photo_add_ads_promo_description), style=MaterialTheme.typography.bodySmall, textAlign= TextAlign.Center, modifier=Modifier.padding(horizontal=16.dp))
-                HorizontalDivider(modifier=Modifier.padding(top=16.dp), color=Color.Gray.copy(0.3f))
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null
+                ) { onDismiss() }, contentAlignment = Alignment.Center
+        ) {
+            Column(
+                modifier = Modifier
+                    .width(280.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.95f))
+                    .clickable(enabled = false) {},
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    stringResource(R.string.photo_add_ads_promo_title),
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(top = 16.dp, bottom = 4.dp),
+                    style = MaterialTheme.typography.titleMedium
+                )
+                Text(
+                    stringResource(R.string.photo_add_ads_promo_description),
+                    style = MaterialTheme.typography.bodySmall,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(horizontal = 16.dp)
+                )
+                HorizontalDivider(
+                    modifier = Modifier.padding(top = 16.dp),
+                    color = Color.Gray.copy(0.3f)
+                )
                 Row(modifier = Modifier.height(44.dp)) {
-                    Box(modifier = Modifier.weight(1f).fillMaxHeight().clickable{onDismiss()}, contentAlignment=Alignment.Center) {
-                        Text(stringResource(R.string.cancel), color=MaterialTheme.colorScheme.primary)
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
+                            .clickable { onDismiss() },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            stringResource(R.string.cancel),
+                            color = MaterialTheme.colorScheme.primary
+                        )
                     }
-                    Box(modifier = Modifier.width(0.5.dp).fillMaxHeight().background(Color.Gray.copy(0.3f)))
-                    Box(modifier = Modifier.weight(1f).fillMaxHeight().clickable{onWatch()}, contentAlignment=Alignment.Center) {
-                        Text(stringResource(R.string.watch_ad), fontWeight=FontWeight.Bold, color=MaterialTheme.colorScheme.primary)
+                    Box(
+                        modifier = Modifier
+                            .width(0.5.dp)
+                            .fillMaxHeight()
+                            .background(Color.Gray.copy(0.3f))
+                    )
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
+                            .clickable { onWatch() },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            stringResource(R.string.watch_ad),
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
                     }
                 }
             }
