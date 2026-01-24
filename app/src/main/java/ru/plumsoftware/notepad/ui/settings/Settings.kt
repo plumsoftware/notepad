@@ -31,6 +31,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.appcompat.app.AppCompatDelegate
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -42,7 +43,9 @@ import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.School
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -284,12 +287,30 @@ fun Settings(
                 icon = Icons.Default.Info,
                 iconColor = Color(0xFF007AFF), // iOS Blue
                 title = stringResource(R.string.about_app),
-                showDivider = false,
+                showDivider = true,
                 onClick = { navController.navigate(Screen.AboutApp.route) },
                 trailingContent = {
                     Icon(
                         Icons.AutoMirrored.Filled.ArrowForwardIos,
                         null,
+                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
+                        modifier = Modifier.size(14.dp)
+                    )
+                }
+            )
+
+            IOSSettingsItem(
+                icon = Icons.Default.School, // Иконка шапочки или книги
+                iconColor = Color(0xFFAC8E68), // Brown/Gold
+                title = stringResource(R.string.settings_tutorial),
+                showDivider = false,
+                onClick = {
+                    navController.navigate("onboarding")
+                },
+                trailingContent = {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowForwardIos,
+                        contentDescription = null,
                         tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
                         modifier = Modifier.size(14.dp)
                     )
@@ -514,7 +535,6 @@ fun requestIgnoreBatteryOptimization(context: Context) {
     }
 }
 
-// Кастомный iOS-style Switch
 @Composable
 fun IOSSwitch(
     checked: Boolean,
@@ -523,9 +543,18 @@ fun IOSSwitch(
     enabled: Boolean = true
 ) {
     val animationDuration = 200
-    val thumbSize = 28.dp  // Увеличил тумблер
-    val trackHeight = 32.dp // Увеличил высоту трека
-    val trackWidth = 52.dp  // Увеличил ширину трека
+    val thumbSize = 28.dp
+    val trackHeight = 32.dp
+    val trackWidth = 52.dp
+
+    // Определяем, включена ли темная тема в системе
+    val isDark = isSystemInDarkTheme()
+
+    // Цвета для выключенного состояния
+    // Light: E9E9EA, Dark: 363636 (iOS Dark Gray)
+    val uncheckedTrackColor = if (isDark) Color(0xFF363636) else Color(0xFFE9E9EA)
+    val checkedTrackColor = Color(0xFF34C759) // iOS Green (хорош в обеих темах)
+
     val thumbOffset by animateDpAsState(
         targetValue = if (checked) trackWidth - thumbSize - 2.dp else 2.dp,
         animationSpec = tween(durationMillis = animationDuration),
@@ -533,13 +562,14 @@ fun IOSSwitch(
     )
 
     val trackColor by animateColorAsState(
-        targetValue = if (checked) Color(0xFF34C759) else Color(0xFFE9E9EA),
+        targetValue = if (checked) checkedTrackColor else uncheckedTrackColor,
         animationSpec = tween(durationMillis = animationDuration),
         label = "track_color_animation"
     )
 
+    // В iOS ползунок всегда белый, независимо от темы
     val thumbColor by animateColorAsState(
-        targetValue = if (checked) Color.White else Color.White,
+        targetValue = Color.White,
         animationSpec = tween(durationMillis = animationDuration),
         label = "thumb_color_animation"
     )

@@ -63,10 +63,10 @@ import ru.plumsoftware.notepad.ui.horizontalSlideInEnter
 import ru.plumsoftware.notepad.ui.horizontalSlideInExit
 import ru.plumsoftware.notepad.ui.horizontalSlideOutEnter
 import ru.plumsoftware.notepad.ui.horizontalSlideOutExit
-import ru.plumsoftware.notepad.ui.settings.Settings
 import ru.plumsoftware.notepad.ui.verticalSlideInEnter
 import ru.plumsoftware.notepad.ui.verticalSlideInExit
 import androidx.core.content.edit
+import ru.plumsoftware.notepad.ui.onboarding.OnboardingScreen
 import ru.plumsoftware.notepad.ui.habit.add_habit.AddHabitScreen
 
 class MainActivity : ComponentActivity() {
@@ -131,6 +131,10 @@ class MainActivity : ComponentActivity() {
                     // Управление иконками нижнего бара навигации (кнопки назад/домой)
                     insetsController.isAppearanceLightNavigationBars = !themeState.isDarkTheme
                 }
+            }
+
+            var isFirstLaunch by remember {
+                mutableStateOf(sharedPreferences.getBoolean("is_first_launch", true))
             }
 
             NotepadTheme(
@@ -216,109 +220,127 @@ class MainActivity : ComponentActivity() {
                 }
 
                 // --- Navigation Host ---
-                // Здесь ничего менять не нужно, Scaffold внутри экранов сам обработает отступы
-                NavHost(
-                    navController = navController,
-                    startDestination = Screen.NoteList.route,
-                    enterTransition = { horizontalSlideInEnter() },
-                    exitTransition = { horizontalSlideInExit() },
-                    popEnterTransition = { horizontalSlideOutEnter() },
-                    popExitTransition = { horizontalSlideOutExit() }
-                ) {
-                    composable(Screen.NoteList.route) {
-                        val viewModel: NoteViewModel = viewModel(
-                            factory = NoteViewModelFactory(application, openAddNote)
-                        )
-                        NoteListScreen(navController, viewModel, scrollToNoteId = noteId, themeState = themeState)
-                    }
-
-                    composable(
-                        Screen.AddNote.route,
-                        enterTransition = { verticalSlideInEnter() },
-                        exitTransition = { fadeOutExit() },
-                        popEnterTransition = { fadeInEnter() },
-                        popExitTransition = { verticalSlideInExit() }
+                if (isFirstLaunch) {
+                    // ПОКАЗЫВАЕМ ОБУЧЕНИЕ
+                    OnboardingScreen(
+                        onFinished = {
+                            // Сохраняем, что обучение пройдено
+                            sharedPreferences.edit {putBoolean("is_first_launch", false)}
+                            isFirstLaunch = false // Переключаем стейт -> покажется NavHost
+                        }
+                    )
+                } else {
+                    NavHost(
+                        navController = navController,
+                        startDestination = Screen.NoteList.route,
+                        enterTransition = { horizontalSlideInEnter() },
+                        exitTransition = { horizontalSlideInExit() },
+                        popEnterTransition = { horizontalSlideOutEnter() },
+                        popExitTransition = { horizontalSlideOutExit() }
                     ) {
-                        val viewModel: NoteViewModel = viewModel(
-                            factory = NoteViewModelFactory(application, openAddNote)
-                        )
-                        AddNoteScreen(this@MainActivity, navController, viewModel)
-                    }
+                        composable(Screen.NoteList.route) {
+                            val viewModel: NoteViewModel = viewModel(
+                                factory = NoteViewModelFactory(application, openAddNote)
+                            )
+                            NoteListScreen(
+                                navController,
+                                viewModel,
+                                scrollToNoteId = noteId,
+                                themeState = themeState
+                            )
+                        }
 
-//                    composable(Screen.Settings.route) {
-//                        val viewModel: NoteViewModel = viewModel(
-//                            factory = NoteViewModelFactory(application, false)
-//                        )
-//                        Settings(
-//                            navController = navController,
-//                            themeState = themeState,
-//                            viewModel = viewModel
-//                        )
-//                    }
+                        composable(
+                            Screen.AddNote.route,
+                            enterTransition = { verticalSlideInEnter() },
+                            exitTransition = { fadeOutExit() },
+                            popEnterTransition = { fadeInEnter() },
+                            popExitTransition = { verticalSlideInExit() }
+                        ) {
+                            val viewModel: NoteViewModel = viewModel(
+                                factory = NoteViewModelFactory(application, openAddNote)
+                            )
+                            AddNoteScreen(this@MainActivity, navController, viewModel)
+                        }
 
-                    composable(Screen.AboutApp.route) {
-                        AboutAppScreen(navController)
-                    }
+                        composable(Screen.AboutApp.route) {
+                            AboutAppScreen(navController)
+                        }
 
-                    composable(
-                        route = Screen.EditNote.route,
-                        arguments = listOf(navArgument("noteId") { type = NavType.StringType })
-                    ) { backStackEntry ->
-                        val viewModel: NoteViewModel = viewModel(
-                            factory = NoteViewModelFactory(application, openAddNote)
-                        )
-                        val noteId = backStackEntry.arguments?.getString("noteId")
+                        composable(
+                            route = Screen.EditNote.route,
+                            arguments = listOf(navArgument("noteId") { type = NavType.StringType })
+                        ) { backStackEntry ->
+                            val viewModel: NoteViewModel = viewModel(
+                                factory = NoteViewModelFactory(application, openAddNote)
+                            )
+                            val noteId = backStackEntry.arguments?.getString("noteId")
 
-                        if (noteId != null) {
-                            val note by viewModel.getNoteById(noteId).collectAsState(initial = null)
-                            if (note != null) {
-                                AddNoteScreen(this@MainActivity, navController, viewModel, note)
-                            } else {
-                                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                    CircularProgressIndicator()
+                            if (noteId != null) {
+                                val note by viewModel.getNoteById(noteId)
+                                    .collectAsState(initial = null)
+                                if (note != null) {
+                                    AddNoteScreen(this@MainActivity, navController, viewModel, note)
+                                } else {
+                                    Box(
+                                        Modifier.fillMaxSize(),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        CircularProgressIndicator()
+                                    }
                                 }
                             }
                         }
-                    }
 
-                    composable(
-                        route = Screen.AddHabit.route,
-                        enterTransition = { verticalSlideInEnter() },
-                        exitTransition = { fadeOutExit() },
-                        popEnterTransition = { fadeInEnter() },
-                        popExitTransition = { verticalSlideInExit() }
-                    ) {
-                        val viewModel: NoteViewModel = viewModel(
-                            factory = NoteViewModelFactory(application, false) // openAddNote false тут
-                        )
+                        composable(
+                            route = Screen.AddHabit.route,
+                            enterTransition = { verticalSlideInEnter() },
+                            exitTransition = { fadeOutExit() },
+                            popEnterTransition = { fadeInEnter() },
+                            popExitTransition = { verticalSlideInExit() }
+                        ) {
+                            val viewModel: NoteViewModel = viewModel(
+                                factory = NoteViewModelFactory(
+                                    application,
+                                    false
+                                ) // openAddNote false тут
+                            )
 
-                        // Вызываем экран создания привычки (код ниже)
-                        AddHabitScreen(
-                            activity = this@MainActivity,
-                            navController = navController,
-                            themeState = themeState,
-                            viewModel = viewModel
-                        )
-                    }
+                            // Вызываем экран создания привычки (код ниже)
+                            AddHabitScreen(
+                                activity = this@MainActivity,
+                                navController = navController,
+                                themeState = themeState,
+                                viewModel = viewModel
+                            )
+                        }
 
-                    composable(
-                        route = "edit_habit/{habitId}", // Или Screen.EditHabit.route
-                        arguments = listOf(navArgument("habitId") { type = NavType.StringType }),
-                        enterTransition = { verticalSlideInEnter() }, // Тоже снизу вверх
-                        exitTransition = { fadeOutExit() },
-                        popEnterTransition = { fadeInEnter() },
-                        popExitTransition = { verticalSlideInExit() }
-                    ) { backStackEntry ->
-                        val viewModel: NoteViewModel = viewModel(factory = NoteViewModelFactory(application, false))
-                        val habitId = backStackEntry.arguments?.getString("habitId")
+                        composable(
+                            route = "edit_habit/{habitId}", // Или Screen.EditHabit.route
+                            arguments = listOf(navArgument("habitId") {
+                                type = NavType.StringType
+                            }),
+                            enterTransition = { verticalSlideInEnter() }, // Тоже снизу вверх
+                            exitTransition = { fadeOutExit() },
+                            popEnterTransition = { fadeInEnter() },
+                            popExitTransition = { verticalSlideInExit() }
+                        ) { backStackEntry ->
+                            val viewModel: NoteViewModel =
+                                viewModel(factory = NoteViewModelFactory(application, false))
+                            val habitId = backStackEntry.arguments?.getString("habitId")
 
-                        AddHabitScreen(
-                            activity = this@MainActivity,
-                            navController = navController,
-                            viewModel = viewModel,
-                            themeState = themeState,
-                            habitId = habitId
-                        )
+                            AddHabitScreen(
+                                activity = this@MainActivity,
+                                navController = navController,
+                                viewModel = viewModel,
+                                themeState = themeState,
+                                habitId = habitId
+                            )
+                        }
+
+                        composable("onboarding") {
+                            OnboardingScreen(onFinished = { navController.popBackStack() })
+                        }
                     }
                 }
             }

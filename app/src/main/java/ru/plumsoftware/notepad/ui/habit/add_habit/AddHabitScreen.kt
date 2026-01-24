@@ -4,6 +4,8 @@ import android.app.Activity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -22,6 +24,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
@@ -105,6 +109,8 @@ fun AddHabitScreen(
     }
 
     val isEditing = habitId != null
+
+    val context = activity.baseContext
 
     // States
     var title by remember { mutableStateOf("") }
@@ -238,7 +244,43 @@ fun AddHabitScreen(
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
         ) {
-            // ... (ВЕСЬ ОСТАЛЬНОЙ UI БЕЗ ИЗМЕНЕНИЙ) ...
+            // 🔥 СЕКЦИЯ ШАБЛОНОВ (Только если создаем новую, не редактируем)
+            if (!isEditing) {
+                IOSSectionHeader(
+                    text = stringResource(R.string.templates_title),
+                    topPadding = 10.dp
+                ) // "Готовые шаблоны"
+
+                LazyRow(
+                    contentPadding = PaddingValues(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    items(getHabitTemplates()) { template ->
+                        TemplateItem(
+                            template = template,
+                            onClick = {
+                                // ЗАПОЛНЯЕМ ПОЛЯ ПРИ КЛИКЕ
+                                title =
+                                    context.getString(template.titleRes) // Получаем строку из ресурса
+                                emoji = template.emoji
+                                selectedColor = template.color
+                                isDaily = template.isDaily
+                                selectedDays = if (template.isDaily) setOf(
+                                    2,
+                                    3,
+                                    4,
+                                    5,
+                                    6
+                                ) else template.days // Если Daily, сбрасываем или ставим дефолт для UI
+                                hasReminder = false // Напоминание всегда выкл
+                            }
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(36.dp))
+            }
+
             // 1. ПРЕВЬЮ
             IOSSettingsGroup(backgroundColor = sectionColor) {
                 Row(
@@ -300,10 +342,11 @@ fun AddHabitScreen(
                     showDivider = hasReminder,
                     trailingContent = { IOSSwitch(hasReminder, { hasReminder = it }) })
                 if (hasReminder) {
-                    Row(modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { showTimePicker = true }
-                        .padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { showTimePicker = true }
+                            .padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween) {
                         Text(
                             text = stringResource(R.string.habit_time),
                             style = MaterialTheme.typography.bodyLarge,
@@ -353,11 +396,103 @@ fun AddHabitScreen(
 
 // Компоненты UI (Те, что я давал раньше, на всякий случай повторю кратко)
 @Composable
-fun IOSSectionHeader(text: String) {
+fun IOSSectionHeader(text: String, topPadding: Dp = 24.dp) {
     Text(
         text = text.uppercase(),
         style = MaterialTheme.typography.labelSmall,
         color = Color.Gray,
-        modifier = Modifier.padding(start = 20.dp, top = 24.dp, bottom = 8.dp)
+        modifier = Modifier.padding(start = 20.dp, top = topPadding, bottom = 8.dp)
     )
+}
+
+data class HabitTemplate(
+    val titleRes: Int,
+    val emoji: String,
+    val color: Color,
+    val isDaily: Boolean,
+    val days: Set<Int> // 1=Sun, 2=Mon ... 7=Sat
+)
+
+// Список шаблонов
+fun getHabitTemplates(): List<HabitTemplate> {
+    return listOf(
+        // 1. Вода (Ежедневно, Голубой)
+        HabitTemplate(
+            titleRes = R.string.tpl_water,
+            emoji = "💧",
+            color = Color(0xFF5AC8FA), // iOS Teal/Blue
+            isDaily = true,
+            days = emptySet()
+        ),
+        // 2. Спорт (3 раза в неделю: Пн, Ср, Пт - Оранжевый)
+        HabitTemplate(
+            titleRes = R.string.tpl_sport,
+            emoji = "🏋️",
+            color = Color(0xFFFF9500), // iOS Orange
+            isDaily = false,
+            days = setOf(2, 4, 6) // Пн, Ср, Пт (Calendar constants)
+        ),
+        // 3. Чтение (Ежедневно, Зеленый)
+        HabitTemplate(
+            titleRes = R.string.tpl_read,
+            emoji = "📚",
+            color = Color(0xFF34C759), // iOS Green
+            isDaily = true,
+            days = emptySet()
+        ),
+        // 4. Сон (Ежедневно, Фиолетовый)
+        HabitTemplate(
+            titleRes = R.string.tpl_sleep,
+            emoji = "😴",
+            color = Color(0xFF5856D6), // iOS Indigo
+            isDaily = true,
+            days = emptySet()
+        ),
+        // 5. Медитация (Ежедневно, Розовый)
+        HabitTemplate(
+            titleRes = R.string.tpl_meditation,
+            emoji = "🧘",
+            color = Color(0xFFFF2D55), // iOS Pink
+            isDaily = true,
+            days = emptySet()
+        ),
+        // 6. Прогулка (Выходные, Синий)
+        HabitTemplate(
+            titleRes = R.string.tpl_walk,
+            emoji = "🚶",
+            color = Color(0xFF007AFF), // iOS Blue
+            isDaily = false,
+            days = setOf(1, 7) // Вс, Сб
+        )
+    )
+}
+
+@Composable
+fun TemplateItem(
+    template: HabitTemplate,
+    onClick: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .width(80.dp) // Фиксированная ширина
+            .clip(RoundedCornerShape(16.dp))
+            .background(template.color.copy(alpha = 0.15f)) // Полупрозрачный фон
+            .clickable(onClick = onClick)
+            .padding(12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text(
+            text = template.emoji,
+            fontSize = 32.sp
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = stringResource(template.titleRes),
+            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+            color = MaterialTheme.colorScheme.onSurface,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
 }

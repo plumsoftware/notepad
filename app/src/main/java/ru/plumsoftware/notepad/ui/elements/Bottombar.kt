@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.TextSnippet
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.ShoppingCart
@@ -36,6 +37,7 @@ import androidx.compose.material3.Divider
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -55,8 +57,10 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import ru.plumsoftware.notepad.R
@@ -94,13 +98,14 @@ fun BottomBar(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(49.dp)
+                .height(49.dp) // Стандартная высота iOS
                 .padding(horizontal = 4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             // 1. ЗАМЕТКИ
             BottomTabItem(
-                icon = painterResource(R.drawable.house_fill),
+                icon = rememberVectorPainter(Icons.AutoMirrored.Filled.TextSnippet),
+                label = stringResource(R.string.notes), // Добавляем подпись
                 isSelected = currentScreen == MainScreenRouteState.Main,
                 activeColor = activeColor,
                 inactiveColor = inactiveColor,
@@ -113,6 +118,7 @@ fun BottomBar(
             // 2. ПРИВЫЧКИ
             BottomTabItem(
                 icon = rememberVectorPainter(Icons.Rounded.TaskAlt),
+                label = stringResource(R.string.habits_title), // Добавляем подпись
                 isSelected = currentScreen == MainScreenRouteState.Habits,
                 activeColor = activeColor,
                 inactiveColor = inactiveColor,
@@ -122,7 +128,7 @@ fun BottomBar(
                 }
             )
 
-            // 3. ЦЕНТРАЛЬНАЯ КНОПКА (+) — ВОТ ЗДЕСЬ ИЗМЕНЕНИЯ
+            // 3. ЦЕНТРАЛЬНАЯ КНОПКА (+) — Оставляем без текста для акцента
             Box(
                 modifier = Modifier
                     .weight(1f)
@@ -136,11 +142,10 @@ fun BottomBar(
                         // 🔥 ЛОГИКА ПЕРЕХОДА 🔥
                         when (currentScreen) {
                             MainScreenRouteState.Habits -> {
-                                // Если мы в привычках -> Создаем привычку
                                 navController.navigate(Screen.AddHabit.route)
                             }
+
                             else -> {
-                                // Если мы в заметках или календаре -> Создаем заметку
                                 navController.navigate(Screen.AddNote.route)
                             }
                         }
@@ -149,7 +154,7 @@ fun BottomBar(
             ) {
                 Box(
                     modifier = Modifier
-                        .size(38.dp)
+                        .size(38.dp) // Чуть больше, чем обычные иконки
                         .background(MaterialTheme.colorScheme.primary, CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
@@ -165,6 +170,7 @@ fun BottomBar(
             // 4. КАЛЕНДАРЬ
             BottomTabItem(
                 icon = rememberVectorPainter(Icons.Filled.CalendarMonth),
+                label = stringResource(R.string.daily_planner), // Добавляем подпись
                 isSelected = currentScreen == MainScreenRouteState.Calendar,
                 activeColor = activeColor,
                 inactiveColor = inactiveColor,
@@ -177,6 +183,7 @@ fun BottomBar(
             // 5. НАСТРОЙКИ
             BottomTabItem(
                 icon = rememberVectorPainter(Icons.Default.Settings),
+                label = stringResource(R.string.settings), // Добавляем подпись
                 isSelected = currentScreen == MainScreenRouteState.Settings,
                 activeColor = activeColor,
                 inactiveColor = inactiveColor,
@@ -189,10 +196,11 @@ fun BottomBar(
     }
 }
 
-// Вспомогательный компонент для одной иконки
+// Вспомогательный компонент для одной иконки С ТЕКСТОМ
 @Composable
 fun RowScope.BottomTabItem(
     icon: Painter,
+    label: String, // Новый параметр
     isSelected: Boolean,
     activeColor: Color,
     inactiveColor: Color,
@@ -201,7 +209,7 @@ fun RowScope.BottomTabItem(
     // Анимация цвета
     val tint by animateColorAsState(
         targetValue = if (isSelected) activeColor else inactiveColor,
-        animationSpec = tween(200)
+        animationSpec = tween(200), label = "tint"
     )
 
     Box(
@@ -214,12 +222,29 @@ fun RowScope.BottomTabItem(
             ) { onClick() },
         contentAlignment = Alignment.Center
     ) {
-        Icon(
-            painter = icon,
-            contentDescription = null,
-            tint = tint,
-            modifier = Modifier.size(26.dp)
-        )
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Icon(
+                painter = icon,
+                contentDescription = label,
+                tint = tint,
+                modifier = Modifier.size(24.dp) // Стандартный размер иконки
+            )
+
+            Spacer(modifier = Modifier.height(2.dp)) // Небольшой отступ
+
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall.copy(
+                    fontSize = 10.sp, // Очень маленький шрифт, как в iOS TabBar
+                    fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium
+                ),
+                color = tint,
+                maxLines = 1
+            )
+        }
     }
 }
 

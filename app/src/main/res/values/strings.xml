@@ -131,6 +131,36 @@
     <string name="habit_color_label">Цвет метки</string>
     <string name="habit_notification_text">Время выполнить привычку!</string>
 
+    <!-- Onboarding -->
+    <string name="settings_tutorial">Обучение</string>
+    <string name="onboarding_next">Далее</string>
+    <string name="onboarding_start">Начать</string>
+    <string name="onboarding_skip">Пропустить</string>
+
+    <string name="onboard_1_title">Добро пожаловать</string>
+    <string name="onboard_1_desc">Ваш новый удобный Ежедневник для заметок, задач и привычек.</string>
+
+    <string name="onboard_2_title">Создание заметок</string>
+    <string name="onboard_2_desc">Чтобы создать заметку, перейдите на вкладку «Заметки» и нажмите «+» в центре. В редакторе вы можете добавлять фото, задачи и напоминания через нижнюю панель.</string>
+
+    <string name="onboard_3_title">Трекер привычек</string>
+    <string name="onboard_3_desc">Перейдите на вкладку «Привычки» и нажмите «+», чтобы создать новую цель. Отмечайте прогресс каждый день и следите за статистикой.</string>
+
+    <string name="onboard_4_title">Управление контентом</string>
+    <string name="onboard_4_desc">Зажмите любую заметку или привычку, чтобы открыть меню действий: Удалить или Переместить в папку.</string>
+
+    <string name="onboard_5_title">Настройки и Безопасность</string>
+    <string name="onboard_5_desc">В настройках можно сменить тему, установить код-пароль для Секретной папки или посмотреть это обучение снова.</string>
+
+    <!-- Templates -->
+    <string name="templates_title">Готовые шаблоны</string>
+    <string name="tpl_water">Пить воду</string>
+    <string name="tpl_sport">Спорт</string>
+    <string name="tpl_read">Чтение</string>
+    <string name="tpl_sleep">Сон 8ч</string>
+    <string name="tpl_walk">Прогулка</string>
+    <string name="tpl_meditation">Медитация</string>
+
 
     <!-- Google Fonts Certs configuration -->
     <array name="com_google_android_gms_fonts_certs">

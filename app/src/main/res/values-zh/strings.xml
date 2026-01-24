@@ -131,6 +131,35 @@
     <string name="habit_color_label">标签颜色</string>
     <string name="habit_notification_text">该完成习惯了！</string>
 
+    <!-- Onboarding -->
+    <string name="settings_tutorial">教程</string>
+    <string name="onboarding_next">下一步</string>
+    <string name="onboarding_start">开始使用</string>
+    <string name="onboarding_skip">跳过</string>
+
+    <string name="onboard_1_title">欢迎使用</string>
+    <string name="onboard_1_desc">您的全新便捷日记本，用于记录笔记、任务和习惯。</string>
+
+    <string name="onboard_2_title">创建笔记</string>
+    <string name="onboard_2_desc">要创建笔记，请转到“笔记”标签页并点击中间的“+”。在编辑器中，您可以通过底部栏添加照片、任务和提醒。</string>
+
+    <string name="onboard_3_title">习惯追踪</string>
+    <string name="onboard_3_desc">转到“习惯”标签页并点击“+”以创建新目标。每天记录进度并查看统计数据。</string>
+
+    <string name="onboard_4_title">内容管理</string>
+    <string name="onboard_4_desc">长按任何笔记或习惯以打开操作菜单：删除或移动到文件夹。</string>
+
+    <string name="onboard_5_title">设置与安全</string>
+    <string name="onboard_5_desc">在设置中，您可以更改主题，为隐藏文件夹设置密码，或再次查看此教程。</string>
+
+    <string name="templates_title">模板</string>
+    <string name="tpl_water">喝水</string>
+    <string name="tpl_sport">运动</string>
+    <string name="tpl_read">阅读</string>
+    <string name="tpl_sleep">睡眠8小时</string>
+    <string name="tpl_walk">散步</string>
+    <string name="tpl_meditation">冥想</string>
+
     <!-- Google Fonts Certs configuration -->
     <array name="com_google_android_gms_fonts_certs">
         <item>@array/com_google_android_gms_fonts_certs_dev</item>

@@ -131,6 +131,35 @@
     <string name="habit_color_label">Label Color</string>
     <string name="habit_notification_text">Time to do your habit!</string>
 
+    <!-- Onboarding -->
+    <string name="settings_tutorial">Tutorial</string>
+    <string name="onboarding_next">Next</string>
+    <string name="onboarding_start">Get Started</string>
+    <string name="onboarding_skip">Skip</string>
+
+    <string name="onboard_1_title">Welcome</string>
+    <string name="onboard_1_desc">Your new handy Planner for notes, tasks, and habits.</string>
+
+    <string name="onboard_2_title">Creating Notes</string>
+    <string name="onboard_2_desc">To create a note, go to the "Notes" tab and tap "+" in the center. In the editor, you can add photos, tasks, and reminders via the bottom bar.</string>
+
+    <string name="onboard_3_title">Habit Tracker</string>
+    <string name="onboard_3_desc">Go to the "Habits" tab and tap "+" to create a new goal. Track your progress daily and watch your streaks grow.</string>
+
+    <string name="onboard_4_title">Manage Content</string>
+    <string name="onboard_4_desc">Long press any note or habit to open the action menu: Delete or Move to Folder.</string>
+
+    <string name="onboard_5_title">Settings &amp; Security</string>
+    <string name="onboard_5_desc">In Settings, you can change the theme, set a passcode for the Hidden Folder, or view this tutorial again.</string>
+
+    <string name="templates_title">Templates</string>
+    <string name="tpl_water">Drink Water</string>
+    <string name="tpl_sport">Workout</string>
+    <string name="tpl_read">Reading</string>
+    <string name="tpl_sleep">Sleep 8h</string>
+    <string name="tpl_walk">Walking</string>
+    <string name="tpl_meditation">Meditation</string>
+
     <!-- Google Fonts Certs configuration -->
     <array name="com_google_android_gms_fonts_certs">
         <item>@array/com_google_android_gms_fonts_certs_dev</item>

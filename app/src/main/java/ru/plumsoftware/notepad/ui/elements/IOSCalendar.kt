@@ -228,7 +228,7 @@ fun IOSDayCell(
 ) {
     val isToday = isSameDay(day.date, Date())
 
-    // Цвета
+    // Цвета выделения даты
     val backgroundColor = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent
     val textColor = when {
         isSelected -> Color.White
@@ -238,9 +238,24 @@ fun IOSDayCell(
     }
     val fontWeight = if (isSelected || isToday) FontWeight.Bold else FontWeight.Normal
 
-    // Цвета для кольца прогресса
-    val ringColor = MaterialTheme.colorScheme.primary
-    val trackColor = MaterialTheme.colorScheme.surfaceVariant // Серый трек
+    // 🔥 ЛОГИКА ЦВЕТА КОЛЬЦА (В ЗАВИСИМОСТИ ОТ ПРОГРЕССА) 🔥
+    val progress = day.habitProgress
+
+    val ringColor = when {
+        // Если выполнено всё (100%) -> Насыщенный Зеленый (Success)
+        progress >= 1f -> Color(0xFF34C759)
+
+        // Если выполнено больше трети (середина) -> Бирюзовый/Мятный (Teal)
+        // Этот цвет воспринимается как "зеленоватый", но гармонирует с Синим стилем
+        progress > 0.33f -> Color(0xFF30B0C7)
+
+        // Если только начали (мало) -> Красный (Urgent)
+        else -> Color(0xFFFF3B30)
+    }
+
+    // Цвет трека делаем чуть прозрачным от основного цвета кольца,
+    // чтобы он выглядел красивее, чем просто серый
+    val trackColor = if (day.habitProgress > 0f) ringColor.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surfaceVariant
 
     Box(
         modifier = modifier
@@ -255,60 +270,66 @@ fun IOSDayCell(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            // Круг с датой
-            Box(
-                modifier = Modifier
-                    .size(32.dp)
-                    .clip(CircleShape)
-                    .background(backgroundColor),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = getDayNumber(day.date),
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        fontWeight = fontWeight,
-                        fontSize = 15.sp
-                    ),
-                    color = textColor,
-                    textAlign = TextAlign.Center
-                )
-            }
+            // КОНТЕЙНЕР ДАТЫ И КОЛЬЦА
+            Box(contentAlignment = Alignment.Center) {
 
-            Spacer(modifier = Modifier.height(2.dp))
+                // 🔥 КОЛЬЦО (Рисуем только если есть прогресс)
+                if (day.habitProgress > 0f) {
+                    Canvas(modifier = Modifier.size(42.dp)) {
+                        val strokeWidth = 2.5.dp.toPx()
 
-            // 🔥 ИНДИКАТОРЫ 🔥
+                        // Трек (фоновый круг)
+                        drawCircle(
+                            color = trackColor,
+                            style = androidx.compose.ui.graphics.drawscope.Stroke(width = strokeWidth)
+                        )
+                        // Прогресс (цветная дуга)
+                        drawArc(
+                            color = ringColor,
+                            startAngle = -90f,
+                            sweepAngle = 360 * day.habitProgress,
+                            useCenter = false,
+                            style = androidx.compose.ui.graphics.drawscope.Stroke(
+                                width = strokeWidth,
+                                cap = androidx.compose.ui.graphics.StrokeCap.Round
+                            )
+                        )
+                    }
+                }
 
-            // Если есть прогресс привычек -> Рисуем кольцо (или точку, если 100%)
-            // Если есть только заметки -> Рисуем точку
-
-            if (day.habitProgress > 0) {
-                // Рисуем маленькое кольцо прогресса
-                Canvas(modifier = Modifier.size(6.dp)) {
-                    // Трек (серый круг)
-                    drawCircle(
-                        color = trackColor,
-                        style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.5.dp.toPx())
-                    )
-                    // Прогресс (цветная дуга)
-                    drawArc(
-                        color = if(isSelected) Color.White else ringColor, // Белый, если фон синий
-                        startAngle = -90f,
-                        sweepAngle = 360 * day.habitProgress,
-                        useCenter = false,
-                        style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.5.dp.toPx(), cap = androidx.compose.ui.graphics.StrokeCap.Round)
+                // КРУГ С ДАТОЙ
+                Box(
+                    modifier = Modifier
+                        .size(32.dp)
+                        .clip(CircleShape)
+                        .background(backgroundColor),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = getDayNumber(day.date),
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            fontWeight = fontWeight,
+                            fontSize = 15.sp
+                        ),
+                        color = textColor,
+                        textAlign = TextAlign.Center
                     )
                 }
-            } else if (day.notes.isNotEmpty()) {
-                // Если привычек нет, но есть заметки - классическая точка
+            }
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            // 🔥 ТОЧКА ЗАМЕТОК
+            // Показываем точку только если нет кольца привычек, чтобы не перегружать
+            if (day.habitProgress <= 0f && day.notes.isNotEmpty()) {
                 Box(
                     modifier = Modifier
                         .size(4.dp)
                         .clip(CircleShape)
-                        .background(if (isSelected) Color.White.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurfaceVariant)
+                        .background(MaterialTheme.colorScheme.primary)
                 )
             } else {
-                // Пустышка, чтобы высота ячейки не скакала
-                Spacer(modifier = Modifier.size(6.dp)) // Высота как у Canvas
+                Spacer(modifier = Modifier.size(4.dp))
             }
         }
     }
