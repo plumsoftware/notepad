@@ -48,6 +48,22 @@ class HabitRepository(private val habitDao: HabitDao) {
         }
     }
 
+    suspend fun toggleHabitCompletionForDate(habitId: String, dateInMillis: Long) {
+        // Проверяем, есть ли запись за ЭТУ дату
+        val existingEntry = habitDao.getEntryForDate(habitId, dateInMillis)
+
+        if (existingEntry != null) {
+            habitDao.deleteEntry(habitId, dateInMillis)
+        } else {
+            val newEntry = HabitEntry(
+                habitId = habitId,
+                date = dateInMillis,
+                completedAt = System.currentTimeMillis()
+            )
+            habitDao.insertEntry(newEntry)
+        }
+    }
+
     // Вспомогательная функция для получения 00:00:00 текущего дня
     private fun getStartOfDayInMillis(): Long {
         val calendar = Calendar.getInstance()

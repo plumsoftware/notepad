@@ -24,20 +24,27 @@ class HabitReminderReceiver : BroadcastReceiver() {
         val habitId = intent.getStringExtra("habitId") ?: return
         val title = intent.getStringExtra("title") ?: "Привычка"
 
-        // 1. Показываем уведомление
+        // 1. Сразу показываем уведомление (это быстро)
         showNotification(context, habitId, title)
 
-        // 2. Планируем СЛЕДУЮЩЕЕ напоминание (Рекурсия)
-        // Нам нужно достать привычку из базы, чтобы узнать расписание
+        // 2. Говорим системе: "Не убивай меня, мне нужно пару секунд на базу данных"
+        val pendingResult = goAsync()
+
         val db = NoteDatabase.getDatabase(context.applicationContext as android.app.Application)
-        val repo = HabitRepository(db.habitDao())
 
         CoroutineScope(Dispatchers.IO).launch {
-            // Внимание: Здесь нам нужен метод в DAO getHabitById(id)
-            // Добавь в HabitDao: @Query("SELECT * FROM habits WHERE id = :id") suspend fun getHabitById(id: String): Habit?
-            val habit = db.habitDao().getHabitById(habitId)
-            habit?.let {
-                HabitAlarmScheduler(context).scheduleNextReminder(it)
+            try {
+                // Достаем привычку, чтобы узнать, когда звонить в следующий раз
+                val habit = db.habitDao().getHabitById(habitId)
+                habit?.let {
+                    // Планируем следующий раз
+                    HabitAlarmScheduler(context).scheduleNextReminder(it)
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            } finally {
+                // 3. Сообщаем системе, что мы закончили
+                pendingResult.finish()
             }
         }
     }
@@ -59,10 +66,13 @@ class HabitReminderReceiver : BroadcastReceiver() {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
 
+        // Используем строковой ресурс или дефолт
+        val contentText = context.getString(R.string.habit_notification_text)
+
         val notification = NotificationCompat.Builder(context, channelId)
-            .setSmallIcon(R.drawable.full_icon) // Твоя иконка
+            .setSmallIcon(R.drawable.ic_stat_name) // Убедись, что иконка есть, или R.drawable.ic_stat_name
             .setContentTitle(title)
-            .setContentText(context.getString(R.string.habit_notification_text))
+            .setContentText(contentText)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setContentIntent(pendingIntent)
             .setAutoCancel(true)

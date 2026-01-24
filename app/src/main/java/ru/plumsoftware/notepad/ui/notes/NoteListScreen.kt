@@ -97,6 +97,9 @@ import ru.plumsoftware.notepad.ui.formatDate
 import ru.plumsoftware.notepad.ui.player.playSound
 import ru.plumsoftware.notepad.ui.player.rememberExoPlayer
 import androidx.core.net.toUri
+import ru.plumsoftware.notepad.data.model.habit.Habit
+import ru.plumsoftware.notepad.data.model.habit.HabitFrequency
+import ru.plumsoftware.notepad.data.model.habit.HabitWithHistory
 import ru.plumsoftware.notepad.ui.MainScreenRouteState
 import ru.plumsoftware.notepad.ui.dialog.MoveToGroupDialog
 import ru.plumsoftware.notepad.ui.elements.BottomBar
@@ -124,6 +127,8 @@ fun NoteListScreen(
     scrollToNoteId: String? = null,
     themeState: ThemeState
 ) {
+    val habitsWithHistory by viewModel.habits.collectAsState()
+
     var searchQuery by remember { mutableStateOf("") }
     val notes by viewModel.notes.collectAsState()
     val groups by viewModel.groups.collectAsState()
@@ -769,6 +774,7 @@ fun NoteListScreen(
                 MainScreenRouteState.Calendar -> {
                     CalendarContent(
                         notes = notes,
+                        habits = emptyList(),
                         viewModel = viewModel, // передаем viewModel
                         navController = navController, // передаем navController
                         groups = groups.map { it.group }, // передаем группы
@@ -796,8 +802,7 @@ fun NoteListScreen(
                 MainScreenRouteState.Habits -> {
                     HabitsContent(
                         viewModel = viewModel,
-                        navController = navController,
-                        themeState = themeState
+                        navController = navController
                     )
                 }
             }
@@ -930,6 +935,7 @@ fun EmptyNotesState() {
 @Composable
 private fun CalendarContent(
     notes: List<Note>,
+    habits: List<HabitWithHistory>,
     viewModel: NoteViewModel,
     navController: NavController,
     groups: List<Group>,
@@ -973,6 +979,7 @@ private fun CalendarContent(
         // --- КАЛЕНДАРЬ ---
         IOSCalendarView(
             notes = notes,
+            habits = habits,
             selectedDate = selectedDate ?: Date(),
             isMonthExpanded = isMonthView,
             onDateSelected = { date ->
@@ -1110,6 +1117,46 @@ private fun CalendarContent(
 fun getFancyDateTitle(date: Date): String {
     val fmt = SimpleDateFormat("EEEE, d MMMM", Locale.getDefault())
     return fmt.format(date).replaceFirstChar { it.uppercase() }
+}
+
+fun calculateDailyHabitProgress(date: Date, habits: List<HabitWithHistory>): Float {
+    val calendar = Calendar.getInstance().apply { time = date }
+    // Сбрасываем время в ноль для корректного сравнения с БД
+    calendar.set(Calendar.HOUR_OF_DAY, 0)
+    calendar.set(Calendar.MINUTE, 0)
+    calendar.set(Calendar.SECOND, 0)
+    calendar.set(Calendar.MILLISECOND, 0)
+    val targetTime = calendar.timeInMillis
+
+    val dayOfWeek = calendar.get(Calendar.DAY_OF_WEEK) // 1=Sun, 2=Mon...
+
+    var totalScheduled = 0
+    var completed = 0
+
+    habits.forEach { item ->
+        val habit = item.habit
+        // Проверяем, создана ли была привычка к этой дате (чтобы не показывать прогресс в прошлом до создания)
+        // Если хочешь видеть прогресс в прошлом, убери эту проверку.
+        if (habit.createdAt > targetTime + 86400000) return@forEach
+
+        // 1. Проверяем расписание
+        val isScheduled = when (habit.frequency) {
+            HabitFrequency.DAILY -> true
+            HabitFrequency.SPECIFIC_DAYS -> habit.repeatDays.contains(dayOfWeek)
+        }
+
+        if (isScheduled) {
+            totalScheduled++
+            // 2. Проверяем историю
+            // item.history - это List<HabitEntry>
+            val isDone = item.history.any { it.date == targetTime }
+            if (isDone) {
+                completed++
+            }
+        }
+    }
+
+    return if (totalScheduled == 0) 0f else completed.toFloat() / totalScheduled
 }
 
 // Функция для форматирования даты

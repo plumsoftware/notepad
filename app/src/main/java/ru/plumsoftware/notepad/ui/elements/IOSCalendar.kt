@@ -7,6 +7,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -14,8 +15,10 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -47,6 +50,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import ru.plumsoftware.notepad.R
 import ru.plumsoftware.notepad.data.model.Note
+import ru.plumsoftware.notepad.data.model.habit.HabitWithHistory
+import ru.plumsoftware.notepad.ui.notes.calculateDailyHabitProgress
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -59,12 +64,14 @@ data class CalendarDay(
     val date: Date,
     val isCurrentMonth: Boolean,
     val week: Int, // Добавляем номер недели
-    val notes: List<Note> = emptyList()
+    val notes: List<Note> = emptyList(),
+    val habitProgress: Float = 0f
 )
 
 @Composable
 fun IOSCalendarView(
     notes: List<Note>,
+    habits: List<HabitWithHistory>,
     selectedDate: Date,
     isMonthExpanded: Boolean,
     onDateSelected: (Date) -> Unit,
@@ -74,9 +81,9 @@ fun IOSCalendarView(
     // Внутренняя дата для навигации (чтобы можно было листать месяцы, не меняя выбранный день)
     var displayedDate by remember { mutableStateOf(selectedDate) }
 
-    // Генерация дней
-    val calendarDays = remember(displayedDate, notes) {
-        generateCalendarDays(Calendar.getInstance().apply { time = displayedDate }, notes)
+    // Передаем habits в генератор
+    val calendarDays = remember(displayedDate, notes, habits) {
+        generateCalendarDays(Calendar.getInstance().apply { time = displayedDate }, notes, habits)
     }
 
     Column(modifier = modifier) {
@@ -219,64 +226,90 @@ fun IOSDayCell(
     onDayClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val isToday = isSameDay(day.date, Date()) // Helper isSameDay уже у тебя есть
+    val isToday = isSameDay(day.date, Date())
 
     // Цвета
-    // Если выбрано: Фон Красный/Синий (Primary), Текст Белый
-    // Если сегодня: Текст Синий, Фон Прозрачный (или слабый)
-    // Иначе: Текст Черный/Серый
-
     val backgroundColor = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent
-
     val textColor = when {
         isSelected -> Color.White
         isToday -> MaterialTheme.colorScheme.primary
         !day.isCurrentMonth -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
         else -> MaterialTheme.colorScheme.onSurface
     }
-
     val fontWeight = if (isSelected || isToday) FontWeight.Bold else FontWeight.Normal
+
+    // Цвета для кольца прогресса
+    val ringColor = MaterialTheme.colorScheme.primary
+    val trackColor = MaterialTheme.colorScheme.surfaceVariant // Серый трек
 
     Box(
         modifier = modifier
-            .padding(2.dp) // Небольшой отступ между ячейками
+            .padding(2.dp)
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
-                indication = null // Убираем ripple, делаем iOS style нажатие (смена цвета)
+                indication = null
             ) { onDayClick() },
         contentAlignment = Alignment.Center
     ) {
-        // Кружок выделения
-        Box(
-            modifier = Modifier
-                .size(36.dp) // Фиксированный размер круга (как в iOS ~35-40pt)
-                .clip(CircleShape)
-                .background(backgroundColor),
-            contentAlignment = Alignment.Center
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
         ) {
-            Text(
-                text = getDayNumber(day.date),
-                style = MaterialTheme.typography.bodyMedium.copy(
-                    fontWeight = fontWeight,
-                    fontSize = 17.sp
-                ),
-                color = textColor,
-                textAlign = TextAlign.Center
-            )
-        }
-
-        // Индикатор событий (Точка снизу)
-        if (day.notes.isNotEmpty()) {
+            // Круг с датой
             Box(
                 modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(bottom = 6.dp) // Отступ от низа
-                    .size(4.dp)
+                    .size(32.dp)
                     .clip(CircleShape)
-                    // Если ячейка выбрана, точка должна быть контрастной (белой) или скрытой
-                    // В iOS она обычно скрывается при выборе, но сделаем белой
-                    .background(if (isSelected) Color.White.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurfaceVariant)
-            )
+                    .background(backgroundColor),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = getDayNumber(day.date),
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        fontWeight = fontWeight,
+                        fontSize = 15.sp
+                    ),
+                    color = textColor,
+                    textAlign = TextAlign.Center
+                )
+            }
+
+            Spacer(modifier = Modifier.height(2.dp))
+
+            // 🔥 ИНДИКАТОРЫ 🔥
+
+            // Если есть прогресс привычек -> Рисуем кольцо (или точку, если 100%)
+            // Если есть только заметки -> Рисуем точку
+
+            if (day.habitProgress > 0) {
+                // Рисуем маленькое кольцо прогресса
+                Canvas(modifier = Modifier.size(6.dp)) {
+                    // Трек (серый круг)
+                    drawCircle(
+                        color = trackColor,
+                        style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.5.dp.toPx())
+                    )
+                    // Прогресс (цветная дуга)
+                    drawArc(
+                        color = if(isSelected) Color.White else ringColor, // Белый, если фон синий
+                        startAngle = -90f,
+                        sweepAngle = 360 * day.habitProgress,
+                        useCenter = false,
+                        style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.5.dp.toPx(), cap = androidx.compose.ui.graphics.StrokeCap.Round)
+                    )
+                }
+            } else if (day.notes.isNotEmpty()) {
+                // Если привычек нет, но есть заметки - классическая точка
+                Box(
+                    modifier = Modifier
+                        .size(4.dp)
+                        .clip(CircleShape)
+                        .background(if (isSelected) Color.White.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurfaceVariant)
+                )
+            } else {
+                // Пустышка, чтобы высота ячейки не скакала
+                Spacer(modifier = Modifier.size(6.dp)) // Высота как у Canvas
+            }
         }
     }
 }
@@ -331,7 +364,11 @@ fun getMonthAndYearString(date: Date): String {
 }
 
 // Обновляем функцию генерации дней для включения номера недели
-private fun generateCalendarDays(currentDate: Calendar, notes: List<Note>): List<CalendarDay> {
+private fun generateCalendarDays(
+    currentDate: Calendar,
+    notes: List<Note>,
+    habits: List<HabitWithHistory>
+): List<CalendarDay> {
     val calendar = currentDate.clone() as Calendar
     calendar.set(Calendar.DAY_OF_MONTH, 1)
 
@@ -348,53 +385,24 @@ private fun generateCalendarDays(currentDate: Calendar, notes: List<Note>): List
 
     // Add days from previous month
     calendar.add(Calendar.DAY_OF_MONTH, -daysFromPreviousMonth)
-    for (i in 0 until daysFromPreviousMonth) {
+    for (i in 0 until 42) {
+        val date = calendar.time
+
+        // Определяем, относится ли день к текущему месяцу (для цвета текста)
+        // (Логика isCurrentMonth может быть чуть сложнее, если используем сквозной скролл,
+        // но для статической сетки берем сравнение месяца)
+        val isCurrentMonth = calendar.get(Calendar.MONTH) == currentDate.get(Calendar.MONTH)
+
         days.add(
             CalendarDay(
-                calendar.time,
-                false,
-                currentWeek,
-                getNotesForDate(notes, calendar.time)
+                date = date,
+                isCurrentMonth = isCurrentMonth,
+                week = currentWeek,
+                notes = getNotesForDate(notes, date),
+                habitProgress = calculateDailyHabitProgress(date, habits) // <-- СЧИТАЕМ ПРОГРЕСС
             )
         )
-        calendar.add(Calendar.DAY_OF_MONTH, 1)
-        if (calendar.get(Calendar.DAY_OF_WEEK) == Calendar.MONDAY) {
-            currentWeek++
-        }
-    }
 
-    // Reset to first day of current month
-    calendar.time = currentDate.time
-    calendar.set(Calendar.DAY_OF_MONTH, 1)
-
-    // Add days of current month
-    val daysInMonth = calendar.getActualMaximum(Calendar.DAY_OF_MONTH)
-    for (i in 1..daysInMonth) {
-        days.add(
-            CalendarDay(
-                calendar.time,
-                true,
-                currentWeek,
-                getNotesForDate(notes, calendar.time)
-            )
-        )
-        calendar.add(Calendar.DAY_OF_MONTH, 1)
-        if (calendar.get(Calendar.DAY_OF_WEEK) == Calendar.MONDAY) {
-            currentWeek++
-        }
-    }
-
-    // Add days from next month to complete the grid (42 cells total for 6 weeks)
-    val remainingDays = 42 - days.size
-    for (i in 0 until remainingDays) {
-        days.add(
-            CalendarDay(
-                calendar.time,
-                false,
-                currentWeek,
-                getNotesForDate(notes, calendar.time)
-            )
-        )
         calendar.add(Calendar.DAY_OF_MONTH, 1)
         if (calendar.get(Calendar.DAY_OF_WEEK) == Calendar.MONDAY) {
             currentWeek++

@@ -16,13 +16,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.rounded.TaskAlt
@@ -30,16 +28,12 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -55,40 +49,43 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import ru.plumsoftware.notepad.R
 import ru.plumsoftware.notepad.data.model.habit.HabitEntry
 import ru.plumsoftware.notepad.data.model.habit.HabitWithHistory
-import ru.plumsoftware.notepad.data.theme_saver.ThemeState
 import ru.plumsoftware.notepad.ui.NoteViewModel
 import ru.plumsoftware.notepad.ui.elements.IOSCalendarView
 import ru.plumsoftware.notepad.ui.elements.habits.HabitCard
+import ru.plumsoftware.notepad.ui.elements.isSameDay
+import ru.plumsoftware.notepad.ui.notes.getFancyDateTitle
+import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
+import java.util.Locale
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun HabitsContent(
     viewModel: NoteViewModel,
-    navController: NavController,
-    themeState: ThemeState
+    navController: NavController
 ) {
     val habitsWithHistory by viewModel.habits.collectAsState()
     var showCreateHabitScreen by remember { mutableStateOf(false) }
 
-    // Календарь
+    // Состояние календаря
     var selectedHabitDate by remember { mutableStateOf(Date()) }
-    var isCalendarExpanded by remember { mutableStateOf(false) } // По умолчанию свернут
+    var isCalendarExpanded by remember { mutableStateOf(false) }
 
     val haptic = LocalHapticFeedback.current
-
-    // Цвет фона (чтобы совпадал с настройками)
-    // Можно взять из темы или хардкодом под iOS
     val backgroundColor = MaterialTheme.colorScheme.background
 
-    // Если открыт экран создания, показываем его поверх
+    // 🔥 Проверка: Является ли выбранная дата "Сегодняшним днём"?
+    val isDateToday = remember(selectedHabitDate) {
+        isSameDay(selectedHabitDate, Date())
+    }
+
     if (showCreateHabitScreen) {
         // Мы используем Screen composable, но можно открыть как Dialog.
         // Для iOS стиля лучше открывать как "Page Sheet".
@@ -122,6 +119,7 @@ fun HabitsContent(
         ) {
             IOSCalendarView(
                 notes = emptyList(),
+                habits = habitsWithHistory,
                 selectedDate = selectedHabitDate,
                 isMonthExpanded = isCalendarExpanded,
                 onDateSelected = { date -> selectedHabitDate = date },
@@ -143,7 +141,7 @@ fun HabitsContent(
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(
-                            imageVector = Icons.Rounded.TaskAlt, // Или красивая картинка
+                            imageVector = Icons.Rounded.TaskAlt,
                             contentDescription = null,
                             modifier = Modifier.size(80.dp),
                             tint = MaterialTheme.colorScheme.surfaceVariant
@@ -155,9 +153,8 @@ fun HabitsContent(
                             color = MaterialTheme.colorScheme.onSurface.copy(0.6f)
                         )
                         Spacer(modifier = Modifier.height(24.dp))
-                        // Кнопка "Создать первую"
                         Button(
-                            onClick = { navController.navigate("add_habit") }, // Добавь route
+                            onClick = { navController.navigate("add_habit") },
                             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                         ) {
                             Text(text = stringResource(R.string.habit_new))
@@ -165,16 +162,25 @@ fun HabitsContent(
                     }
                 }
             } else {
-                // --- СПИСОК ---
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    // 1. ВИДЖЕТ ПРОГРЕССА
+                    // ВИДЖЕТ ПРОГРЕССА
+                    // (Показывает прогресс за выбранный день)
                     item {
-                        // Подсчет статистики "на лету"
-                        IOSHabitProgressWidget(habits = habitsWithHistory, themeState = themeState)
+                        // Считаем прогресс для ВЫБРАННОЙ даты
+                        val total = habitsWithHistory.size
+                        val done = habitsWithHistory.count {
+                            checkIfCompletedForDate(
+                                it.history,
+                                selectedHabitDate
+                            )
+                        }
+                        val progress = if (total > 0) done.toFloat() / total else 0f
+
+                        IOSHabitProgressHeaderInternal(progress, done, total, selectedHabitDate)
                     }
 
                     item {
@@ -186,41 +192,40 @@ fun HabitsContent(
                         )
                     }
 
-                    // 2. КАРТОЧКИ
                     items(habitsWithHistory, key = { it.habit.id }) { item ->
                         val habit = item.habit
-
-                        // --- CONTEXT MENU STATE ---
                         var showHabitMenu by remember { mutableStateOf(false) }
-
                         val history = item.history
-                        val isCompletedToday =
-                            remember(history) { checkIfCompletedToday(history) }
+
+                        // 🔥 1. Проверяем статус для ВЫБРАННОЙ даты (чтобы видеть историю)
+                        val isCompletedOnSelectedDate = remember(history, selectedHabitDate) {
+                            checkIfCompletedForDate(history, selectedHabitDate)
+                        }
+
                         val streak = remember(history) { calculateStreak(history) }
 
                         Box(modifier = Modifier.animateItem()) {
                             HabitCard(
                                 title = habit.title,
-                                emoji = habit.emoji, // <-- Новый параметр
+                                emoji = habit.emoji,
                                 streak = streak,
                                 color = Color(habit.color.toULong()),
-                                isCompletedToday = isCompletedToday,
-                                themeState = themeState,
+                                isCompletedToday = isCompletedOnSelectedDate,
                                 onToggle = {
-                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                    viewModel.toggleHabit(habit.id)
+                                    // 🔥 2. Блокируем изменение, если дата не сегодня
+                                    if (isDateToday) {
+                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        viewModel.toggleHabit(habit.id)
+                                    } else {
+                                        // Опционально: Сообщить пользователю
+                                        // Toast.makeText(context, "Нельзя менять прошлое", Toast.LENGTH_SHORT).show()
+                                    }
                                 },
-                                onLongClick = {
-                                    showHabitMenu = true // Открываем меню
-                                },
-                                onClick = {
-                                    // ОТКРЫВАЕМ РЕДАКТИРОВАНИЕ
-                                    // Используем маршрут add_habit и передаем аргумент habitId
-                                    navController.navigate("edit_habit/${habit.id}")
-                                }
+                                onLongClick = { showHabitMenu = true },
+                                onClick = { navController.navigate("edit_habit/${habit.id}") }
                             )
 
-                            // --- MENU ---
+                            // Меню (без изменений)
                             DropdownMenu(
                                 expanded = showHabitMenu,
                                 onDismissRequest = { showHabitMenu = false },
@@ -258,8 +263,7 @@ fun HabitsContent(
                         }
                     }
 
-                    // Отступ
-                    item { Spacer(modifier = Modifier.height(70.dp)) }
+                    item { Spacer(modifier = Modifier.height(100.dp)) }
                 }
             }
         }
@@ -268,23 +272,34 @@ fun HabitsContent(
 
 // Хелпер: Виджет прогресса для реальных данных
 @Composable
-fun IOSHabitProgressWidget(habits: List<HabitWithHistory>, themeState: ThemeState) {
+fun IOSHabitProgressWidget(
+    habits: List<HabitWithHistory>,
+    selectedDate: Date
+) {
     // Считаем сколько выполнено СЕГОДНЯ
     val total = habits.size
-    val done = habits.count { checkIfCompletedToday(it.history) }
+    val done = habits.count { checkIfCompletedForDate(it.history, selectedDate) }
     val progress = if (total > 0) done.toFloat() / total else 0f
 
     // (Используем тот же код дизайна, что я давал ранее, но с реальными данными)
     // ... [См. код IOSHabitProgressHeader из предыдущих ответов, он идеально подходит] ...
     // Вставь сюда вызов того же UI кода
-    IOSHabitProgressHeaderInternal(progress, done, total, themeState = themeState)
+    IOSHabitProgressHeaderInternal(progress, done, total, selectedDate)
 }
 
 // Вспомогательная функция (UI виджета прогресса)
 @Composable
-fun IOSHabitProgressHeaderInternal(progress: Float, done: Int, total: Int, themeState: ThemeState) {
+fun IOSHabitProgressHeaderInternal(
+    progress: Float,
+    done: Int,
+    total: Int,
+    selectedHabitDate: Date
+) {
     val animatedProgress by animateFloatAsState(targetValue = progress, animationSpec = tween(800))
     val sectionColor = MaterialTheme.colorScheme.surface
+
+    val currentDate = Calendar.getInstance().time
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -300,7 +315,7 @@ fun IOSHabitProgressHeaderInternal(progress: Float, done: Int, total: Int, theme
             ) {
                 Column {
                     Text(
-                        stringResource(R.string.today),
+                        if (isSameDay(date1 = currentDate, date2 = selectedHabitDate)) stringResource(R.string.today) else getFancyDateTitle(selectedHabitDate),
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
                     )
                     Spacer(modifier = Modifier.height(4.dp))
@@ -370,6 +385,17 @@ fun calculateStreak(history: List<HabitEntry>): Int {
         }
     }
     return streak
+}
+
+fun checkIfCompletedForDate(history: List<HabitEntry>, date: Date): Boolean {
+    val calendar = Calendar.getInstance().apply { time = date }
+    calendar.set(Calendar.HOUR_OF_DAY, 0)
+    calendar.set(Calendar.MINUTE, 0)
+    calendar.set(Calendar.SECOND, 0)
+    calendar.set(Calendar.MILLISECOND, 0)
+    val targetTime = calendar.timeInMillis
+
+    return history.any { it.date == targetTime }
 }
 
 fun getStartOfDay(): Long {

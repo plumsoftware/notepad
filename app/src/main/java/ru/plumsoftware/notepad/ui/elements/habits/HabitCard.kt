@@ -56,7 +56,6 @@ fun HabitCard(
     streak: Int, // Серия дней
     color: Color,
     isCompletedToday: Boolean,
-    themeState: ThemeState,
     onToggle: () -> Unit,
     onLongClick: () -> Unit, // <-- Обязательно для меню
     onClick: () -> Unit

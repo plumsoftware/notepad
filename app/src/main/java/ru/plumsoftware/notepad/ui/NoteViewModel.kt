@@ -44,6 +44,7 @@ import ru.plumsoftware.notepad.data.model.habit.HabitFrequency
 import ru.plumsoftware.notepad.data.model.habit.HabitWithHistory
 import ru.plumsoftware.notepad.data.worker.HabitAlarmScheduler
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
@@ -358,6 +359,21 @@ class NoteViewModel(application: Application, openAddNote: Boolean) : ViewModel(
             return true
         }
         return false
+    }
+
+    fun toggleHabitForDate(habitId: String, date: Date) {
+        viewModelScope.launch {
+            // Конвертируем Date в timestamp начала дня (00:00:00)
+            val calendar = Calendar.getInstance().apply { time = date }
+            calendar.set(Calendar.HOUR_OF_DAY, 0)
+            calendar.set(Calendar.MINUTE, 0)
+            calendar.set(Calendar.SECOND, 0)
+            calendar.set(Calendar.MILLISECOND, 0)
+            val targetTime = calendar.timeInMillis
+
+            // Вызываем репозиторий (тебе нужно добавить этот метод в репозиторий тоже)
+            habitRepository.toggleHabitCompletionForDate(habitId, targetTime)
+        }
     }
 
     //    region::Habits
