@@ -5,8 +5,12 @@ import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.content.Context
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.util.Log
 import androidx.core.view.WindowCompat
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -72,6 +76,10 @@ import ru.plumsoftware.notepad.ui.habit.add_habit.AddHabitScreen
 class MainActivity : ComponentActivity() {
     private var showOpenAdsCounter = 0
     private var opensForAd = 0
+    private var currentAdLoadAttempt = 0
+    private val maxAdLoadAttempts = 5
+    private var handler: Handler? = null
+    private var appOpenLoader: AppOpenAdLoader? = null
 
     @SuppressLint("StateFlowValueCalledInComposition")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -347,28 +355,97 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun onDestroy() {
+        super.onDestroy()
+        // Очищаем handler при уничтожении активности
+        handler?.removeCallbacksAndMessages(null)
+        handler = null
+    }
+
     private fun showOpenAds() {
-        val appOpenLoader = AppOpenAdLoader(baseContext)
+        currentAdLoadAttempt = 0
+        loadOpenAdWithRetry()
+    }
+
+    private fun loadOpenAdWithRetry() {
+        // Увеличиваем счетчик попыток
+        currentAdLoadAttempt++
+
+        if (currentAdLoadAttempt > maxAdLoadAttempts) {
+            // Достигнуто максимальное количество попыток
+            Log.d("AdLoad", "Max load attempts reached: $maxAdLoadAttempts")
+            showOpenAdsCounter = 1 // Сбрасываем счетчик показа
+            return
+        }
+
+        Log.d("AdLoad", "Attempting to load ad (attempt $currentAdLoadAttempt/$maxAdLoadAttempts)")
+
+        // Создаем новый загрузчик
+        appOpenLoader = AppOpenAdLoader(baseContext)
         val adRequestConfiguration =
             AdRequestConfiguration.Builder(App.platformConfig.adsConfig.openAdsId).build()
 
         val appOpenAdEventListener = object : AppOpenAdEventListener {
-            override fun onAdShown() {}
-            override fun onAdDismissed() {}
-            override fun onAdFailedToShow(adError: AdError) {}
-            override fun onAdClicked() {}
-            override fun onAdImpression(impressionData: ImpressionData?) {}
-        }
+            override fun onAdShown() {
+                Log.d("AdLoad", "Ad shown successfully")
+                showOpenAdsCounter = 1 // Увеличиваем счетчик показа
+            }
 
-        val appOpenAdLoadListener = object : AppOpenAdLoadListener {
-            override fun onAdFailedToLoad(error: AdRequestError) {}
-            override fun onAdLoaded(appOpenAd: AppOpenAd) {
-                appOpenAd.setAdEventListener(appOpenAdEventListener)
-                appOpenAd.show(this@MainActivity)
+            override fun onAdDismissed() {
+                Log.d("AdLoad", "Ad dismissed")
+            }
+
+            override fun onAdFailedToShow(adError: AdError) {
+                Log.d("AdLoad", "Ad failed to show: $adError")
+            }
+
+            override fun onAdClicked() {
+                Log.d("AdLoad", "Ad clicked")
+            }
+
+            override fun onAdImpression(impressionData: ImpressionData?) {
+                Log.d("AdLoad", "Ad impression recorded")
             }
         }
 
-        appOpenLoader.setAdLoadListener(appOpenAdLoadListener)
-        appOpenLoader.loadAd(adRequestConfiguration)
+        val appOpenAdLoadListener = object : AppOpenAdLoadListener {
+            override fun onAdFailedToLoad(error: AdRequestError) {
+                Log.d("AdLoad", "Ad failed to load: ${error}. Attempt $currentAdLoadAttempt/$maxAdLoadAttempts")
+
+                // Рассчитываем задержку для следующей попытки (экспоненциальная задержка)
+                val retryDelay = calculateRetryDelay(currentAdLoadAttempt)
+
+                // Планируем следующую попытку через задержку
+                handler = Handler(Looper.getMainLooper())
+                handler?.postDelayed({
+                    loadOpenAdWithRetry()
+                }, retryDelay)
+            }
+
+            override fun onAdLoaded(appOpenAd: AppOpenAd) {
+                Log.d("AdLoad", "Ad loaded successfully on attempt $currentAdLoadAttempt")
+
+                appOpenAd.setAdEventListener(appOpenAdEventListener)
+                appOpenAd.show(this@MainActivity)
+
+                // Сброс счетчика попыток при успешной загрузке
+                currentAdLoadAttempt = 0
+            }
+        }
+
+        appOpenLoader?.setAdLoadListener(appOpenAdLoadListener)
+        appOpenLoader?.loadAd(adRequestConfiguration)
+    }
+
+    private fun calculateRetryDelay(attempt: Int): Long {
+        // Экспоненциальная задержка с джиттером для избежания перегрузки
+        return when (attempt) {
+            1 -> 1000L // 1 секунда
+            2 -> 2000L // 2 секунды
+            3 -> 4000L // 4 секунды
+            4 -> 8000L // 8 секунд
+            5 -> 16000L // 16 секунд
+            else -> 1000L
+        }
     }
 }
