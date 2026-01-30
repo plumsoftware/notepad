@@ -121,7 +121,7 @@
     <string name="streak_days">%d дн.</string>
     <string name="all_done_title">Все цели достигнуты! 🎉</string>
     <string name="progress_status">%d из %d выполнено</string>
-    <string name="habit_new_title">Новая привычка</string>
+    <string name="habit_new_title">Новая\nпривычка</string>
     <string name="habit_edit_title">Изменить</string>
     <string name="habit_name_hint">Название (напр. Вода)</string>
     <string name="habit_frequency">Частота</string>

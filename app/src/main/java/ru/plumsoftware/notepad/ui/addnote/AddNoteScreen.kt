@@ -78,6 +78,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -145,34 +146,67 @@ fun AddNoteScreen(
     viewModel: NoteViewModel,
     note: Note? = null
 ) {
-    // --- Ads Setup (Твой код, без изменений) ---
-    var rewardedAd: RewardedAd? = null
-    var rewardedAdLoader: RewardedAdLoader? = null
-    rewardedAdLoader = RewardedAdLoader(LocalContext.current).apply {
-        setAdLoadListener(object : RewardedAdLoadListener {
-            override fun onAdLoaded(rewarded: RewardedAd) {
-                rewardedAd = rewarded
-            }
+    // --- ADS STATE ---
+    var rewardedAd: RewardedAd? by remember { mutableStateOf(null) }
+    var myInterstitialAds: InterstitialAd? by remember { mutableStateOf(null) }
 
-            override fun onAdFailedToLoad(error: AdRequestError) {}
-        })
-    }
-    val adRequestConfiguration =
-        AdRequestConfiguration.Builder(App.platformConfig.adsConfig.rewardedAdsId).build()
-    var myInterstitialAds: InterstitialAd? = null
+    // Флаг загрузки (покажем спиннер или заблокируем кнопки, если нужно, но обычно это фоновый процесс)
+    var isAdsLoading by remember { mutableStateOf(false) }
+
+    // Счетчики попыток
+    var rewardedRetryCount by remember { mutableIntStateOf(0) }
+    var interstitialRetryCount by remember { mutableIntStateOf(0) }
+    val maxRetries = 5
+
+    val context = LocalContext.current
+
+    // Loaders (создаем один раз)
+    val rewardedAdLoader = remember { RewardedAdLoader(context) }
     val interstitialAdsLoader = remember { InterstitialAdLoader(activity) }
 
-    LaunchedEffect(key1 = Unit) {
-        rewardedAdLoader.loadAd(adRequestConfiguration)
-        interstitialAdsLoader.apply {
-            setAdLoadListener(object : InterstitialAdLoadListener {
+    val rewardedConfig = remember {
+        AdRequestConfiguration.Builder(App.platformConfig.adsConfig.rewardedAdsId).build()
+    }
+    val interstitialConfig = remember {
+        AdRequestConfiguration.Builder(App.platformConfig.adsConfig.interstitialAdsId).build()
+    }
+
+    // --- ADS LOAD LOGIC ---
+
+    // 1. Загрузка Rewarded Ad с повторами
+    LaunchedEffect(rewardedRetryCount) {
+        if (rewardedAd == null && rewardedRetryCount < maxRetries) {
+            isAdsLoading = true
+            rewardedAdLoader.setAdLoadListener(object : RewardedAdLoadListener {
+                override fun onAdLoaded(rewarded: RewardedAd) {
+                    isAdsLoading = false
+                    rewardedAd = rewarded
+                }
+
+                override fun onAdFailedToLoad(error: AdRequestError) {
+                    // Ошибка -> пробуем снова через задержку
+                    // Используем корутину внутри листенера нельзя, поэтому меняем стейт,
+                    // что триггернет LaunchedEffect снова.
+                    // Но LaunchedEffect уже запущен.
+                    // Лучший способ в Compose для ретраев - это простой рекурсивный вызов или изменение стейта.
+                    rewardedRetryCount++
+                }
+            })
+            rewardedAdLoader.loadAd(rewardedConfig)
+        } else {
+            isAdsLoading = false
+        }
+    }
+
+    // 2. Загрузка Interstitial Ad с повторами
+    LaunchedEffect(interstitialRetryCount) {
+        if (myInterstitialAds == null && interstitialRetryCount < maxRetries) {
+            interstitialAdsLoader.setAdLoadListener(object : InterstitialAdLoadListener {
                 override fun onAdLoaded(interstitialAd: InterstitialAd) {
                     myInterstitialAds = interstitialAd
-                    myInterstitialAds.setAdEventListener(object : InterstitialAdEventListener {
-                        override fun onAdClicked() {
-
-                        }
-
+                    // Настраиваем слушатель закрытия сразу
+                    myInterstitialAds?.setAdEventListener(object : InterstitialAdEventListener {
+                        override fun onAdClicked() {}
                         override fun onAdDismissed() {
                             navController.navigateUp()
                         }
@@ -181,26 +215,21 @@ fun AddNoteScreen(
                             navController.navigateUp()
                         }
 
-                        override fun onAdImpression(impressionData: ImpressionData?) {
-
-                        }
-
-                        override fun onAdShown() {
-
-                        }
+                        override fun onAdImpression(impressionData: ImpressionData?) {}
+                        override fun onAdShown() {}
                     })
                 }
 
-                override fun onAdFailedToLoad(error: AdRequestError) {}
+                override fun onAdFailedToLoad(error: AdRequestError) {
+                    interstitialRetryCount++
+                }
             })
+            interstitialAdsLoader.loadAd(interstitialConfig)
         }
-        val interstitialConfig =
-            AdRequestConfiguration.Builder(App.platformConfig.adsConfig.interstitialAdsId).build()
-        interstitialAdsLoader.loadAd(interstitialConfig)
     }
 
+
     // --- State ---
-    val context = LocalContext.current
     val scrollState = rememberScrollState()
     val scope = rememberCoroutineScope()
     val isEditing = note != null
@@ -231,12 +260,8 @@ fun AddNoteScreen(
     val isLoading by viewModel.isLoading.collectAsState()
     val notes by viewModel.notes.collectAsState()
     val exoPlayer = rememberExoPlayer()
-    var isAdsLoading by remember { mutableStateOf(false) }
 
     // Colors
-    // Цвета в виде объектов Color для удобства
-    // Пастельная палитра в стиле iOS Notes / Reminders
-// Оптимизирована для черного текста (luminance > 0.5)
     val availableColors = listOf(
         Color(0xFFFFFFFF), // White (Default) - Чистый белый
         Color(0xFFEBEBF5), // System Gray 6 (Light) - Нейтральный серый
@@ -270,28 +295,14 @@ fun AddNoteScreen(
         label = "bgColor"
     )
 
-    // Контраст: Если фон темный -> текст белый, иначе -> черный
-    // Яркость фона
     val isLightBg = luminance(selectedColor.toArgb()) > 0.5f
-
-    // Проверка: Является ли фон "нейтральным" (белый/черный)
-    // Если да - используем Primary (синий), иначе - контрастный (Ч/Б)
     val isNeutralBg =
         selectedColor == Color.White || selectedColor == Color.Black || selectedColor == Color.Transparent
 
-    // Цвет КНОПОК и ИКОНОК (Navigation, Action Icons)
-    val actionItemsColor = if (isNeutralBg) {
-        MaterialTheme.colorScheme.primary // Синий на белом/черном
-    } else {
-        if (isLightBg) Color.Black else Color.White // Черный на светлом, Белый на темном (цветном)
-    }
-
-    // На белом - черный, на черном - белый, на цветном - по яркости
-    val contentTextColor = if (isLightBg) Color.Black else Color.White
-
+    val actionItemsColor =
+        if (isNeutralBg) MaterialTheme.colorScheme.primary else if (isLightBg) Color.Black else Color.White
     val contentColor = if (isLightBg) Color.Black else Color.White
     val placeholderColor = contentColor.copy(alpha = 0.4f)
-    val dividerColor = contentColor.copy(alpha = 0.1f)
 
     // Helpers
     val pickImages =
@@ -306,7 +317,6 @@ fun AddNoteScreen(
         }
 
     // --- Функция сохранения ---
-    // Добавляем явное указание типа : () -> Unit или Unit в конце
     val onSaveClick: () -> Unit = {
         if (title.isNotBlank() || description.isNotBlank()) {
             val updatedNote = Note(
@@ -332,8 +342,9 @@ fun AddNoteScreen(
                 viewModel.addNote(updatedNote)
             }
 
+            // Показ Interstitial
             if (notes.size >= 5 && myInterstitialAds != null) {
-                myInterstitialAds.show(activity)
+                myInterstitialAds?.show(activity)
             } else {
                 navController.navigateUp()
             }
@@ -343,9 +354,8 @@ fun AddNoteScreen(
         Unit
     }
 
-    // --- DIALOGS (IOS STYLE) ---
-
-    // 1. Цвет (Шторка снизу)
+    // --- DIALOGS ---
+    // (Код диалогов iOS стиля оставляем тот же, он хороший)
     if (showColorSheet) {
         ModalBottomSheet(
             onDismissRequest = { showColorSheet = false },
@@ -397,7 +407,6 @@ fun AddNoteScreen(
         }
     }
 
-    // 2. Задача (iOS Alert)
     if (showAddTaskDialog) {
         IOSAddTaskDialog(
             onDismiss = { showAddTaskDialog = false },
@@ -408,16 +417,15 @@ fun AddNoteScreen(
         )
     }
 
-    // 3. Фото за рекламу (iOS Alert)
     if (showAddPhotoDialog) {
         IOSAdsDialog(
             onDismiss = { showAddPhotoDialog = false },
             onWatch = {
                 showAddPhotoDialog = false
-                isAdsLoading = true
+                // Показываем рекламу для фото
                 showAd(rewardedAd, rewardedAdLoader, activity) {
+                    // Коллбэк награды
                     scope.launch {
-                        isAdsLoading = false
                         pickImages.launch("image/*")
                     }
                 }
@@ -479,19 +487,29 @@ fun AddNoteScreen(
         FullscreenImageDialog(imagePath = it, onDismiss = { fullscreenImagePath = null })
     }
 
+    if (isAdsLoading) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(color = Color.Black.copy(alpha = 0.4f)),
+            contentAlignment = Alignment.Center
+        ) {
+            LoadingDialog()
+        }
+    }
+
     Scaffold(
         containerColor = animatedBackgroundColor,
         topBar = {
-            // --- IOS TOP BAR (Прозрачный) ---
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 8.dp, vertical = 8.dp)
-                    .statusBarsPadding(), // Учитываем статус бар
+                    .statusBarsPadding(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Кнопка Назад (Шеврон + Текст "Назад")
+                // Кнопка Назад
                 Row(
                     modifier = Modifier
                         .clip(RoundedCornerShape(8.dp))
@@ -501,36 +519,18 @@ fun AddNoteScreen(
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBackIos,
-                        contentDescription = null, // Декоративный элемент, текст рядом есть
-                        tint = actionItemsColor, // iOS Blue
+                        contentDescription = null,
+                        tint = actionItemsColor,
                         modifier = Modifier.size(20.dp)
                     )
-                    // Текст кнопки (обычно "Назад" или название предыдущего экрана)
-                    // В твоем коде настроек использовался "back_button"
                     Text(
                         text = stringResource(R.string.back_button),
                         style = MaterialTheme.typography.bodyLarge,
                         color = actionItemsColor
                     )
                 }
-//                // Кнопка НАЗАД (Шеврон)
-//                TextButton(
-//                    onClick = onSaveClick,
-//                    colors = ButtonDefaults.textButtonColors(contentColor = contentColor)
-//                ) {
-//                    Icon(
-//                        imageVector = Icons.AutoMirrored.Filled.ArrowBackIos,
-//                        contentDescription = null,
-//                        modifier = Modifier.size(20.dp)
-//                    )
-//                    Text(
-//                        text = stringResource(R.string.notes),
-//                        style = MaterialTheme.typography.bodyLarge
-//                    )
-//                }
 
-                // Кнопка СОХРАНИТЬ (Готово)
-                // Показываем более ярко, если есть изменения (здесь упрощенно всегда "Готово")
+                // Кнопка Сохранить
                 TextButton(
                     onClick = onSaveClick,
                     enabled = !isLoading,
@@ -544,60 +544,44 @@ fun AddNoteScreen(
             }
         },
         bottomBar = {
-            // --- IOS TOOLBAR (Плоский, часть фона) ---
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 12.dp)
                     .navigationBarsPadding()
-                    .imePadding(), // Чтобы поднимался над клавиатурой
+                    .imePadding(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // 1. Чеклист
                 IconButton(onClick = { showAddTaskDialog = true }) {
                     Icon(
-                        imageVector = Icons.Rounded.CheckBox,
+                        Icons.Rounded.CheckBox,
                         contentDescription = "Checklist",
                         tint = contentColor,
                         modifier = Modifier.size(24.dp)
                     )
                 }
-
-                // 2. Фото
                 IconButton(onClick = {
                     if (photos.size < 5) {
                         if (photos.size == 4) showAddPhotoDialog =
                             true else pickImages.launch("image/*")
                     }
                 }) {
-                    if (isAdsLoading) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(20.dp),
-                            color = contentColor,
-                            strokeWidth = 2.dp
-                        )
-                    } else {
-                        Icon(
-                            imageVector = Icons.Default.Image,
-                            contentDescription = "Photo",
-                            tint = contentColor,
-                            modifier = Modifier.size(24.dp)
-                        )
-                    }
+                    Icon(
+                        Icons.Default.Image,
+                        contentDescription = "Photo",
+                        tint = contentColor,
+                        modifier = Modifier.size(24.dp)
+                    )
                 }
-
-                // 3. Цвет
                 IconButton(onClick = { showColorSheet = true }) {
                     Icon(
-                        painter = painterResource(R.drawable.palette_icon),
+                        painterResource(R.drawable.palette_icon),
                         contentDescription = "Color",
                         tint = contentColor,
                         modifier = Modifier.size(24.dp)
                     )
                 }
-
-                // 4. Напоминание
                 IconButton(onClick = { showDatePicker = true; isReminder = true }) {
                     Icon(
                         imageVector = if (isReminder) Icons.Default.NotificationsActive else Icons.Default.NotificationsNone,
@@ -609,7 +593,6 @@ fun AddNoteScreen(
             }
         }
     ) { padding ->
-        // --- КОНТЕНТ ---
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -617,7 +600,7 @@ fun AddNoteScreen(
                 .padding(top = 12.dp)
                 .verticalScroll(scrollState)
         ) {
-            // Дата создания (сверху, серая)
+            // Дата
             Text(
                 text = getFriendlyDate(note?.createdAt ?: System.currentTimeMillis()),
                 style = MaterialTheme.typography.labelMedium,
@@ -628,7 +611,7 @@ fun AddNoteScreen(
                 textAlign = TextAlign.Center
             )
 
-            // ЗАГОЛОВОК (Large Title)
+            // Заголовок
             Box(modifier = Modifier.padding(horizontal = 20.dp)) {
                 if (title.isEmpty()) {
                     Text(
@@ -651,7 +634,7 @@ fun AddNoteScreen(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // ТЕКСТ (Body)
+            // Текст
             Box(modifier = Modifier
                 .padding(horizontal = 20.dp)
                 .fillMaxWidth()) {
@@ -670,7 +653,7 @@ fun AddNoteScreen(
                     onValueChange = { description = it },
                     textStyle = MaterialTheme.typography.bodyLarge.copy(
                         color = contentColor,
-                        fontSize = 17.sp, // iOS size
+                        fontSize = 17.sp,
                         lineHeight = 24.sp
                     ),
                     cursorBrush = SolidColor(contentColor),
@@ -757,7 +740,6 @@ fun AddNoteScreen(
                 }
                 Spacer(modifier = Modifier.height(24.dp))
             }
-
             // ФОТОГРАФИИ
             if (photos.isNotEmpty()) {
                 LazyRow(
@@ -807,6 +789,46 @@ fun AddNoteScreen(
     }
 }
 
+// Функция показа с обработкой логики
+private fun showAd(
+    rewardedAd: RewardedAd?,
+    rewardedAdLoader: RewardedAdLoader?,
+    activity: Activity?,
+    onRewarded: () -> Unit
+) {
+    if (rewardedAd != null && activity != null) {
+        rewardedAd.setAdEventListener(object : RewardedAdEventListener {
+            override fun onAdShown() {}
+            override fun onRewarded(reward: Reward) {
+                onRewarded()
+            }
+
+            override fun onAdFailedToShow(adError: AdError) {
+                // Если не удалось показать - пробуем перезагрузить и даем награду (фоллбэк)
+                rewardedAdLoader?.loadAd(
+                    AdRequestConfiguration.Builder(App.platformConfig.adsConfig.rewardedAdsId)
+                        .build()
+                )
+                onRewarded()
+            }
+
+            override fun onAdDismissed() {
+                rewardedAdLoader?.loadAd(
+                    AdRequestConfiguration.Builder(App.platformConfig.adsConfig.rewardedAdsId)
+                        .build()
+                )
+            }
+
+            override fun onAdClicked() {}
+            override fun onAdImpression(impressionData: ImpressionData?) {}
+        })
+        rewardedAd.show(activity)
+    } else {
+        // Если рекламы нет совсем - даем награду (или можно показать Toast "Загрузка...")
+        onRewarded()
+    }
+}
+
 // --- ВСПОМОГАТЕЛЬНЫЕ ДИАЛОГИ (ВСТАВИТЬ ВНИЗ ФАЙЛА) ---
 
 @Composable
@@ -851,9 +873,11 @@ fun IOSAddTaskDialog(onDismiss: () -> Unit, onAdd: (String) -> Unit) {
                         .padding(12.dp)
                         .focusRequester(focusRequester)
                 )
-                Row(modifier = Modifier
-                    .padding(top = 16.dp)
-                    .height(44.dp)) {
+                Row(
+                    modifier = Modifier
+                        .padding(top = 16.dp)
+                        .height(44.dp)
+                ) {
                     Box(
                         modifier = Modifier
                             .weight(1f)
@@ -978,57 +1002,4 @@ private fun loadRewardedAd(rewardedAdLoader: RewardedAdLoader?) {
     val adRequestConfiguration =
         AdRequestConfiguration.Builder(App.platformConfig.adsConfig.rewardedAdsId).build()
     rewardedAdLoader?.loadAd(adRequestConfiguration)
-}
-
-private fun showAd(
-    rewardedAd: RewardedAd?,
-    rewardedAdLoader: RewardedAdLoader?,
-    activity: Activity?,
-    onRewarded: () -> Unit
-) {
-    var isRewarded = false
-    rewardedAd?.apply {
-        setAdEventListener(object : RewardedAdEventListener {
-            override fun onAdShown() {
-                // Called when ad is shown.
-            }
-
-            override fun onRewarded(reward: Reward) {
-                isRewarded = true
-                // ВЫЗЫВАЕМ onRewarded СРАЗУ ПОСЛЕ НАГРАДЫ
-//                 onRewarded()
-            }
-
-            override fun onAdFailedToShow(adError: AdError) {
-                // Called when an RewardedAd failed to show
-                rewardedAd.setAdEventListener(null)
-                loadRewardedAd(rewardedAdLoader = rewardedAdLoader)
-            }
-
-            override fun onAdDismissed() {
-                // Called when ad is dismissed.
-                rewardedAd.setAdEventListener(null)
-                loadRewardedAd(rewardedAdLoader = rewardedAdLoader)
-
-                // ЕСЛИ НАГРАДА НЕ БЫЛА ВРУЧЕНА, НО РЕКЛАМА БЫЛА ПОЛНОСТЬЮ ПРОСМОТРЕНА
-                if (isRewarded) {
-                    // Можно также вызвать onRewarded() здесь, если хотите давать награду за любой просмотр
-                    onRewarded()
-                }
-            }
-
-            override fun onAdClicked() {
-                // Called when a click is recorded for an ad.
-            }
-
-            override fun onAdImpression(impressionData: ImpressionData?) {
-                // Called when an impression is recorded for an ad.
-            }
-        })
-        if (activity != null)
-            show(activity = activity)
-    } ?: run {
-        // Если реклама не загружена, всё равно разрешаем добавить фото
-        onRewarded()
-    }
 }

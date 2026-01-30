@@ -121,7 +121,7 @@
     <string name="streak_days">%d days</string>
     <string name="all_done_title">All goals reached! 🎉</string>
     <string name="progress_status">%d of %d done</string>
-    <string name="habit_new_title">New Habit</string>
+    <string name="habit_new_title">New\nHabit</string>
     <string name="habit_edit_title">Edit Habit</string>
     <string name="habit_name_hint">Name (e.g. Water)</string>
     <string name="habit_frequency">Frequency</string>
