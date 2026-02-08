@@ -99,7 +99,6 @@ class MainActivity : ComponentActivity() {
         // Загружаем настройку темы при запуске
         val isDarkTheme = getDarkThemePreference(this)
 
-        MobileAds.initialize(baseContext) {}
         val analytics: FirebaseAnalytics = Firebase.analytics
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -209,13 +208,15 @@ class MainActivity : ComponentActivity() {
                         requestPermissions.launch(permissionsToRequest)
                     }
 
-                    if (opensForAd == 5) {
-                        if (showOpenAdsCounter == 0) {
-                            showOpenAds()
+                    MobileAds.initialize(baseContext) {
+                        if (opensForAd == 5) {
+//                            if (showOpenAdsCounter == 0) {
+                                showOpenAds()
+//                            }
+                        } else {
+                            opensForAd++
+                            sharedPreferences.edit { putInt("open_counter", opensForAd) }
                         }
-                    } else {
-                        opensForAd++
-                        sharedPreferences.edit { putInt("open_counter", opensForAd) }
                     }
                 }
 
@@ -363,20 +364,20 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun showOpenAds() {
-        currentAdLoadAttempt = 0
+//        currentAdLoadAttempt = 0
         loadOpenAdWithRetry()
     }
 
     private fun loadOpenAdWithRetry() {
         // Увеличиваем счетчик попыток
-        currentAdLoadAttempt++
+//        currentAdLoadAttempt++
 
-        if (currentAdLoadAttempt > maxAdLoadAttempts) {
+//        if (currentAdLoadAttempt > maxAdLoadAttempts) {
             // Достигнуто максимальное количество попыток
-            Log.d("AdLoad", "Max load attempts reached: $maxAdLoadAttempts")
-            showOpenAdsCounter = 1 // Сбрасываем счетчик показа
-            return
-        }
+//            Log.d("AdLoad", "Max load attempts reached: $maxAdLoadAttempts")
+//            showOpenAdsCounter = 1 // Сбрасываем счетчик показа
+//            return
+//        }
 
         Log.d("AdLoad", "Attempting to load ad (attempt $currentAdLoadAttempt/$maxAdLoadAttempts)")
 
@@ -388,7 +389,7 @@ class MainActivity : ComponentActivity() {
         val appOpenAdEventListener = object : AppOpenAdEventListener {
             override fun onAdShown() {
                 Log.d("AdLoad", "Ad shown successfully")
-                showOpenAdsCounter = 1 // Увеличиваем счетчик показа
+//                showOpenAdsCounter = 1 // Увеличиваем счетчик показа
             }
 
             override fun onAdDismissed() {
@@ -413,13 +414,13 @@ class MainActivity : ComponentActivity() {
                 Log.d("AdLoad", "Ad failed to load: ${error}. Attempt $currentAdLoadAttempt/$maxAdLoadAttempts")
 
                 // Рассчитываем задержку для следующей попытки (экспоненциальная задержка)
-                val retryDelay = calculateRetryDelay(currentAdLoadAttempt)
+//                val retryDelay = calculateRetryDelay(currentAdLoadAttempt)
 
                 // Планируем следующую попытку через задержку
-                handler = Handler(Looper.getMainLooper())
-                handler?.postDelayed({
-                    loadOpenAdWithRetry()
-                }, retryDelay)
+//                handler = Handler(Looper.getMainLooper())
+//                handler?.postDelayed({
+//                    loadOpenAdWithRetry()
+//                }, retryDelay)
             }
 
             override fun onAdLoaded(appOpenAd: AppOpenAd) {
@@ -429,7 +430,7 @@ class MainActivity : ComponentActivity() {
                 appOpenAd.show(this@MainActivity)
 
                 // Сброс счетчика попыток при успешной загрузке
-                currentAdLoadAttempt = 0
+//                currentAdLoadAttemptAttempt = 0
             }
         }
 

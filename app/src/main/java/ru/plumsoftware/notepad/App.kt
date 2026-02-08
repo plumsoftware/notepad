@@ -11,7 +11,7 @@ class App : Application() {
         super.onCreate()
         App.applicationContext = this
 
-        val platformConfig = PlatformConfig.RuStoreConfig()
+        val platformConfig = PlatformConfig.HuaweiConfig()
         val config = AppMetricaConfig.newConfigBuilder(platformConfig.appMetricaId).build()
         // Initializing the AppMetrica SDK.
         AppMetrica.activate(this, config)
@@ -20,6 +20,6 @@ class App : Application() {
     companion object {
         lateinit var applicationContext: Context
         // Не забываем менять платформ конфиг в двух местах
-        val platformConfig = PlatformConfig.RuStoreConfig()
+        val platformConfig = PlatformConfig.HuaweiConfig()
     }
 }
