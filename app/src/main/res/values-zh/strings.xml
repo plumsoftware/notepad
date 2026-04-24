@@ -152,6 +152,9 @@
     <string name="onboard_5_title">设置与安全</string>
     <string name="onboard_5_desc">在设置中，您可以更改主题，为隐藏文件夹设置密码，或再次查看此教程。</string>
 
+    <string name="onboard_voice_title">语音输入</string>
+    <string name="onboard_voice_desc">随时随地创建笔记。点击麦克风图标即可快速听写文本。</string>
+
     <string name="templates_title">模板</string>
     <string name="tpl_water">喝水</string>
     <string name="tpl_sport">运动</string>

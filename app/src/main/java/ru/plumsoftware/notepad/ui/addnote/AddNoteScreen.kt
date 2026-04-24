@@ -2,10 +2,21 @@ package ru.plumsoftware.notepad.ui.addnote
 
 import android.annotation.SuppressLint
 import android.app.Activity
+import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.Color.luminance
+import android.os.Bundle
+import android.speech.RecognizerIntent
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -48,6 +59,7 @@ import androidx.compose.material.icons.rounded.Call
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.CheckBox
 import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.RadioButtonUnchecked
 import androidx.compose.material3.AlertDialog
@@ -75,6 +87,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -86,6 +99,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
@@ -103,6 +117,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.core.content.ContextCompat
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import ru.plumsoftware.notepad.R
@@ -150,17 +165,14 @@ fun AddNoteScreen(
     var rewardedAd: RewardedAd? by remember { mutableStateOf(null) }
     var myInterstitialAds: InterstitialAd? by remember { mutableStateOf(null) }
 
-    // Флаг загрузки (покажем спиннер или заблокируем кнопки, если нужно, но обычно это фоновый процесс)
     var isAdsLoading by remember { mutableStateOf(false) }
 
-    // Счетчики попыток
     var rewardedRetryCount by remember { mutableIntStateOf(0) }
     var interstitialRetryCount by remember { mutableIntStateOf(0) }
     val maxRetries = 5
 
     val context = LocalContext.current
 
-    // Loaders (создаем один раз)
     val rewardedAdLoader = remember { RewardedAdLoader(context) }
     val interstitialAdsLoader = remember { InterstitialAdLoader(activity) }
 
@@ -172,8 +184,6 @@ fun AddNoteScreen(
     }
 
     // --- ADS LOAD LOGIC ---
-
-    // 1. Загрузка Rewarded Ad с повторами
     LaunchedEffect(rewardedRetryCount) {
         if (rewardedAd == null && rewardedRetryCount < maxRetries) {
             isAdsLoading = true
@@ -184,11 +194,6 @@ fun AddNoteScreen(
                 }
 
                 override fun onAdFailedToLoad(error: AdRequestError) {
-                    // Ошибка -> пробуем снова через задержку
-                    // Используем корутину внутри листенера нельзя, поэтому меняем стейт,
-                    // что триггернет LaunchedEffect снова.
-                    // Но LaunchedEffect уже запущен.
-                    // Лучший способ в Compose для ретраев - это простой рекурсивный вызов или изменение стейта.
                     rewardedRetryCount++
                 }
             })
@@ -198,23 +203,19 @@ fun AddNoteScreen(
         }
     }
 
-    // 2. Загрузка Interstitial Ad с повторами
     LaunchedEffect(interstitialRetryCount) {
         if (myInterstitialAds == null && interstitialRetryCount < maxRetries) {
             interstitialAdsLoader.setAdLoadListener(object : InterstitialAdLoadListener {
                 override fun onAdLoaded(interstitialAd: InterstitialAd) {
                     myInterstitialAds = interstitialAd
-                    // Настраиваем слушатель закрытия сразу
                     myInterstitialAds?.setAdEventListener(object : InterstitialAdEventListener {
                         override fun onAdClicked() {}
                         override fun onAdDismissed() {
                             navController.navigateUp()
                         }
-
                         override fun onAdFailedToShow(adError: AdError) {
                             navController.navigateUp()
                         }
-
                         override fun onAdImpression(impressionData: ImpressionData?) {}
                         override fun onAdShown() {}
                     })
@@ -255,40 +256,30 @@ fun AddNoteScreen(
     var showAddTaskDialog by remember { mutableStateOf(false) }
     var showAddPhotoDialog by remember { mutableStateOf(false) }
     var showColorSheet by remember { mutableStateOf(false) }
+    var showVoiceDialog by remember { mutableStateOf(false) } // State для диалога микрофона
     var fullscreenImagePath by remember { mutableStateOf<String?>(null) }
 
     val isLoading by viewModel.isLoading.collectAsState()
     val notes by viewModel.notes.collectAsState()
     val exoPlayer = rememberExoPlayer()
 
-    // Colors
+    // --- Цвета в стиле iOS (минимализм, пастель) ---
     val availableColors = listOf(
-        Color(0xFFFFFFFF), // White (Default) - Чистый белый
-        Color(0xFFEBEBF5), // System Gray 6 (Light) - Нейтральный серый
-
-        Color(0xFFFFB3AC), // Soft Red (iOS Red Tint)
-        Color(0xFFFFDCA8), // Soft Orange (iOS Orange Tint)
-        Color(0xFFFFF0A6), // Soft Yellow (iOS Yellow Tint)
-        Color(0xFFC7F0BD), // Soft Green (iOS Green Tint)
-        Color(0xFFB5EAD7), // Mint (Popular Aesthetic)
-        Color(0xFFBCE9FF), // Soft Teal / Cyan
-        Color(0xFFA8D3FF), // Soft Blue (iOS Blue Tint)
-        Color(0xFFC4D9FF), // Periwinkle (Indigo Tint)
-        Color(0xFFE4C2FA), // Soft Purple (iOS Purple Tint)
-        Color(0xFFFFC2D1), // Soft Pink (iOS Pink Tint)
-        Color(0xFFE6BEB3), // Soft Brown
-
-        // Более насыщенные, но безопасные варианты (если хочется цвета поярче)
-        Color(0xFF81D4FA), // Sky Blue
-        Color(0xFFC5E1A5), // Light Green
-        Color(0xFFFFCC80)  // Orange Peel
+        Color(0xFFFFFFFF), // Белый (White)
+        Color(0xFFF2F2F7), // Светло-серый (System Gray 6)
+        Color(0xFFFFF5BA), // Пастельный желтый (Apple Notes Yellow)
+        Color(0xFFFFD8D6), // Нежный красный/розовый (Pastel Red)
+        Color(0xFFFFE5B4), // Нежный оранжевый (Pastel Orange)
+        Color(0xFFD4F0CD), // Мятно-зеленый (Pastel Green)
+        Color(0xFFB4D5FA), // Светло-голубой (Pastel Blue)
+        Color(0xFFD5C0F9), // Нежно-фиолетовый (Pastel Purple)
+        Color(0xFFEBE3D5)  // Нежно-коричневый/бежевый (Pastel Brown)
     )
 
     var selectedColor by remember {
-        mutableStateOf(note?.color?.let { Color(it.toULong()) } ?: availableColors.last())
+        mutableStateOf(note?.color?.let { Color(it.toULong()) } ?: availableColors.first())
     }
 
-    // --- Animation & Contrast ---
     val animatedBackgroundColor by animateColorAsState(
         targetValue = selectedColor,
         animationSpec = tween(durationMillis = 500),
@@ -296,25 +287,49 @@ fun AddNoteScreen(
     )
 
     val isLightBg = luminance(selectedColor.toArgb()) > 0.5f
-    val isNeutralBg =
-        selectedColor == Color.White || selectedColor == Color.Black || selectedColor == Color.Transparent
+    val isNeutralBg = selectedColor == Color.White || selectedColor == Color.Black || selectedColor == Color.Transparent
 
-    val actionItemsColor =
-        if (isNeutralBg) MaterialTheme.colorScheme.primary else if (isLightBg) Color.Black else Color.White
+    val actionItemsColor = if (isNeutralBg) MaterialTheme.colorScheme.primary else if (isLightBg) Color.Black else Color.White
     val contentColor = if (isLightBg) Color.Black else Color.White
     val placeholderColor = contentColor.copy(alpha = 0.4f)
 
-    // Helpers
-    val pickImages =
-        rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
-            uri?.let {
-                if (photos.size < 5) {
-                    photos = photos.toMutableList().apply {
-                        saveImageToInternalStorage(context, it)?.let { path -> add(path) }
-                    }
+    // --- Helpers: Фото ---
+    val pickImages = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        uri?.let {
+            if (photos.size < 5) {
+                photos = photos.toMutableList().apply {
+                    saveImageToInternalStorage(context, it)?.let { path -> add(path) }
                 }
             }
         }
+    }
+
+    // --- Helpers: Собственный голосовой ввод (SpeechRecognizer) ---
+    val micPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            if (android.speech.SpeechRecognizer.isRecognitionAvailable(context)) {
+                showVoiceDialog = true
+            } else {
+                Toast.makeText(context, "Распознавание речи недоступно", Toast.LENGTH_SHORT).show()
+            }
+        } else {
+            Toast.makeText(context, "Требуется разрешение на микрофон", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    val onMicClick = {
+        if (ContextCompat.checkSelfPermission(context, android.Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
+            if (android.speech.SpeechRecognizer.isRecognitionAvailable(context)) {
+                showVoiceDialog = true
+            } else {
+                Toast.makeText(context, "Распознавание речи недоступно", Toast.LENGTH_SHORT).show()
+            }
+        } else {
+            micPermissionLauncher.launch(android.Manifest.permission.RECORD_AUDIO)
+        }
+    }
 
     // --- Функция сохранения ---
     val onSaveClick: () -> Unit = {
@@ -342,7 +357,6 @@ fun AddNoteScreen(
                 viewModel.addNote(updatedNote)
             }
 
-            // Показ Interstitial
             if (notes.size >= 5 && myInterstitialAds != null) {
                 myInterstitialAds?.show(activity)
             } else {
@@ -355,11 +369,24 @@ fun AddNoteScreen(
     }
 
     // --- DIALOGS ---
-    // (Код диалогов iOS стиля оставляем тот же, он хороший)
+
+    // Диалог Голосового Ввода
+    if (showVoiceDialog) {
+        IOSVoiceInputDialog(
+            context = context,
+            onDismiss = { showVoiceDialog = false },
+            onResult = { recognizedText ->
+                val separator = if (description.isNotEmpty() && !description.endsWith(" ")) " " else ""
+                description += "$separator$recognizedText"
+                showVoiceDialog = false
+            }
+        )
+    }
+
     if (showColorSheet) {
         ModalBottomSheet(
             onDismissRequest = { showColorSheet = false },
-            containerColor = if (isLightBg) Color(0xFFF2F2F7) else Color(0xFF1C1C1E), // iOS system bg
+            containerColor = if (isLightBg) Color(0xFFF2F2F7) else Color(0xFF1C1C1E),
             dragHandle = {
                 Box(
                     modifier = Modifier
@@ -394,9 +421,7 @@ fun AddNoteScreen(
                                 .background(color)
                                 .border(
                                     width = if (selectedColor == color) 3.dp else 1.dp,
-                                    color = if (selectedColor == color) MaterialTheme.colorScheme.primary else Color.Gray.copy(
-                                        0.3f
-                                    ),
+                                    color = if (selectedColor == color) MaterialTheme.colorScheme.primary else Color.Gray.copy(0.3f),
                                     shape = CircleShape
                                 )
                                 .clickable { selectedColor = color }
@@ -422,9 +447,7 @@ fun AddNoteScreen(
             onDismiss = { showAddPhotoDialog = false },
             onWatch = {
                 showAddPhotoDialog = false
-                // Показываем рекламу для фото
                 showAd(rewardedAd, rewardedAdLoader, activity) {
-                    // Коллбэк награды
                     scope.launch {
                         pickImages.launch("image/*")
                     }
@@ -433,7 +456,6 @@ fun AddNoteScreen(
         )
     }
 
-    // System Date Pickers (как просил - системные)
     if (showDatePicker) {
         val datePickerState = rememberDatePickerState(
             initialSelectedDateMillis = reminderDate ?: System.currentTimeMillis()
@@ -449,13 +471,12 @@ fun AddNoteScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showDatePicker = false; isReminder = false }) {
-                    Text(
-                        stringResource(R.string.cancel)
-                    )
+                    Text(stringResource(R.string.cancel))
                 }
             }
         ) { DatePicker(state = datePickerState) }
     }
+
     if (showTimePicker) {
         val timePickerState = rememberTimePickerState(
             initialHour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY),
@@ -482,7 +503,6 @@ fun AddNoteScreen(
         )
     }
 
-    // Fullscreen
     fullscreenImagePath?.let {
         FullscreenImageDialog(imagePath = it, onDismiss = { fullscreenImagePath = null })
     }
@@ -509,7 +529,6 @@ fun AddNoteScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Кнопка Назад
                 Row(
                     modifier = Modifier
                         .clip(RoundedCornerShape(8.dp))
@@ -530,7 +549,6 @@ fun AddNoteScreen(
                     )
                 }
 
-                // Кнопка Сохранить
                 TextButton(
                     onClick = onSaveClick,
                     enabled = !isLoading,
@@ -563,8 +581,7 @@ fun AddNoteScreen(
                 }
                 IconButton(onClick = {
                     if (photos.size < 5) {
-                        if (photos.size == 4) showAddPhotoDialog =
-                            true else pickImages.launch("image/*")
+                        if (photos.size == 4) showAddPhotoDialog = true else pickImages.launch("image/*")
                     }
                 }) {
                     Icon(
@@ -574,6 +591,17 @@ fun AddNoteScreen(
                         modifier = Modifier.size(24.dp)
                     )
                 }
+
+                // Кнопка Кастомного Микрофона
+                IconButton(onClick = onMicClick) {
+                    Icon(
+                        Icons.Rounded.Mic,
+                        contentDescription = "Voice input",
+                        tint = contentColor,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+
                 IconButton(onClick = { showColorSheet = true }) {
                     Icon(
                         painterResource(R.drawable.palette_icon),
@@ -600,7 +628,6 @@ fun AddNoteScreen(
                 .padding(top = 12.dp)
                 .verticalScroll(scrollState)
         ) {
-            // Дата
             Text(
                 text = getFriendlyDate(note?.createdAt ?: System.currentTimeMillis()),
                 style = MaterialTheme.typography.labelMedium,
@@ -611,7 +638,6 @@ fun AddNoteScreen(
                 textAlign = TextAlign.Center
             )
 
-            // Заголовок
             Box(modifier = Modifier.padding(horizontal = 20.dp)) {
                 if (title.isEmpty()) {
                     Text(
@@ -634,7 +660,6 @@ fun AddNoteScreen(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Текст
             Box(modifier = Modifier
                 .padding(horizontal = 20.dp)
                 .fillMaxWidth()) {
@@ -663,7 +688,6 @@ fun AddNoteScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // НАПОМИНАНИЕ (Чип внутри контента, если активно)
             if (isReminder && reminderDate != null) {
                 Row(
                     modifier = Modifier
@@ -697,7 +721,6 @@ fun AddNoteScreen(
                 Spacer(modifier = Modifier.height(24.dp))
             }
 
-            // ЗАДАЧИ
             if (tasks.isNotEmpty()) {
                 tasks.forEachIndexed { index, task ->
                     Row(
@@ -740,7 +763,6 @@ fun AddNoteScreen(
                 }
                 Spacer(modifier = Modifier.height(24.dp))
             }
-            // ФОТОГРАФИИ
             if (photos.isNotEmpty()) {
                 LazyRow(
                     contentPadding = PaddingValues(horizontal = 20.dp),
@@ -757,7 +779,6 @@ fun AddNoteScreen(
                                     .clip(RoundedCornerShape(12.dp))
                                     .clickable { fullscreenImagePath = path }
                             )
-                            // Кнопка удалить (круглый крестик)
                             Box(
                                 modifier = Modifier
                                     .padding(6.dp)
@@ -781,7 +802,7 @@ fun AddNoteScreen(
                         }
                     }
                 }
-                Spacer(modifier = Modifier.height(100.dp)) // Отступ снизу
+                Spacer(modifier = Modifier.height(100.dp))
             }
         }
 
@@ -789,7 +810,6 @@ fun AddNoteScreen(
     }
 }
 
-// Функция показа с обработкой логики
 private fun showAd(
     rewardedAd: RewardedAd?,
     rewardedAdLoader: RewardedAdLoader?,
@@ -797,39 +817,156 @@ private fun showAd(
     onRewarded: () -> Unit
 ) {
     if (rewardedAd != null && activity != null) {
+        var isEarnedReward = false
         rewardedAd.setAdEventListener(object : RewardedAdEventListener {
             override fun onAdShown() {}
             override fun onRewarded(reward: Reward) {
-                onRewarded()
+                isEarnedReward = true
             }
-
             override fun onAdFailedToShow(adError: AdError) {
-                // Если не удалось показать - пробуем перезагрузить и даем награду (фоллбэк)
-                rewardedAdLoader?.loadAd(
-                    AdRequestConfiguration.Builder(App.platformConfig.adsConfig.rewardedAdsId)
-                        .build()
-                )
                 onRewarded()
             }
-
             override fun onAdDismissed() {
-                rewardedAdLoader?.loadAd(
-                    AdRequestConfiguration.Builder(App.platformConfig.adsConfig.rewardedAdsId)
-                        .build()
-                )
+                if (isEarnedReward) {
+                    onRewarded()
+                }
             }
-
             override fun onAdClicked() {}
             override fun onAdImpression(impressionData: ImpressionData?) {}
         })
         rewardedAd.show(activity)
     } else {
-        // Если рекламы нет совсем - даем награду (или можно показать Toast "Загрузка...")
         onRewarded()
     }
 }
 
-// --- ВСПОМОГАТЕЛЬНЫЕ ДИАЛОГИ (ВСТАВИТЬ ВНИЗ ФАЙЛА) ---
+// --- ВСПОМОГАТЕЛЬНЫЕ ДИАЛОГИ ---
+
+@Composable
+fun IOSVoiceInputDialog(
+    context: Context,
+    onDismiss: () -> Unit,
+    onResult: (String) -> Unit
+) {
+    var partialText by remember { mutableStateOf("Слушаю...") }
+    val speechRecognizer = remember { android.speech.SpeechRecognizer.createSpeechRecognizer(context) }
+
+    // Анимация пульсации (iOS style)
+    val infiniteTransition = rememberInfiniteTransition(label = "pulse")
+    val scale by infiniteTransition.animateFloat(
+        initialValue = 1f,
+        targetValue = 1.35f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(800, easing = LinearOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "scale"
+    )
+    val alpha by infiniteTransition.animateFloat(
+        initialValue = 0.4f,
+        targetValue = 0f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(800, easing = LinearOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "alpha"
+    )
+
+    DisposableEffect(Unit) {
+        val listener = object : android.speech.RecognitionListener {
+            override fun onReadyForSpeech(params: Bundle?) {}
+            override fun onBeginningOfSpeech() {}
+            override fun onRmsChanged(rmsdB: Float) {}
+            override fun onBufferReceived(buffer: ByteArray?) {}
+            override fun onEndOfSpeech() {}
+            override fun onError(error: Int) {
+                onDismiss() // Если ошибка (например, тишина), просто закрываем
+            }
+            override fun onResults(results: Bundle?) {
+                val matches = results?.getStringArrayList(android.speech.SpeechRecognizer.RESULTS_RECOGNITION)
+                if (!matches.isNullOrEmpty()) {
+                    onResult(matches[0])
+                } else {
+                    onDismiss()
+                }
+            }
+            override fun onPartialResults(partialResults: Bundle?) {
+                val matches = partialResults?.getStringArrayList(android.speech.SpeechRecognizer.RESULTS_RECOGNITION)
+                if (!matches.isNullOrEmpty()) {
+                    partialText = matches[0]
+                }
+            }
+            override fun onEvent(eventType: Int, params: Bundle?) {}
+        }
+
+        speechRecognizer.setRecognitionListener(listener)
+        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+            putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL, android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE, java.util.Locale.getDefault())
+            putExtra(android.speech.RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
+        }
+        speechRecognizer.startListening(intent)
+
+        onDispose {
+            speechRecognizer.stopListening()
+            speechRecognizer.destroy()
+        }
+    }
+
+    Dialog(onDismissRequest = onDismiss) {
+        Box(
+            modifier = Modifier
+                .width(280.dp)
+                .clip(RoundedCornerShape(20.dp))
+                .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.95f))
+                .padding(vertical = 32.dp, horizontal = 24.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                // Пульсирующий микрофон
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier.size(80.dp)
+                ) {
+                    // Анимированная тень/пульс
+                    Box(
+                        modifier = Modifier
+                            .size(64.dp)
+                            .scale(scale)
+                            .background(Color(0xFFFF3B30).copy(alpha = alpha), CircleShape)
+                    )
+                    // Статичный кружок с микрофоном
+                    Box(
+                        modifier = Modifier
+                            .size(64.dp)
+                            .background(Color(0xFFFF3B30).copy(alpha = 0.15f), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Rounded.Mic,
+                            contentDescription = "Listening",
+                            tint = Color(0xFFFF3B30),
+                            modifier = Modifier.size(32.dp)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // Текст диктовки
+                Text(
+                    text = partialText,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    textAlign = TextAlign.Center,
+                    maxLines = 3
+                )
+            }
+        }
+    }
+}
 
 @Composable
 fun IOSAddTaskDialog(onDismiss: () -> Unit, onAdd: (String) -> Unit) {
@@ -993,13 +1130,11 @@ fun IOSAdsDialog(onDismiss: () -> Unit, onWatch: () -> Unit) {
     }
 }
 
-// Дата для шапки: "15 января, 10:30"
 fun getFriendlyDate(time: Long): String {
     return SimpleDateFormat("d MMMM, HH:mm", Locale.getDefault()).format(Date(time))
 }
 
 private fun loadRewardedAd(rewardedAdLoader: RewardedAdLoader?) {
-    val adRequestConfiguration =
-        AdRequestConfiguration.Builder(App.platformConfig.adsConfig.rewardedAdsId).build()
+    val adRequestConfiguration = AdRequestConfiguration.Builder(App.platformConfig.adsConfig.rewardedAdsId).build()
     rewardedAdLoader?.loadAd(adRequestConfiguration)
 }

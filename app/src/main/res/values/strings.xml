@@ -152,6 +152,9 @@
     <string name="onboard_5_title">Настройки и Безопасность</string>
     <string name="onboard_5_desc">В настройках можно сменить тему, установить код-пароль для Секретной папки или посмотреть это обучение снова.</string>
 
+    <string name="onboard_voice_title">Голосовой ввод</string>
+    <string name="onboard_voice_desc">Создавайте заметки на ходу. Нажмите на иконку микрофона, чтобы быстро надиктовать текст.</string>
+
     <!-- Templates -->
     <string name="templates_title">Готовые шаблоны</string>
     <string name="tpl_water">Пить воду</string>

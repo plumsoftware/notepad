@@ -23,6 +23,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.EditNote
+import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.TouchApp
 import androidx.compose.material3.Button
@@ -57,7 +58,7 @@ fun OnboardingScreen(
         OnboardingPage(
             title = R.string.onboard_1_title,
             description = R.string.onboard_1_desc,
-            icon = Icons.Rounded.AutoAwesome // Или R.drawable...
+            icon = Icons.Rounded.AutoAwesome
         ),
         OnboardingPage(
             title = R.string.onboard_2_title,
@@ -69,10 +70,16 @@ fun OnboardingScreen(
             description = R.string.onboard_3_desc,
             icon = Icons.Rounded.CheckCircle
         ),
+        // --- НОВАЯ СТРАНИЦА ПРО МИКРОФОН ---
+        OnboardingPage(
+            title = R.string.onboard_voice_title,
+            description = R.string.onboard_voice_desc,
+            icon = Icons.Rounded.Mic
+        ),
         OnboardingPage(
             title = R.string.onboard_4_title,
             description = R.string.onboard_4_desc,
-            icon = Icons.Rounded.TouchApp // Long press icon
+            icon = Icons.Rounded.TouchApp
         ),
         OnboardingPage(
             title = R.string.onboard_5_title,
@@ -85,9 +92,8 @@ fun OnboardingScreen(
     val coroutineScope = rememberCoroutineScope()
 
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.background, // Белый/Черный фон
+        containerColor = MaterialTheme.colorScheme.background,
         bottomBar = {
-            // Нижняя панель с кнопкой и точками
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -132,7 +138,7 @@ fun OnboardingScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(56.dp),
-                    shape = RoundedCornerShape(16.dp), // iOS Button shape
+                    shape = RoundedCornerShape(16.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.primary,
                         contentColor = Color.White
@@ -146,7 +152,6 @@ fun OnboardingScreen(
             }
         }
     ) { padding ->
-        // Контент Пейджера
         HorizontalPager(
             state = pagerState,
             modifier = Modifier
@@ -156,7 +161,6 @@ fun OnboardingScreen(
             OnboardingPageContent(page = pages[pageIndex])
         }
 
-        // Кнопка "Пропустить" сверху справа (опционально, но полезно)
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -184,9 +188,6 @@ fun OnboardingPageContent(page: OnboardingPage) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        // Иконка или Картинка
-        // Можно использовать Image(painterResource(id), ...) для скриншотов
-        // Пока используем векторные иконки в круге
         Box(
             modifier = Modifier
                 .size(120.dp)
@@ -204,7 +205,6 @@ fun OnboardingPageContent(page: OnboardingPage) {
 
         Spacer(modifier = Modifier.height(40.dp))
 
-        // Заголовок
         Text(
             text = stringResource(page.title),
             style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
@@ -214,10 +214,9 @@ fun OnboardingPageContent(page: OnboardingPage) {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Описание
         Text(
             text = stringResource(page.description),
-            style = MaterialTheme.typography.bodyLarge, // 17sp iOS
+            style = MaterialTheme.typography.bodyLarge,
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
             lineHeight = 24.sp
@@ -228,5 +227,5 @@ fun OnboardingPageContent(page: OnboardingPage) {
 data class OnboardingPage(
     val title: Int,
     val description: Int,
-    val icon: ImageVector // Или Int (DrawableRes) если будешь ставить скриншоты
+    val icon: ImageVector
 )

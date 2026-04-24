@@ -152,6 +152,9 @@
     <string name="onboard_5_title">Settings &amp; Security</string>
     <string name="onboard_5_desc">In Settings, you can change the theme, set a passcode for the Hidden Folder, or view this tutorial again.</string>
 
+    <string name="onboard_voice_title">Voice Input</string>
+    <string name="onboard_voice_desc">Create notes on the go. Tap the microphone icon to quickly dictate text.</string>
+
     <string name="templates_title">Templates</string>
     <string name="tpl_water">Drink Water</string>
     <string name="tpl_sport">Workout</string>
