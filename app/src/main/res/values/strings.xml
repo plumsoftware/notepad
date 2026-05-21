@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Ежедневник</string>
+    <string name="app_name">Блокнот</string>
 
     <!-- Общие действия -->
     <string name="ok_">OK</string>

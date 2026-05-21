@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Daily Planner</string>
+    <string name="app_name">Notepad</string>
 
     <!-- General Actions -->
     <string name="ok_">OK</string>
