@@ -184,6 +184,7 @@ fun AddNoteScreen(
     }
 
     // --- ADS LOAD LOGIC ---
+    // Загрузка Rewarded
     LaunchedEffect(rewardedRetryCount) {
         if (rewardedAd == null && rewardedRetryCount < maxRetries) {
             isAdsLoading = true
@@ -203,6 +204,7 @@ fun AddNoteScreen(
         }
     }
 
+    // Загрузка Interstitial
     LaunchedEffect(interstitialRetryCount) {
         if (myInterstitialAds == null && interstitialRetryCount < maxRetries) {
             interstitialAdsLoader.setAdLoadListener(object : InterstitialAdLoadListener {
@@ -211,11 +213,13 @@ fun AddNoteScreen(
                     myInterstitialAds?.setAdEventListener(object : InterstitialAdEventListener {
                         override fun onAdClicked() {}
                         override fun onAdDismissed() {
-                            navController.navigateUp()
+                            navController.navigateUp() // Выходим после закрытия рекламы
                         }
+
                         override fun onAdFailedToShow(adError: AdError) {
-                            navController.navigateUp()
+                            navController.navigateUp() // Выходим, если произошла ошибка показа
                         }
+
                         override fun onAdImpression(impressionData: ImpressionData?) {}
                         override fun onAdShown() {}
                     })
@@ -228,7 +232,6 @@ fun AddNoteScreen(
             interstitialAdsLoader.loadAd(interstitialConfig)
         }
     }
-
 
     // --- State ---
     val scrollState = rememberScrollState()
@@ -256,14 +259,14 @@ fun AddNoteScreen(
     var showAddTaskDialog by remember { mutableStateOf(false) }
     var showAddPhotoDialog by remember { mutableStateOf(false) }
     var showColorSheet by remember { mutableStateOf(false) }
-    var showVoiceDialog by remember { mutableStateOf(false) } // State для диалога микрофона
+    var showVoiceDialog by remember { mutableStateOf(false) }
     var fullscreenImagePath by remember { mutableStateOf<String?>(null) }
 
     val isLoading by viewModel.isLoading.collectAsState()
     val notes by viewModel.notes.collectAsState()
     val exoPlayer = rememberExoPlayer()
 
-    // --- Цвета в стиле iOS (минимализм, пастель) ---
+    // --- Цвета в стиле iOS ---
     val availableColors = listOf(
         Color(0xFFFFFFFF), // Белый (White)
         Color(0xFFF2F2F7), // Светло-серый (System Gray 6)
@@ -287,24 +290,26 @@ fun AddNoteScreen(
     )
 
     val isLightBg = luminance(selectedColor.toArgb()) > 0.5f
-    val isNeutralBg = selectedColor == Color.White || selectedColor == Color.Black || selectedColor == Color.Transparent
+    val isNeutralBg =
+        selectedColor == Color.White || selectedColor == Color.Black || selectedColor == Color.Transparent
 
-    val actionItemsColor = if (isNeutralBg) MaterialTheme.colorScheme.primary else if (isLightBg) Color.Black else Color.White
+    val actionItemsColor =
+        if (isNeutralBg) MaterialTheme.colorScheme.primary else if (isLightBg) Color.Black else Color.White
     val contentColor = if (isLightBg) Color.Black else Color.White
     val placeholderColor = contentColor.copy(alpha = 0.4f)
 
-    // --- Helpers: Фото ---
-    val pickImages = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
-        uri?.let {
-            if (photos.size < 5) {
-                photos = photos.toMutableList().apply {
-                    saveImageToInternalStorage(context, it)?.let { path -> add(path) }
+    // --- Helpers: Фото и Голос ---
+    val pickImages =
+        rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+            uri?.let {
+                if (photos.size < 5) {
+                    photos = photos.toMutableList().apply {
+                        saveImageToInternalStorage(context, it)?.let { path -> add(path) }
+                    }
                 }
             }
         }
-    }
 
-    // --- Helpers: Собственный голосовой ввод (SpeechRecognizer) ---
     val micPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { isGranted ->
@@ -320,7 +325,11 @@ fun AddNoteScreen(
     }
 
     val onMicClick = {
-        if (ContextCompat.checkSelfPermission(context, android.Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
+        if (ContextCompat.checkSelfPermission(
+                context,
+                android.Manifest.permission.RECORD_AUDIO
+            ) == PackageManager.PERMISSION_GRANTED
+        ) {
             if (android.speech.SpeechRecognizer.isRecognitionAvailable(context)) {
                 showVoiceDialog = true
             } else {
@@ -331,52 +340,66 @@ fun AddNoteScreen(
         }
     }
 
-    // --- Функция сохранения ---
-    val onSaveClick: () -> Unit = {
-        if (title.isNotBlank() || description.isNotBlank()) {
-            val updatedNote = Note(
-                id = note?.id ?: UUID.randomUUID().toString(),
-                title = title,
-                description = description,
-                color = selectedColor.value.toLong(),
-                tasks = tasks,
-                createdAt = note?.createdAt ?: System.currentTimeMillis(),
-                reminderDate = if (isReminder) reminderDate else null,
-                photos = photos,
-                groupId = note?.groupId ?: "0"
-            )
+    // ==========================================
+    // --- ЕДИНАЯ ЛОГИКА ВЫХОДА И СОХРАНЕНИЯ ---
+    // ==========================================
+    var isExiting by remember { mutableStateOf(false) } // Защита от двойного клика
 
-            if (isEditing) {
-                if (note.photos != photos) {
-                    deleteImagesFromStorage(context, note.photos.filterNot { photos.contains(it) })
+    val performExit: () -> Unit = {
+        if (!isExiting) {
+            isExiting = true
+
+            // Сохраняем, если есть текст
+            if (title.isNotBlank() || description.isNotBlank()) {
+                val updatedNote = Note(
+                    id = note?.id ?: UUID.randomUUID().toString(),
+                    title = title,
+                    description = description,
+                    color = selectedColor.value.toLong(),
+                    tasks = tasks,
+                    createdAt = note?.createdAt ?: System.currentTimeMillis(),
+                    reminderDate = if (isReminder) reminderDate else null,
+                    photos = photos,
+                    groupId = note?.groupId ?: "0"
+                )
+
+                if (isEditing) {
+                    if (note?.photos != photos) {
+                        deleteImagesFromStorage(
+                            context,
+                            note?.photos?.filterNot { photos.contains(it) } ?: emptyList())
+                    }
+                    playSound(context, exoPlayer, R.raw.note_create)
+                    viewModel.updateNote(updatedNote, context)
+                } else {
+                    playSound(context, exoPlayer, R.raw.note_create)
+                    viewModel.addNote(updatedNote)
                 }
-                playSound(context, exoPlayer, R.raw.note_create)
-                viewModel.updateNote(updatedNote, context)
-            } else {
-                playSound(context, exoPlayer, R.raw.note_create)
-                viewModel.addNote(updatedNote)
             }
 
-            if (notes.size >= 5 && myInterstitialAds != null) {
+            // Всегда показываем рекламу на выходе
+            if (myInterstitialAds != null) {
                 myInterstitialAds?.show(activity)
             } else {
                 navController.navigateUp()
             }
-        } else {
-            navController.navigateUp()
         }
-        Unit
     }
 
-    // --- DIALOGS ---
+    // Перехват системного жеста "Назад" (Свайп / Нижняя кнопка телефона)
+    androidx.activity.compose.BackHandler(enabled = !isExiting) {
+        performExit()
+    }
 
-    // Диалог Голосового Ввода
+
+    // --- DIALOGS ---
     if (showVoiceDialog) {
         IOSVoiceInputDialog(
             context = context,
             onDismiss = { showVoiceDialog = false },
             onResult = { recognizedText ->
-                val separator = if (description.isNotEmpty() && !description.endsWith(" ")) " " else ""
+                val separator =
+                    if (description.isNotEmpty() && !description.endsWith(" ")) " " else ""
                 description += "$separator$recognizedText"
                 showVoiceDialog = false
             }
@@ -399,12 +422,7 @@ fun AddNoteScreen(
             }
         ) {
             Column(
-                modifier = Modifier.padding(
-                    bottom = 40.dp,
-                    start = 16.dp,
-                    end = 16.dp,
-                    top = 16.dp
-                )
+                modifier = Modifier.padding(bottom = 40.dp, start = 16.dp, end = 16.dp, top = 16.dp)
             ) {
                 Text(
                     text = stringResource(R.string.note_color),
@@ -421,7 +439,9 @@ fun AddNoteScreen(
                                 .background(color)
                                 .border(
                                     width = if (selectedColor == color) 3.dp else 1.dp,
-                                    color = if (selectedColor == color) MaterialTheme.colorScheme.primary else Color.Gray.copy(0.3f),
+                                    color = if (selectedColor == color) MaterialTheme.colorScheme.primary else Color.Gray.copy(
+                                        0.3f
+                                    ),
                                     shape = CircleShape
                                 )
                                 .clickable { selectedColor = color }
@@ -529,10 +549,11 @@ fun AddNoteScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                // Кнопка Назад
                 Row(
                     modifier = Modifier
                         .clip(RoundedCornerShape(8.dp))
-                        .clickable { onSaveClick() }
+                        .clickable(enabled = !isExiting) { performExit() } // Используем performExit
                         .padding(start = 8.dp, end = 8.dp, top = 8.dp, bottom = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -549,9 +570,10 @@ fun AddNoteScreen(
                     )
                 }
 
+                // Кнопка Сохранить
                 TextButton(
-                    onClick = onSaveClick,
-                    enabled = !isLoading,
+                    onClick = performExit, // Используем performExit
+                    enabled = !isLoading && !isExiting,
                     colors = ButtonDefaults.textButtonColors(contentColor = contentColor)
                 ) {
                     Text(
@@ -581,7 +603,8 @@ fun AddNoteScreen(
                 }
                 IconButton(onClick = {
                     if (photos.size < 5) {
-                        if (photos.size == 4) showAddPhotoDialog = true else pickImages.launch("image/*")
+                        if (photos.size == 4) showAddPhotoDialog =
+                            true else pickImages.launch("image/*")
                     }
                 }) {
                     Icon(
@@ -592,7 +615,6 @@ fun AddNoteScreen(
                     )
                 }
 
-                // Кнопка Кастомного Микрофона
                 IconButton(onClick = onMicClick) {
                     Icon(
                         Icons.Rounded.Mic,
@@ -660,9 +682,11 @@ fun AddNoteScreen(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            Box(modifier = Modifier
-                .padding(horizontal = 20.dp)
-                .fillMaxWidth()) {
+            Box(
+                modifier = Modifier
+                    .padding(horizontal = 20.dp)
+                    .fillMaxWidth()
+            ) {
                 if (description.isEmpty() && tasks.isEmpty()) {
                     Text(
                         text = stringResource(R.string.desc),
@@ -823,14 +847,17 @@ private fun showAd(
             override fun onRewarded(reward: Reward) {
                 isEarnedReward = true
             }
+
             override fun onAdFailedToShow(adError: AdError) {
                 onRewarded()
             }
+
             override fun onAdDismissed() {
                 if (isEarnedReward) {
                     onRewarded()
                 }
             }
+
             override fun onAdClicked() {}
             override fun onAdImpression(impressionData: ImpressionData?) {}
         })
@@ -849,9 +876,9 @@ fun IOSVoiceInputDialog(
     onResult: (String) -> Unit
 ) {
     var partialText by remember { mutableStateOf("Слушаю...") }
-    val speechRecognizer = remember { android.speech.SpeechRecognizer.createSpeechRecognizer(context) }
+    val speechRecognizer =
+        remember { android.speech.SpeechRecognizer.createSpeechRecognizer(context) }
 
-    // Анимация пульсации (iOS style)
     val infiniteTransition = rememberInfiniteTransition(label = "pulse")
     val scale by infiniteTransition.animateFloat(
         initialValue = 1f,
@@ -880,28 +907,36 @@ fun IOSVoiceInputDialog(
             override fun onBufferReceived(buffer: ByteArray?) {}
             override fun onEndOfSpeech() {}
             override fun onError(error: Int) {
-                onDismiss() // Если ошибка (например, тишина), просто закрываем
+                onDismiss()
             }
+
             override fun onResults(results: Bundle?) {
-                val matches = results?.getStringArrayList(android.speech.SpeechRecognizer.RESULTS_RECOGNITION)
+                val matches =
+                    results?.getStringArrayList(android.speech.SpeechRecognizer.RESULTS_RECOGNITION)
                 if (!matches.isNullOrEmpty()) {
                     onResult(matches[0])
                 } else {
                     onDismiss()
                 }
             }
+
             override fun onPartialResults(partialResults: Bundle?) {
-                val matches = partialResults?.getStringArrayList(android.speech.SpeechRecognizer.RESULTS_RECOGNITION)
+                val matches =
+                    partialResults?.getStringArrayList(android.speech.SpeechRecognizer.RESULTS_RECOGNITION)
                 if (!matches.isNullOrEmpty()) {
                     partialText = matches[0]
                 }
             }
+
             override fun onEvent(eventType: Int, params: Bundle?) {}
         }
 
         speechRecognizer.setRecognitionListener(listener)
         val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-            putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL, android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            putExtra(
+                android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+                android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM
+            )
             putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE, java.util.Locale.getDefault())
             putExtra(android.speech.RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
         }
@@ -925,19 +960,16 @@ fun IOSVoiceInputDialog(
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Пульсирующий микрофон
                 Box(
                     contentAlignment = Alignment.Center,
                     modifier = Modifier.size(80.dp)
                 ) {
-                    // Анимированная тень/пульс
                     Box(
                         modifier = Modifier
                             .size(64.dp)
                             .scale(scale)
                             .background(Color(0xFFFF3B30).copy(alpha = alpha), CircleShape)
                     )
-                    // Статичный кружок с микрофоном
                     Box(
                         modifier = Modifier
                             .size(64.dp)
@@ -952,10 +984,7 @@ fun IOSVoiceInputDialog(
                         )
                     }
                 }
-
                 Spacer(modifier = Modifier.height(24.dp))
-
-                // Текст диктовки
                 Text(
                     text = partialText,
                     style = MaterialTheme.typography.bodyLarge,
@@ -1135,6 +1164,7 @@ fun getFriendlyDate(time: Long): String {
 }
 
 private fun loadRewardedAd(rewardedAdLoader: RewardedAdLoader?) {
-    val adRequestConfiguration = AdRequestConfiguration.Builder(App.platformConfig.adsConfig.rewardedAdsId).build()
+    val adRequestConfiguration =
+        AdRequestConfiguration.Builder(App.platformConfig.adsConfig.rewardedAdsId).build()
     rewardedAdLoader?.loadAd(adRequestConfiguration)
 }
