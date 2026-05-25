@@ -1,5 +1,6 @@
 package ru.plumsoftware.notepad.ui.habit.add_habit
 
+import android.annotation.SuppressLint
 import android.app.Activity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -49,6 +50,7 @@ import ru.plumsoftware.notepad.ui.settings.IOSSettingsGroup
 import ru.plumsoftware.notepad.ui.settings.IOSSettingsItem
 import ru.plumsoftware.notepad.ui.settings.IOSSwitch
 
+@SuppressLint("MutableCollectionMutableState", "UnrememberedMutableInteractionSource")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddHabitScreen(
@@ -58,44 +60,41 @@ fun AddHabitScreen(
     themeState: ThemeState,
     habitId: String? = null
 ) {
-    // --- ADS SETUP ---
-    var myInterstitialAds: InterstitialAd? = null
+    // --- ADS STATE ---
+    var myInterstitialAds: InterstitialAd? by remember { mutableStateOf(null) }
+    var interstitialRetryCount by remember { mutableIntStateOf(0) }
+    val maxRetries = 1
+
     val interstitialAdsLoader = remember { InterstitialAdLoader(activity) }
+    val interstitialConfig = remember {
+        AdRequestConfiguration.Builder(App.platformConfig.adsConfig.interstitialAdsId).build()
+    }
 
-    LaunchedEffect(key1 = Unit) {
-        // Загружаем рекламу при запуске экрана
-        interstitialAdsLoader.setAdLoadListener(object : InterstitialAdLoadListener {
-            override fun onAdLoaded(interstitialAd: InterstitialAd) {
-                myInterstitialAds = interstitialAd
-                myInterstitialAds.setAdEventListener(object : InterstitialAdEventListener {
-                    override fun onAdClicked() {
+    // --- ADS LOAD LOGIC ---
+    LaunchedEffect(interstitialRetryCount) {
+        if (myInterstitialAds == null && interstitialRetryCount < maxRetries) {
+            interstitialAdsLoader.setAdLoadListener(object : InterstitialAdLoadListener {
+                override fun onAdLoaded(interstitialAd: InterstitialAd) {
+                    myInterstitialAds = interstitialAd
+                    myInterstitialAds?.setAdEventListener(object : InterstitialAdEventListener {
+                        override fun onAdClicked() {}
+                        override fun onAdDismissed() {
+                            navController.navigateUp() // Выходим из экрана после закрытия рекламы
+                        }
+                        override fun onAdFailedToShow(adError: AdError) {
+                            navController.navigateUp() // Выходим, если реклама не смогла показаться
+                        }
+                        override fun onAdImpression(impressionData: ImpressionData?) {}
+                        override fun onAdShown() {}
+                    })
+                }
 
-                    }
-
-                    override fun onAdDismissed() {
-                        navController.navigateUp()
-                    }
-
-                    override fun onAdFailedToShow(adError: AdError) {
-                        navController.navigateUp()
-                    }
-
-                    override fun onAdImpression(impressionData: ImpressionData?) {
-
-                    }
-
-                    override fun onAdShown() {
-
-                    }
-                })
-            }
-
-            override fun onAdFailedToLoad(error: AdRequestError) {}
-        })
-
-        val interstitialConfig =
-            AdRequestConfiguration.Builder(App.platformConfig.adsConfig.interstitialAdsId).build()
-        interstitialAdsLoader.loadAd(interstitialConfig)
+                override fun onAdFailedToLoad(error: AdRequestError) {
+                    interstitialRetryCount++
+                }
+            })
+            interstitialAdsLoader.loadAd(interstitialConfig)
+        }
     }
 
     // --- ЛОГИКА ЭКРАНА ---
@@ -109,7 +108,6 @@ fun AddHabitScreen(
     }
 
     val isEditing = habitId != null
-
     val context = activity.baseContext
 
     // States
@@ -129,11 +127,7 @@ fun AddHabitScreen(
             selectedColor = Color(habit.color.toULong())
             isDaily = habit.frequency == HabitFrequency.DAILY
             selectedDays = if (habit.repeatDays.isNotEmpty()) habit.repeatDays.toSet() else setOf(
-                2,
-                3,
-                4,
-                5,
-                6
+                2, 3, 4, 5, 6
             )
             hasReminder = habit.isReminderEnabled
             reminderHour = habit.reminderHour ?: 9
@@ -148,6 +142,59 @@ fun AddHabitScreen(
     // Dialogs
     var showTimePicker by remember { mutableStateOf(false) }
     var showEmojiPicker by remember { mutableStateOf(false) }
+
+    // ==========================================
+    // --- ЕДИНАЯ ЛОГИКА ВЫХОДА И СОХРАНЕНИЯ ---
+    // ==========================================
+    var isExiting by remember { mutableStateOf(false) } // Защита от двойного клика
+
+    val performExit: (isSaveAction: Boolean) -> Unit = { isSaveAction ->
+        if (!isExiting) {
+            isExiting = true
+
+            // 1. Сохраняем, если это явное действие "Сохранить"
+            if (isSaveAction && title.isNotBlank()) {
+                if (isEditing) {
+                    viewModel.updateHabit(
+                        editingHabit!!.copy(
+                            title = title,
+                            color = selectedColor.value.toLong(),
+                            emoji = emoji,
+                            frequency = if (isDaily) HabitFrequency.DAILY else HabitFrequency.SPECIFIC_DAYS,
+                            repeatDays = if (isDaily) emptyList() else selectedDays.toList(),
+                            isReminderEnabled = hasReminder,
+                            reminderHour = if (hasReminder) reminderHour else null,
+                            reminderMinute = if (hasReminder) reminderMinute else null
+                        )
+                    )
+                } else {
+                    viewModel.createHabit(
+                        title = title,
+                        color = selectedColor.value.toLong(),
+                        emoji = emoji,
+                        isDaily = isDaily,
+                        days = selectedDays,
+                        hasReminder = hasReminder,
+                        hour = reminderHour,
+                        minute = reminderMinute
+                    )
+                }
+            }
+
+            // 2. Показываем рекламу ПРИ ВЫХОДЕ, если привычек >= 2
+            if (habits.size >= 2 && myInterstitialAds != null) {
+                myInterstitialAds?.show(activity)
+            } else {
+                navController.navigateUp()
+            }
+        }
+    }
+
+    // Перехват системного жеста "Назад" (Свайп / Нижняя кнопка телефона)
+    // При свайпе мы НЕ сохраняем данные (isSaveAction = false), но показываем рекламу
+    androidx.activity.compose.BackHandler(enabled = !isExiting) {
+        performExit(false)
+    }
 
     Scaffold(
         containerColor = backgroundColor,
@@ -164,7 +211,7 @@ fun AddHabitScreen(
                 Row(
                     modifier = Modifier
                         .clip(RoundedCornerShape(8.dp))
-                        .clickable { navController.popBackStack() }
+                        .clickable(enabled = !isExiting) { performExit(false) } // ВЫХОД БЕЗ СОХРАНЕНИЯ
                         .padding(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -183,9 +230,7 @@ fun AddHabitScreen(
 
                 // Заголовок
                 Text(
-                    text = if (isEditing) stringResource(R.string.habit_edit_title) else stringResource(
-                        R.string.habit_new_title
-                    ),
+                    text = if (isEditing) stringResource(R.string.habit_edit_title) else stringResource(R.string.habit_new_title),
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                     color = MaterialTheme.colorScheme.onBackground
                 )
@@ -196,41 +241,8 @@ fun AddHabitScreen(
                     color = if (title.isNotBlank()) MaterialTheme.colorScheme.primary else Color.Gray,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier
-                        .clickable(enabled = title.isNotBlank()) {
-                            if (title.isNotBlank()) {
-                                if (isEditing) {
-                                    viewModel.updateHabit(
-                                        editingHabit!!.copy(
-                                            title = title,
-                                            color = selectedColor.value.toLong(),
-                                            emoji = emoji,
-                                            frequency = if (isDaily) HabitFrequency.DAILY else HabitFrequency.SPECIFIC_DAYS,
-                                            repeatDays = if (isDaily) emptyList() else selectedDays.toList(),
-                                            isReminderEnabled = hasReminder,
-                                            reminderHour = if (hasReminder) reminderHour else null,
-                                            reminderMinute = if (hasReminder) reminderMinute else null
-                                        )
-                                    )
-                                } else {
-                                    viewModel.createHabit(
-                                        title = title,
-                                        color = selectedColor.value.toLong(),
-                                        emoji = emoji,
-                                        isDaily = isDaily,
-                                        days = selectedDays,
-                                        hasReminder = hasReminder,
-                                        hour = reminderHour,
-                                        minute = reminderMinute
-                                    )
-                                }
-
-                                // 🔥 ПОКАЗ РЕКЛАМЫ ПОСЛЕ СОХРАНЕНИЯ 🔥
-                                if (habits.isNotEmpty() && myInterstitialAds != null) {
-                                    myInterstitialAds.show(activity)
-                                } else {
-                                    navController.navigateUp()
-                                }
-                            }
+                        .clickable(enabled = title.isNotBlank() && !isExiting) {
+                            performExit(true) // ВЫХОД С СОХРАНЕНИЕМ
                         }
                         .padding(8.dp),
                     style = MaterialTheme.typography.bodyLarge
@@ -249,7 +261,7 @@ fun AddHabitScreen(
                 IOSSectionHeader(
                     text = stringResource(R.string.templates_title),
                     topPadding = 10.dp
-                ) // "Готовые шаблоны"
+                )
 
                 LazyRow(
                     contentPadding = PaddingValues(horizontal = 16.dp),
@@ -259,20 +271,12 @@ fun AddHabitScreen(
                         TemplateItem(
                             template = template,
                             onClick = {
-                                // ЗАПОЛНЯЕМ ПОЛЯ ПРИ КЛИКЕ
-                                title =
-                                    context.getString(template.titleRes) // Получаем строку из ресурса
+                                title = context.getString(template.titleRes)
                                 emoji = template.emoji
                                 selectedColor = template.color
                                 isDaily = template.isDaily
-                                selectedDays = if (template.isDaily) setOf(
-                                    2,
-                                    3,
-                                    4,
-                                    5,
-                                    6
-                                ) else template.days // Если Daily, сбрасываем или ставим дефолт для UI
-                                hasReminder = false // Напоминание всегда выкл
+                                selectedDays = if (template.isDaily) setOf(2, 3, 4, 5, 6) else template.days
+                                hasReminder = false
                             }
                         )
                     }
@@ -394,7 +398,7 @@ fun AddHabitScreen(
         { emoji = it; showEmojiPicker = false })
 }
 
-// Компоненты UI (Те, что я давал раньше, на всякий случай повторю кратко)
+// Компоненты UI
 @Composable
 fun IOSSectionHeader(text: String, topPadding: Dp = 24.dp) {
     Text(
@@ -410,60 +414,17 @@ data class HabitTemplate(
     val emoji: String,
     val color: Color,
     val isDaily: Boolean,
-    val days: Set<Int> // 1=Sun, 2=Mon ... 7=Sat
+    val days: Set<Int>
 )
 
-// Список шаблонов
 fun getHabitTemplates(): List<HabitTemplate> {
     return listOf(
-        // 1. Вода (Ежедневно, Голубой)
-        HabitTemplate(
-            titleRes = R.string.tpl_water,
-            emoji = "💧",
-            color = Color(0xFF5AC8FA), // iOS Teal/Blue
-            isDaily = true,
-            days = emptySet()
-        ),
-        // 2. Спорт (3 раза в неделю: Пн, Ср, Пт - Оранжевый)
-        HabitTemplate(
-            titleRes = R.string.tpl_sport,
-            emoji = "🏋️",
-            color = Color(0xFFFF9500), // iOS Orange
-            isDaily = false,
-            days = setOf(2, 4, 6) // Пн, Ср, Пт (Calendar constants)
-        ),
-        // 3. Чтение (Ежедневно, Зеленый)
-        HabitTemplate(
-            titleRes = R.string.tpl_read,
-            emoji = "📚",
-            color = Color(0xFF34C759), // iOS Green
-            isDaily = true,
-            days = emptySet()
-        ),
-        // 4. Сон (Ежедневно, Фиолетовый)
-        HabitTemplate(
-            titleRes = R.string.tpl_sleep,
-            emoji = "😴",
-            color = Color(0xFF5856D6), // iOS Indigo
-            isDaily = true,
-            days = emptySet()
-        ),
-        // 5. Медитация (Ежедневно, Розовый)
-        HabitTemplate(
-            titleRes = R.string.tpl_meditation,
-            emoji = "🧘",
-            color = Color(0xFFFF2D55), // iOS Pink
-            isDaily = true,
-            days = emptySet()
-        ),
-        // 6. Прогулка (Выходные, Синий)
-        HabitTemplate(
-            titleRes = R.string.tpl_walk,
-            emoji = "🚶",
-            color = Color(0xFF007AFF), // iOS Blue
-            isDaily = false,
-            days = setOf(1, 7) // Вс, Сб
-        )
+        HabitTemplate(R.string.tpl_water, "💧", Color(0xFF5AC8FA), true, emptySet()),
+        HabitTemplate(R.string.tpl_sport, "🏋️", Color(0xFFFF9500), false, setOf(2, 4, 6)),
+        HabitTemplate(R.string.tpl_read, "📚", Color(0xFF34C759), true, emptySet()),
+        HabitTemplate(R.string.tpl_sleep, "😴", Color(0xFF5856D6), true, emptySet()),
+        HabitTemplate(R.string.tpl_meditation, "🧘", Color(0xFFFF2D55), true, emptySet()),
+        HabitTemplate(R.string.tpl_walk, "🚶", Color(0xFF007AFF), false, setOf(1, 7))
     )
 }
 
@@ -474,18 +435,15 @@ fun TemplateItem(
 ) {
     Column(
         modifier = Modifier
-            .width(80.dp) // Фиксированная ширина
+            .width(80.dp)
             .clip(RoundedCornerShape(16.dp))
-            .background(template.color.copy(alpha = 0.15f)) // Полупрозрачный фон
+            .background(template.color.copy(alpha = 0.15f))
             .clickable(onClick = onClick)
             .padding(12.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Text(
-            text = template.emoji,
-            fontSize = 32.sp
-        )
+        Text(text = template.emoji, fontSize = 32.sp)
         Spacer(modifier = Modifier.height(8.dp))
         Text(
             text = stringResource(template.titleRes),
