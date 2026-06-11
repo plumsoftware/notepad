@@ -3,14 +3,12 @@ package ru.plumsoftware.notepad.ui.elements
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -22,30 +20,21 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Cancel
-import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -57,16 +46,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.luminance
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -77,6 +63,7 @@ import ru.plumsoftware.notepad.R
 import ru.plumsoftware.notepad.data.database.GroupWithCount
 import ru.plumsoftware.notepad.data.model.Group
 import ru.plumsoftware.notepad.ui.NoteViewModel
+import ru.plumsoftware.notepad.ui.theme.Dimens
 
 @Composable
 fun IOSGroupList(
@@ -92,140 +79,200 @@ fun IOSGroupList(
     val scrollState = rememberLazyListState()
     val haptic = LocalHapticFeedback.current
 
-    LazyRow(
-        state = scrollState,
+    Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 12.dp),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        contentPadding = PaddingValues(horizontal = 16.dp)
+            .padding(horizontal = Dimens.screenPaddingHorizontal)
+            .padding(bottom = Dimens.spacingM),
+        shape = MaterialTheme.shapes.medium,
+        color = MaterialTheme.colorScheme.surfaceVariant
     ) {
-        // Кнопка создания (+)
-        item {
-            IOSActionChip(
-                icon = Icons.Default.Add,
-                onClick = {
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                    onCreateGroup()
-                }
-            )
-        }
+        LazyRow(
+            state = scrollState,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(Dimens.spacingXs),
+            horizontalArrangement = Arrangement.spacedBy(Dimens.spacingXs),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            item {
+                FolderAddChip(
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        onCreateGroup()
+                    }
+                )
+            }
 
-        // Разделитель
-        item {
-            Box(
-                modifier = Modifier
-                    .height(24.dp)
-                    .width(1.dp)
-                    .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-            )
-        }
+            item {
+                FolderChip(
+                    title = stringResource(R.string.folder_all),
+                    count = totalCount,
+                    isSelected = selectedGroupId == "0",
+                    color = null,
+                    onClick = {
+                        onGroupSelected("0")
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    }
+                )
+            }
 
-        // Кнопка "Все"
-        item {
-            IOSGroupChip(
-                title = stringResource(R.string.all_notes),
-                count = totalCount,
-                isSelected = selectedGroupId == "0",
-                color = null,
-                onClick = {
-                    onGroupSelected("0")
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                }
-            )
-        }
+            item {
+                FolderSecureChip(
+                    count = secretCount,
+                    isSelected = selectedGroupId == NoteViewModel.SECURE_FOLDER_ID,
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        onSecureClick()
+                    }
+                )
+            }
 
-        item {
-            // Используем тот же IOSGroupChip, но с иконкой замка
-            IOSSecureGroupChip(
-                count = secretCount,
-                isSelected = selectedGroupId == NoteViewModel.SECURE_FOLDER_ID,
-                onClick = {
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                    onSecureClick()
-                }
-            )
-        }
-
-        // Список папок
-        items(groups, key = { it.group.id }) { item ->
-            IOSGroupChip(
-                title = item.group.title,
-                count = item.noteCount,
-                isSelected = selectedGroupId == item.group.id,
-                color = Color(item.group.color.toULong()),
-                onClick = {
-                    onGroupSelected(item.group.id)
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                },
-                onLongClick = {
-                    onDeleteGroup(item.group)
-                }
-            )
-        }
-    }
-}
-
-@Composable
-fun IOSSecureGroupChip(
-    count: Int,
-    isSelected: Boolean,
-    onClick: () -> Unit
-) {
-    // Анимация цветов
-    val backgroundColor by animateColorAsState(
-        targetValue = if (isSelected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-        animationSpec = tween(200)
-    )
-    val contentColor by animateColorAsState(
-        targetValue = if (isSelected) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.onSurface,
-        animationSpec = tween(200)
-    )
-
-    Box(
-        modifier = Modifier
-            .height(36.dp)
-            .clip(CircleShape)
-            .background(backgroundColor)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 14.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            // Иконка Замка (или скрытого глаза)
-            Icon(
-                // R.drawable.lock создай или используй Icons.Default.Lock
-                // Либо vector: Icons.Filled.Lock (или Outlined)
-                imageVector = Icons.Default.Lock,
-                contentDescription = null,
-                tint = if (isSelected) contentColor else MaterialTheme.colorScheme.error.copy(alpha = 0.8f), // Можно сделать красным замочек? Или обычным серым
-                modifier = Modifier.size(14.dp)
-            )
-
-            Spacer(modifier = Modifier.width(6.dp))
-
-            // Название "Скрытые"
-            Text(
-                text = stringResource(R.string.secure_folder), // <-- Добавь строку в strings.xml
-                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
-                color = contentColor
-            )
-
-            // Если заметок нет, все равно показываем папку, но счетчик скрываем
-            if (count > 0) {
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(
-                    text = count.toString(),
-                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                    color = if (isSelected) contentColor.copy(alpha = 0.7f) else contentColor.copy(alpha = 0.5f)
+            items(groups, key = { it.group.id }) { item ->
+                FolderChip(
+                    title = item.group.title,
+                    count = item.noteCount,
+                    isSelected = selectedGroupId == item.group.id,
+                    color = Color(item.group.color.toULong()),
+                    onClick = {
+                        onGroupSelected(item.group.id)
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    },
+                    onLongClick = { onDeleteGroup(item.group) }
                 )
             }
         }
     }
 }
 
-// --- 2. ЭЛЕМЕНТ ГРУППЫ (CHIP) ---
+@Composable
+private fun FolderAddChip(onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .height(32.dp)
+            .clip(MaterialTheme.shapes.small)
+            .clickable(onClick = onClick)
+            .padding(horizontal = Dimens.spacingM),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = Icons.Default.Add,
+            contentDescription = stringResource(R.string.add_group),
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(Dimens.iconSizeMedium)
+        )
+    }
+}
+
+@Composable
+fun FolderSecureChip(
+    count: Int,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    FolderChip(
+        title = stringResource(R.string.secure_folder),
+        count = count,
+        isSelected = isSelected,
+        color = null,
+        leadingIcon = Icons.Default.Lock,
+        onClick = onClick
+    )
+}
+
+@Composable
+fun FolderChip(
+    title: String,
+    count: Int,
+    isSelected: Boolean,
+    color: Color?,
+    onClick: () -> Unit,
+    onLongClick: (() -> Unit)? = null,
+    leadingIcon: ImageVector? = null
+) {
+    val backgroundColor by animateColorAsState(
+        targetValue = if (isSelected) {
+            MaterialTheme.colorScheme.surface
+        } else {
+            Color.Transparent
+        },
+        animationSpec = tween(200),
+        label = "folderBg"
+    )
+    val contentColor by animateColorAsState(
+        targetValue = if (isSelected) {
+            MaterialTheme.colorScheme.onSurface
+        } else {
+            MaterialTheme.colorScheme.onSurfaceVariant
+        },
+        animationSpec = tween(200),
+        label = "folderText"
+    )
+
+    Box(
+        modifier = Modifier
+            .height(32.dp)
+            .clip(MaterialTheme.shapes.small)
+            .background(backgroundColor)
+            .pointerInput(Unit) {
+                detectTapGestures(
+                    onTap = { onClick() },
+                    onLongPress = { onLongClick?.invoke() }
+                )
+            }
+            .padding(horizontal = Dimens.spacingM),
+        contentAlignment = Alignment.Center
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
+        ) {
+            if (leadingIcon != null) {
+                Icon(
+                    imageVector = leadingIcon,
+                    contentDescription = null,
+                    tint = if (isSelected) {
+                        contentColor
+                    } else {
+                        MaterialTheme.colorScheme.primary
+                    },
+                    modifier = Modifier.size(Dimens.iconSizeSmall)
+                )
+                Spacer(modifier = Modifier.width(Dimens.spacingXs))
+            }
+
+            if (color != null && !isSelected) {
+                Box(
+                    modifier = Modifier
+                        .size(Dimens.dotSize)
+                        .background(color, CircleShape)
+                )
+                Spacer(modifier = Modifier.width(Dimens.spacingS))
+            }
+
+            Text(
+                text = title,
+                style = MaterialTheme.typography.labelLarge,
+                color = contentColor
+            )
+
+            if (count > 0) {
+                Spacer(modifier = Modifier.width(Dimens.spacingXs))
+                Text(
+                    text = count.toString(),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = contentColor.copy(alpha = 0.6f)
+                )
+            }
+        }
+    }
+}
+
+// Алиасы для обратной совместимости
+@Composable
+fun IOSSecureGroupChip(count: Int, isSelected: Boolean, onClick: () -> Unit) =
+    FolderSecureChip(count, isSelected, onClick)
+
 @Composable
 fun IOSGroupChip(
     title: String,
@@ -234,86 +281,11 @@ fun IOSGroupChip(
     color: Color?,
     onClick: () -> Unit,
     onLongClick: (() -> Unit)? = null
-) {
-    val backgroundColor by animateColorAsState(
-        targetValue = if (isSelected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-        animationSpec = tween(durationMillis = 200), label = "bgColor"
-    )
+) = FolderChip(title, count, isSelected, color, onClick, onLongClick)
 
-    val contentColor by animateColorAsState(
-        targetValue = if (isSelected) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.onSurface,
-        animationSpec = tween(durationMillis = 200), label = "textColor"
-    )
-
-    Box(
-        modifier = Modifier
-            .height(36.dp)
-            .clip(CircleShape)
-            .background(backgroundColor)
-            .pointerInput(Unit) {
-                detectTapGestures(
-                    onTap = { onClick() },
-                    onLongPress = { onLongClick?.invoke() }
-                )
-            }
-            .padding(horizontal = 14.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center
-        ) {
-            if (color != null && !isSelected) {
-                Box(
-                    modifier = Modifier
-                        .size(8.dp)
-                        .background(color, CircleShape)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-            }
-
-            Text(
-                text = title,
-                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
-                color = contentColor
-            )
-
-            if (count > 0) {
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(
-                    text = count.toString(),
-                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                    color = if (isSelected) contentColor.copy(alpha = 0.7f) else contentColor.copy(alpha = 0.5f)
-                )
-            }
-        }
-    }
-}
-
-// --- 3. КНОПКА ДЕЙСТВИЯ (Круглая с иконкой) ---
 @Composable
-fun IOSActionChip(
-    icon: ImageVector,
-    onClick: () -> Unit
-) {
-    Box(
-        modifier = Modifier
-            .size(36.dp)
-            .clip(CircleShape)
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-            .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.size(20.dp)
-        )
-    }
-}
+fun IOSActionChip(icon: ImageVector, onClick: () -> Unit) = FolderAddChip(onClick)
 
-// --- 4. ДИАЛОГ СОЗДАНИЯ ПАПКИ (IOS STYLE + RESOURCE FIX) ---
 @Composable
 fun IOSCreateGroupDialog(
     onDismiss: () -> Unit,
@@ -322,7 +294,6 @@ fun IOSCreateGroupDialog(
     var title by remember { mutableStateOf("") }
     val focusRequester = remember { FocusRequester() }
 
-    // Используем Color объекты сразу, чтобы избежать ошибки краша конвертации
     val colors = listOf(
         Color(0xFF4DB6AC), Color(0xFF81C784), Color(0xFFFFB74D), Color(0xFFE57373),
         Color(0xFFF06292), Color(0xFFBA68C8), Color(0xFF64B5F6), Color(0xFF4DD0E1),
@@ -354,7 +325,6 @@ fun IOSCreateGroupDialog(
                     .clickable(enabled = false) {},
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Заголовок: "Создать папку"
                 Text(
                     text = stringResource(R.string.create_group),
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
@@ -362,7 +332,6 @@ fun IOSCreateGroupDialog(
                     color = MaterialTheme.colorScheme.onSurface
                 )
 
-                // Описание: "Введите название"
                 Text(
                     text = stringResource(R.string.enter_group_name),
                     style = MaterialTheme.typography.bodySmall,
@@ -373,7 +342,6 @@ fun IOSCreateGroupDialog(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Поле ввода
                 BasicTextField(
                     value = title,
                     onValueChange = { title = it },
@@ -391,7 +359,6 @@ fun IOSCreateGroupDialog(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Box(modifier = Modifier.weight(1f)) {
                                 if (title.isEmpty()) {
-                                    // Плейсхолдер внутри поля
                                     Text(
                                         text = stringResource(R.string.enter_group_name),
                                         style = MaterialTheme.typography.bodyMedium,
@@ -416,7 +383,6 @@ fun IOSCreateGroupDialog(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Выбор цвета
                 LazyRow(
                     modifier = Modifier.fillMaxWidth(),
                     contentPadding = PaddingValues(horizontal = 16.dp),
@@ -432,7 +398,6 @@ fun IOSCreateGroupDialog(
                                 .clickable { selectedColor = color }
                         ) {
                             if (isSelected) {
-                                // Используем .luminance() напрямую из класса Color
                                 val isDark = color.luminance() < 0.5f
                                 Box(
                                     modifier = Modifier
@@ -449,9 +414,7 @@ fun IOSCreateGroupDialog(
                 Spacer(modifier = Modifier.height(24.dp))
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
 
-                // Кнопки
                 Row(modifier = Modifier.height(48.dp)) {
-                    // Отмена
                     Box(
                         modifier = Modifier
                             .weight(1f)
@@ -473,14 +436,12 @@ fun IOSCreateGroupDialog(
                             .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
                     )
 
-                    // Создать
                     Box(
                         modifier = Modifier
                             .weight(1f)
                             .fillMaxHeight()
                             .clickable(enabled = title.isNotBlank()) {
                                 if (title.isNotBlank()) {
-                                    // Отправляем ULong значение цвета
                                     onCreate(title, selectedColor.value)
                                 }
                             },

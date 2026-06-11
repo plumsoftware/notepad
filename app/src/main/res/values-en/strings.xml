@@ -23,6 +23,11 @@
     <string name="about_app">About App</string>
     <string name="rate_app">Rate App</string>
     <string name="daily_planner">Planner</string>
+    <string name="date_range_start">Start date</string>
+    <string name="date_range_end">End date</string>
+    <string name="ad_label">Ad</string>
+    <string name="ad_by_yandex">Yandex</string>
+    <string name="ad_domain_separator">%1$s</string>
     <string name="all_notes">All Notes</string>
     <string name="empty_notes_list">No notes here yet</string>
     <string name="empty_notes_description">Empty list</string>

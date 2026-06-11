@@ -110,91 +110,22 @@ fun IOSPinInputScreen(
 
             Spacer(modifier = Modifier.weight(1f))
 
-            // Клавиатура (Numpad)
-            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                val rows = listOf(
-                    listOf("1", "2", "3"),
-                    listOf("4", "5", "6"),
-                    listOf("7", "8", "9"),
-                    listOf("", "0", "back") // "" для выравнивания, "back" для удаления
-                )
-
-                rows.forEach { row ->
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(24.dp),
-                        modifier = Modifier.align(Alignment.CenterHorizontally)
-                    ) {
-                        row.forEach { digit ->
-                            if (digit.isEmpty()) {
-                                Spacer(modifier = Modifier.size(72.dp))
-                            } else if (digit == "back") {
-                                // Кнопка Удаления (только если есть что удалять или Отмена)
-                                if (pin.isNotEmpty()) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(72.dp)
-                                            .clickable(
-                                                interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
-                                                indication = null
-                                            ) {
-                                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                                pin = pin.dropLast(1)
-                                            },
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Text(
-                                            text = "Удалить", // Или иконка Backspace
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            color = MaterialTheme.colorScheme.onSurface
-                                        )
-                                    }
-                                } else if (onCancel != null) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(72.dp)
-                                            .clickable(
-                                                interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
-                                                indication = null
-                                            ) { onCancel() },
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Text("Отмена", color = MaterialTheme.colorScheme.onSurface)
-                                    }
-                                } else {
-                                    Spacer(modifier = Modifier.size(72.dp))
-                                }
-                            } else {
-                                // Цифровая кнопка
-                                NumButton(number = digit) {
-                                    if (pin.length < 4) {
-                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                        pin += digit
-                                    }
-                                }
-                            }
-                        }
+            PinKeypad(
+                onDigit = { digit ->
+                    if (pin.length < 4) {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        pin += digit.toString()
                     }
-                }
-            }
+                },
+                onDelete = {
+                    if (pin.isNotEmpty()) {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        pin = pin.dropLast(1)
+                    }
+                },
+                onCancel = onCancel
+            )
             Spacer(modifier = Modifier.height(30.dp))
         }
-    }
-}
-
-@Composable
-fun NumButton(number: String, onClick: () -> Unit) {
-    Box(
-        modifier = Modifier
-            .size(72.dp)
-            .clip(CircleShape)
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)) // Серый фон как в iOS
-            .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = number,
-            style = MaterialTheme.typography.headlineLarge.copy(fontSize = 32.sp, fontWeight = FontWeight.Normal),
-            color = MaterialTheme.colorScheme.onSurface
-        )
     }
 }

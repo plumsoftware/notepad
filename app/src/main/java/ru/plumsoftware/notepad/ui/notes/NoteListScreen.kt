@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
@@ -40,8 +41,13 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells.*
+import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridItemSpan
 import androidx.compose.foundation.lazy.staggeredgrid.items
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.outlined.NoteAdd
+import androidx.compose.material.icons.outlined.PushPin
+import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -108,12 +114,25 @@ import ru.plumsoftware.notepad.ui.elements.IOSCalendarView
 import ru.plumsoftware.notepad.ui.elements.IOSCreateGroupDialog
 import ru.plumsoftware.notepad.ui.elements.IOSNoteCard
 import ru.plumsoftware.notepad.ui.elements.IOSPinInputScreen
-import ru.plumsoftware.notepad.ui.elements.IOSTopBar
+import ru.plumsoftware.notepad.ui.elements.HabitsBottomSheet
+import ru.plumsoftware.notepad.ui.elements.HomeTopBar
+import ru.plumsoftware.notepad.ui.elements.ScreenHeaderTitle
+import ru.plumsoftware.notepad.ui.settings.SettingsContent
+import androidx.compose.foundation.layout.statusBarsPadding
+import ru.plumsoftware.notepad.ui.elements.NoteDateRange
+import ru.plumsoftware.notepad.ui.elements.SortBottomSheet
+import ru.plumsoftware.notepad.ui.elements.filterNotesByDateRange
+import ru.plumsoftware.notepad.ui.elements.SortOrder
+import ru.plumsoftware.notepad.ui.theme.Dimens
 import ru.plumsoftware.notepad.ui.elements.RateAppBottomSheet
 import ru.plumsoftware.notepad.ui.elements.getNotesForDate
+import ru.plumsoftware.notepad.ui.ads.NoteFeedItem
+import ru.plumsoftware.notepad.ui.ads.YandexNativeAdCard
+import ru.plumsoftware.notepad.ui.ads.buildNoteFeedWithAds
+import ru.plumsoftware.notepad.ui.ads.nativeAdGridWidth
+import ru.plumsoftware.notepad.ui.ads.nativeAdListWidth
 import ru.plumsoftware.notepad.ui.habit.HabitsContent
 import ru.plumsoftware.notepad.ui.rememberBiometricPrompt
-import ru.plumsoftware.notepad.ui.settings.Settings
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -125,7 +144,8 @@ fun NoteListScreen(
     navController: NavController,
     viewModel: NoteViewModel,
     scrollToNoteId: String? = null,
-    themeState: ThemeState
+    themeState: ThemeState,
+    focusSearchOnStart: Boolean = false
 ) {
     val habitsWithHistory by viewModel.habits.collectAsState()
 
@@ -174,6 +194,9 @@ fun NoteListScreen(
     val previousNotesCount = remember { mutableStateOf(0) }
     val selectedGroupId by viewModel.selectedGroupId.collectAsState() // "0" = "All"
     var mainScreenState by remember { mutableStateOf(MainScreenRouteState.Main) }
+    var showHabitsSheet by remember { mutableStateOf(false) }
+    var showSettings by remember { mutableStateOf(false) }
+    var dateRange by remember { mutableStateOf<NoteDateRange?>(null) }
     val instaOpenAddNoteScreen = viewModel.openAddNoteScreen.collectAsState()
     val totalNotesCount by viewModel.totalNotesCount.collectAsState()
 
@@ -183,6 +206,12 @@ fun NoteListScreen(
     var showMenuBottomSheet by remember { mutableStateOf(false) }
 
     var isSearchFocused by remember { mutableStateOf(false) }
+
+    LaunchedEffect(focusSearchOnStart) {
+        if (focusSearchOnStart) {
+            isSearchFocused = true
+        }
+    }
 
     // Добавляем FocusManager для управления фокусом
     val focusManager = LocalFocusManager.current
@@ -284,15 +313,27 @@ fun NoteListScreen(
         viewModel.searchNotes("")
     }
 
-    val displayedNotes = remember(notes, selectedFilter) {
-        when (selectedFilter) {
-            0 -> notes.sortedByDescending { it.createdAt }
-            1 -> notes.sortedBy { it.createdAt }
-            2 -> notes.filter { it.reminderDate != null }
-            3 -> notes.filter { it.photos.isNotEmpty() }
-            4 -> notes.filter { it.tasks.isNotEmpty() }
-            else -> notes
+    fun sortNotes(list: List<Note>, filter: Int): List<Note> {
+        val filtered = when (filter) {
+            0 -> list
+            1 -> list
+            2 -> list.filter { it.reminderDate != null }
+            3 -> list.filter { it.photos.isNotEmpty() }
+            4 -> list.filter { it.tasks.isNotEmpty() }
+            else -> list
         }
+        val pinFirst = compareByDescending<Note> { it.isPinned }
+        return when (filter) {
+            1 -> filtered.sortedWith(pinFirst.thenBy { it.createdAt })
+            else -> filtered.sortedWith(pinFirst.thenByDescending { it.createdAt })
+        }
+    }
+
+    val displayedNotes = remember(notes, selectedFilter, dateRange) {
+        filterNotesByDateRange(sortNotes(notes, selectedFilter), dateRange)
+    }
+    val feedItems = remember(displayedNotes) {
+        buildNoteFeedWithAds(displayedNotes)
     }
 
     // Scroll to note if noteId is provided
@@ -308,18 +349,6 @@ fun NoteListScreen(
     LaunchedEffect(key1 = instaOpenAddNoteScreen) {
         if (instaOpenAddNoteScreen.value) {
             navController.navigate(Screen.AddNote.route)
-        }
-    }
-
-    // Применение фильтрации к заметкам
-    val filteredNotes = remember(notes, selectedFilter) {
-        when (selectedFilter) {
-            0 -> notes.sortedByDescending { it.createdAt }
-            1 -> notes.sortedBy { it.createdAt }
-            2 -> notes.filter { it.reminderDate != null }
-            3 -> notes.filter { it.photos.isNotEmpty() }
-            4 -> notes.filter { it.tasks.isNotEmpty() }
-            else -> notes
         }
     }
 
@@ -365,7 +394,9 @@ fun NoteListScreen(
                         text = stringResource(R.string.settings),
                         onClick = {
                             showMenuBottomSheet = false
-                            navController.navigate(Screen.Settings.route)
+                            showSettings = true
+                            showHabitsSheet = false
+                            mainScreenState = MainScreenRouteState.Main
                         },
                         showDivider = false
                     )
@@ -434,16 +465,19 @@ fun NoteListScreen(
         bottomBar = {
             BottomBar(
                 navController = navController,
-                currentScreen = mainScreenState,
-                themeState = themeState,
-                onHomeClick = { mainScreenState = MainScreenRouteState.Main },
-                onHabitsClick = { mainScreenState = MainScreenRouteState.Habits }, // Переход
-                onCalendarClick = { mainScreenState = MainScreenRouteState.Calendar },
-                onSettingsClick = { mainScreenState = MainScreenRouteState.Settings }
+                isHomeSelected = !showSettings,
+                isSettingsSelected = showSettings,
+                onHomeClick = {
+                    showSettings = false
+                    mainScreenState = MainScreenRouteState.Main
+                    showHabitsSheet = false
+                },
+                onSettingsClick = {
+                    showSettings = true
+                    showHabitsSheet = false
+                    mainScreenState = MainScreenRouteState.Main
+                }
             )
-        },
-        floatingActionButton = {
-            // ... код без изменений ...
         }
     ) { padding ->
         // Добавляем обработчик клика вне текстового поля
@@ -451,8 +485,7 @@ fun NoteListScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.background)
-                .padding(padding)
-                .padding(top = 12.dp)
+                .padding(bottom = padding.calculateBottomPadding())
                 .clickable(
                     indication = null,
                     interactionSource = remember { MutableInteractionSource() }
@@ -462,42 +495,47 @@ fun NoteListScreen(
                     }
                 }
         ) {
-            when (mainScreenState) {
-                MainScreenRouteState.Main -> {
-                    Column(
-                        modifier = Modifier.fillMaxSize()
-                    ) {
-                        // Анимированная строка поиска
-                        AnimatedVisibility(
-                            visible = isSearchBarVisible || isSearchFocused, // Если поиск активен, бар не скрываем
-                            enter = slideInVertically { -it } + fadeIn(),
-                            exit = slideOutVertically { -it } + fadeOut()
-                        ) {
-                            IOSTopBar(
-                                searchQuery = searchQuery,
-                                onSearchQueryChange = { query ->
-                                    searchQuery = query
-                                    if (searchQuery.isEmpty()) {
-                                        viewModel.searchNotes("") // Сбрасываем поиск
-                                    } else {
-                                        // Можно добавить debounce, если нужно
-                                        viewModel.searchNotes(query)
-                                    }
-                                },
-                                isSearchFocused = isSearchFocused,
-                                onFocusChange = { focused -> isSearchFocused = focused },
-                                onSettingsClick = { showMenuBottomSheet = true },
-                                onFilterClick = { showFilterDialog = true },
-                                onLayoutToggle = {
-                                    listType = if (listType == 0) 1 else 0
-                                    saveListTypeToPreferences(listType, context)
-                                },
-                                listType = listType
-                            )
-                        }
+            if (showSettings) {
+                Column(modifier = Modifier.fillMaxSize()) {
+                    ScreenHeaderTitle(
+                        title = stringResource(R.string.settings),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .statusBarsPadding()
+                            .padding(horizontal = Dimens.screenPaddingHorizontal)
+                            .padding(top = 4.dp, bottom = 4.dp)
+                    )
+                    SettingsContent(
+                        navController = navController,
+                        themeState = themeState,
+                        viewModel = viewModel,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            } else {
+            Column(modifier = Modifier.fillMaxSize()) {
+                HomeTopBar(
+                    activeSection = mainScreenState,
+                    onSectionSelected = { section ->
+                        mainScreenState = section
+                        showHabitsSheet = section == MainScreenRouteState.Habits
+                    },
+                    query = searchQuery,
+                    onQueryChange = { query ->
+                        searchQuery = query
+                        viewModel.searchNotes(query)
+                    },
+                    onFilterClick = { showFilterDialog = true },
+                    onLayoutToggle = {
+                        listType = if (listType == 0) 1 else 0
+                        saveListTypeToPreferences(listType, context)
+                    },
+                    isGrid = listType == 1,
+                    dateRange = dateRange,
+                    onDateRangeChange = { dateRange = it }
+                )
 
-                        //Spacer(modifier = Modifier.height(12.dp))
-                        IOSGroupList(
+                IOSGroupList(
                             groups = groups,
                             selectedGroupId = selectedGroupId,
                             totalCount = totalNotesCount,
@@ -517,7 +555,11 @@ fun NoteListScreen(
                         ) {
                             // Отображаем пустое состояние, если заметок нет и нет загрузки
                             if (displayedNotes.isEmpty() && !isLoading) {
-                                EmptyNotesState()
+                                EmptyNotesState(
+                                    onCreateClick = {
+                                        navController.navigate(Screen.AddNote.route)
+                                    }
+                                )
                             } else {
                                 // Notes List
                                 if (listType == 1) {
@@ -534,107 +576,119 @@ fun NoteListScreen(
                                             vertical = 8.dp
                                         )
                                     ) {
-                                        items(displayedNotes, key = { it.id }) { note ->
-                                            // Логика удаления (оставляем твою анимацию)
-                                            if (notesToDelete[note.id] != true) {
-
-                                                // Переменная для управления меню конкретной заметки
-                                                var showNoteMenu by remember { mutableStateOf(false) }
-
-                                                Box {
-                                                    IOSNoteCard(
-                                                        note = note,
-                                                        groups = groups.map { it.group },
-                                                        modifier = Modifier.fillMaxWidth(), // Для списка и грида работает
-                                                        onClick = {
-                                                            navController.navigate(
-                                                                Screen.EditNote.createRoute(
-                                                                    note.id
-                                                                )
-                                                            )
-                                                        },
-                                                        onLongClick = {
-                                                            showNoteMenu = true
-                                                            playSound(
-                                                                context,
-                                                                exoPlayer,
-                                                                R.raw.note_create
-                                                            )
-                                                        },
-                                                        onImageClick = { path ->
-                                                            fullscreenImagePath =
-                                                                path // Восстановили полный экран
-                                                        },
-                                                        onNoteUpdated = { updatedNote ->
-                                                            // Обновляем заметку через ViewModel (сохраняем галочку)
-                                                            viewModel.updateNote(
-                                                                updatedNote,
-                                                                context
-                                                            )
-                                                            // Если хочешь звук при нажатии галочки:
-                                                            // playSound(context, exoPlayer, R.raw.note_create)
-                                                        }
+                                        items(
+                                            items = feedItems,
+                                            key = { it.key },
+                                            span = { item ->
+                                                when (item) {
+                                                    is NoteFeedItem.NativeAdSlot -> StaggeredGridItemSpan.FullLine
+                                                    is NoteFeedItem.NoteEntry -> StaggeredGridItemSpan.SingleLane
+                                                }
+                                            }
+                                        ) { item ->
+                                            when (item) {
+                                                is NoteFeedItem.NativeAdSlot -> {
+                                                    YandexNativeAdCard(
+                                                        slotIndex = item.index,
+                                                        modifier = Modifier.nativeAdGridWidth(),
                                                     )
+                                                }
 
-                                                    // --- КОНТЕКСТНОЕ МЕНЮ (При долгом нажатии) ---
-                                                    DropdownMenu(
-                                                        expanded = showNoteMenu,
-                                                        onDismissRequest = { showNoteMenu = false },
-                                                        offset = DpOffset(x = 10.dp, y = 0.dp),
-                                                        containerColor = MaterialTheme.colorScheme.surfaceContainer,
-                                                        shape = RoundedCornerShape(12.dp)
-                                                    ) {
-                                                        // Переместить в группу (сверни свой диалог выбора группы сюда или вызывай callback)
-                                                        DropdownMenuItem(
-                                                            text = { Text("В папку") },
-                                                            onClick = {
-                                                                showNoteMenu = false
-                                                                noteToMove = note
-                                                                // ТУТ ЛОГИКА ДЛЯ ОТКРЫТИЯ ДИАЛОГА ВЫБОРА ГРУППЫ
-                                                                // Тебе нужно будет поднять state showMoveToFolderDialog на уровень выше
-                                                                // или сделать callback onShowMoveDialog(note)
-                                                            },
-                                                            leadingIcon = {
-                                                                Icon(
-                                                                    Icons.Default.FolderOpen,
-                                                                    null
-                                                                )
-                                                            }
-                                                        )
+                                                is NoteFeedItem.NoteEntry -> {
+                                                    val note = item.note
+                                                    if (notesToDelete[note.id] != true) {
+                                                        var showNoteMenu by remember { mutableStateOf(false) }
 
-                                                        // Удалить
-                                                        DropdownMenuItem(
-                                                            text = {
-                                                                Text(
-                                                                    "Удалить",
-                                                                    color = MaterialTheme.colorScheme.error
-                                                                )
-                                                            },
-                                                            onClick = {
-                                                                showNoteMenu = false
-                                                                notesToDelete[note.id] =
-                                                                    true // Запуск твоей анимации удаления
-                                                                playSound(
-                                                                    context,
-                                                                    exoPlayer,
-                                                                    R.raw.note_delete
-                                                                )
-                                                                coroutineScope.launch {
-                                                                    delay(400)
-                                                                    viewModel.deleteNote(
-                                                                        note,
+                                                        Box {
+                                                            IOSNoteCard(
+                                                                note = note,
+                                                                groups = groups.map { it.group },
+                                                                modifier = Modifier.fillMaxWidth(),
+                                                                onClick = {
+                                                                    navController.navigate(
+                                                                        Screen.EditNote.createRoute(note.id)
+                                                                    )
+                                                                },
+                                                                onLongClick = {
+                                                                    showNoteMenu = true
+                                                                    playSound(
+                                                                        context,
+                                                                        exoPlayer,
+                                                                        R.raw.note_create
+                                                                    )
+                                                                },
+                                                                onImageClick = { path ->
+                                                                    fullscreenImagePath = path
+                                                                },
+                                                                onNoteUpdated = { updatedNote ->
+                                                                    viewModel.updateNote(
+                                                                        updatedNote,
                                                                         context
                                                                     )
                                                                 }
-                                                            },
-                                                            leadingIcon = {
-                                                                Icon(
-                                                                    Icons.Default.Delete,
-                                                                    null,
-                                                                    tint = MaterialTheme.colorScheme.error
+                                                            )
+
+                                                            DropdownMenu(
+                                                                expanded = showNoteMenu,
+                                                                onDismissRequest = { showNoteMenu = false },
+                                                                offset = DpOffset(x = 10.dp, y = 0.dp),
+                                                                containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                                                                shape = RoundedCornerShape(12.dp)
+                                                            ) {
+                                                                DropdownMenuItem(
+                                                                    text = { Text(stringResource(R.string.move_to_folder)) },
+                                                                    onClick = {
+                                                                        showNoteMenu = false
+                                                                        noteToMove = note
+                                                                    },
+                                                                    leadingIcon = {
+                                                                        Icon(Icons.Default.FolderOpen, null)
+                                                                    }
+                                                                )
+                                                                DropdownMenuItem(
+                                                                    text = {
+                                                                        Text(
+                                                                            if (note.isPinned) {
+                                                                                stringResource(R.string.unpin_note)
+                                                                            } else {
+                                                                                stringResource(R.string.pin_note)
+                                                                            }
+                                                                        )
+                                                                    },
+                                                                    onClick = {
+                                                                        showNoteMenu = false
+                                                                        viewModel.togglePin(note)
+                                                                    },
+                                                                    leadingIcon = {
+                                                                        Icon(Icons.Outlined.PushPin, null)
+                                                                    }
+                                                                )
+                                                                DropdownMenuItem(
+                                                                    text = {
+                                                                        Text(
+                                                                            stringResource(R.string.delete),
+                                                                            color = MaterialTheme.colorScheme.error
+                                                                        )
+                                                                    },
+                                                                    onClick = {
+                                                                        showNoteMenu = false
+                                                                        notesToDelete[note.id] = true
+                                                                        playSound(context, exoPlayer, R.raw.note_delete)
+                                                                        coroutineScope.launch {
+                                                                            delay(400)
+                                                                            viewModel.deleteNote(note, context)
+                                                                        }
+                                                                    },
+                                                                    leadingIcon = {
+                                                                        Icon(
+                                                                            Icons.Default.Delete,
+                                                                            null,
+                                                                            tint = MaterialTheme.colorScheme.error
+                                                                        )
+                                                                    }
                                                                 )
                                                             }
-                                                        )
+                                                        }
                                                     }
                                                 }
                                             }
@@ -659,107 +713,110 @@ fun NoteListScreen(
                                             .fillMaxSize()
                                             .padding(top = 10.dp)
                                     ) {
-                                        items(displayedNotes, key = { it.id }) { note ->
-                                            // Логика удаления (оставляем твою анимацию)
-                                            if (notesToDelete[note.id] != true) {
-
-                                                // Переменная для управления меню конкретной заметки
-                                                var showNoteMenu by remember { mutableStateOf(false) }
-
-                                                Box {
-                                                    IOSNoteCard(
-                                                        note = note,
-                                                        groups = groups.map { it.group },
-                                                        modifier = Modifier.fillMaxWidth(), // Для списка и грида работает
-                                                        onClick = {
-                                                            navController.navigate(
-                                                                Screen.EditNote.createRoute(
-                                                                    note.id
-                                                                )
-                                                            )
-                                                        },
-                                                        onLongClick = {
-                                                            showNoteMenu = true
-                                                            playSound(
-                                                                context,
-                                                                exoPlayer,
-                                                                R.raw.note_create
-                                                            )
-                                                        },
-                                                        onImageClick = { path ->
-                                                            fullscreenImagePath =
-                                                                path // Восстановили полный экран
-                                                        },
-                                                        onNoteUpdated = { updatedNote ->
-                                                            // Обновляем заметку через ViewModel (сохраняем галочку)
-                                                            viewModel.updateNote(
-                                                                updatedNote,
-                                                                context
-                                                            )
-                                                            // Если хочешь звук при нажатии галочки:
-                                                            // playSound(context, exoPlayer, R.raw.note_create)
-                                                        }
+                                        items(feedItems, key = { it.key }) { item ->
+                                            when (item) {
+                                                is NoteFeedItem.NativeAdSlot -> {
+                                                    YandexNativeAdCard(
+                                                        slotIndex = item.index,
+                                                        modifier = Modifier.nativeAdListWidth(),
                                                     )
+                                                }
 
-                                                    // --- КОНТЕКСТНОЕ МЕНЮ (При долгом нажатии) ---
-                                                    DropdownMenu(
-                                                        expanded = showNoteMenu,
-                                                        onDismissRequest = { showNoteMenu = false },
-                                                        offset = DpOffset(x = 10.dp, y = 0.dp),
-                                                        containerColor = MaterialTheme.colorScheme.surfaceContainer,
-                                                        shape = RoundedCornerShape(12.dp)
-                                                    ) {
-                                                        // Переместить в группу (сверни свой диалог выбора группы сюда или вызывай callback)
-                                                        DropdownMenuItem(
-                                                            text = { Text("В папку") },
-                                                            onClick = {
-                                                                showNoteMenu = false
-                                                                noteToMove = note
-                                                                // ТУТ ЛОГИКА ДЛЯ ОТКРЫТИЯ ДИАЛОГА ВЫБОРА ГРУППЫ
-                                                                // Тебе нужно будет поднять state showMoveToFolderDialog на уровень выше
-                                                                // или сделать callback onShowMoveDialog(note)
-                                                            },
-                                                            leadingIcon = {
-                                                                Icon(
-                                                                    Icons.Default.FolderOpen,
-                                                                    null
-                                                                )
-                                                            }
-                                                        )
+                                                is NoteFeedItem.NoteEntry -> {
+                                                    val note = item.note
+                                                    if (notesToDelete[note.id] != true) {
+                                                        var showNoteMenu by remember { mutableStateOf(false) }
 
-                                                        // Удалить
-                                                        DropdownMenuItem(
-                                                            text = {
-                                                                Text(
-                                                                    "Удалить",
-                                                                    color = MaterialTheme.colorScheme.error
-                                                                )
-                                                            },
-                                                            onClick = {
-                                                                showNoteMenu = false
-                                                                notesToDelete[note.id] =
-                                                                    true // Запуск твоей анимации удаления
-                                                                playSound(
-                                                                    context,
-                                                                    exoPlayer,
-                                                                    R.raw.note_delete
-                                                                )
-                                                                coroutineScope.launch {
-                                                                    delay(400)
-                                                                    viewModel.deleteNote(
-                                                                        note,
+                                                        Box {
+                                                            IOSNoteCard(
+                                                                note = note,
+                                                                groups = groups.map { it.group },
+                                                                modifier = Modifier.fillMaxWidth(),
+                                                                onClick = {
+                                                                    navController.navigate(
+                                                                        Screen.EditNote.createRoute(note.id)
+                                                                    )
+                                                                },
+                                                                onLongClick = {
+                                                                    showNoteMenu = true
+                                                                    playSound(
+                                                                        context,
+                                                                        exoPlayer,
+                                                                        R.raw.note_create
+                                                                    )
+                                                                },
+                                                                onImageClick = { path ->
+                                                                    fullscreenImagePath = path
+                                                                },
+                                                                onNoteUpdated = { updatedNote ->
+                                                                    viewModel.updateNote(
+                                                                        updatedNote,
                                                                         context
                                                                     )
                                                                 }
-                                                            },
-                                                            leadingIcon = {
-                                                                Icon(
-                                                                    Icons.Default.Delete,
-                                                                    null,
-                                                                    tint = MaterialTheme.colorScheme.error
+                                                            )
+
+                                                            DropdownMenu(
+                                                                expanded = showNoteMenu,
+                                                                onDismissRequest = { showNoteMenu = false },
+                                                                offset = DpOffset(x = 10.dp, y = 0.dp),
+                                                                containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                                                                shape = RoundedCornerShape(12.dp)
+                                                            ) {
+                                                                DropdownMenuItem(
+                                                                    text = { Text(stringResource(R.string.move_to_folder)) },
+                                                                    onClick = {
+                                                                        showNoteMenu = false
+                                                                        noteToMove = note
+                                                                    },
+                                                                    leadingIcon = {
+                                                                        Icon(Icons.Default.FolderOpen, null)
+                                                                    }
+                                                                )
+                                                                DropdownMenuItem(
+                                                                    text = {
+                                                                        Text(
+                                                                            if (note.isPinned) {
+                                                                                stringResource(R.string.unpin_note)
+                                                                            } else {
+                                                                                stringResource(R.string.pin_note)
+                                                                            }
+                                                                        )
+                                                                    },
+                                                                    onClick = {
+                                                                        showNoteMenu = false
+                                                                        viewModel.togglePin(note)
+                                                                    },
+                                                                    leadingIcon = {
+                                                                        Icon(Icons.Outlined.PushPin, null)
+                                                                    }
+                                                                )
+                                                                DropdownMenuItem(
+                                                                    text = {
+                                                                        Text(
+                                                                            stringResource(R.string.delete),
+                                                                            color = MaterialTheme.colorScheme.error
+                                                                        )
+                                                                    },
+                                                                    onClick = {
+                                                                        showNoteMenu = false
+                                                                        notesToDelete[note.id] = true
+                                                                        playSound(context, exoPlayer, R.raw.note_delete)
+                                                                        coroutineScope.launch {
+                                                                            delay(400)
+                                                                            viewModel.deleteNote(note, context)
+                                                                        }
+                                                                    },
+                                                                    leadingIcon = {
+                                                                        Icon(
+                                                                            Icons.Default.Delete,
+                                                                            null,
+                                                                            tint = MaterialTheme.colorScheme.error
+                                                                        )
+                                                                    }
                                                                 )
                                                             }
-                                                        )
+                                                        }
                                                     }
                                                 }
                                             }
@@ -768,41 +825,21 @@ fun NoteListScreen(
                                 }
                             }
                         }
-                    }
-                }
+            }
+            }
 
-                MainScreenRouteState.Calendar -> {
-                    CalendarContent(
-                        notes = notes,
-                        habits = emptyList(),
-                        viewModel = viewModel, // передаем viewModel
-                        navController = navController, // передаем navController
-                        groups = groups.map { it.group }, // передаем группы
-                        notesToDelete = notesToDelete,
-                        onDelete = { note ->
-                            notesToDelete[note.id] = true
-                            playSound(context, exoPlayer, R.raw.note_delete)
-                            coroutineScope.launch {
-                                delay(400)
-                                viewModel.deleteNote(note, context)
-                            }
-                        },
-                        onImageClick = { path -> fullscreenImagePath = path }
-                    )
-                }
-
-                MainScreenRouteState.Settings -> {
-                    Settings(
-                        navController = navController,
-                        themeState = themeState,
-                        viewModel = viewModel
-                    )
-                }
-
-                MainScreenRouteState.Habits -> {
+            if (showHabitsSheet) {
+                HabitsBottomSheet(
+                    onDismiss = {
+                        showHabitsSheet = false
+                        mainScreenState = MainScreenRouteState.Main
+                    },
+                    onAddHabit = { navController.navigate(Screen.AddHabit.route) }
+                ) {
                     HabitsContent(
                         viewModel = viewModel,
-                        navController = navController
+                        navController = navController,
+                        showEmptyStateButton = false
                     )
                 }
             }
@@ -820,14 +857,10 @@ fun NoteListScreen(
                 )
             }
 
-            // Filter Dialog
             if (showFilterDialog) {
-                FilterDialog(
-                    selectedFilter = selectedFilter,
-                    onFilterSelected = { filter ->
-                        selectedFilter = filter
-                        showFilterDialog = false
-                    },
+                SortBottomSheet(
+                    current = SortOrder.fromIndex(selectedFilter),
+                    onSelect = { order -> selectedFilter = SortOrder.toIndex(order) },
                     onDismiss = { showFilterDialog = false }
                 )
             }
@@ -907,27 +940,37 @@ fun NoteListScreen(
     }
 }
 
-// Компонент для отображения пустого состояния
 @Composable
-fun EmptyNotesState() {
+fun EmptyNotesState(onCreateClick: () -> Unit) {
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
+        modifier = Modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Image(
-            painter = painterResource(R.drawable.empty_notes_list),
-            contentDescription = stringResource(R.string.empty_notes_description),
-            modifier = Modifier.size(80.dp)
+        Icon(
+            Icons.Outlined.NoteAdd,
+            contentDescription = null,
+            modifier = Modifier.size(64.dp),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
         )
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(Modifier.height(Dimens.spacingL))
         Text(
-            text = stringResource(R.string.empty_notes_list),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+            stringResource(R.string.no_notes_title),
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurface
         )
+        Spacer(Modifier.height(Dimens.spacingS))
+        Text(
+            stringResource(R.string.no_notes_subtitle),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(Modifier.height(Dimens.spacingXl))
+        FilledTonalButton(onClick = onCreateClick) {
+            Icon(Icons.Rounded.Add, null, modifier = Modifier.size(Dimens.iconSizeMedium))
+            Spacer(Modifier.width(Dimens.spacingS))
+            Text(stringResource(R.string.create_note))
+        }
     }
 }
 

@@ -23,9 +23,38 @@
     <string name="about_app">О приложении</string>
     <string name="rate_app">Оценить приложение</string>
     <string name="daily_planner">Календарь</string>
+    <string name="date_range_start">Начальная дата</string>
+    <string name="date_range_end">Конечная дата</string>
+    <string name="ad_label">Реклама</string>
+    <string name="ad_by_yandex">Яндекс</string>
+    <string name="ad_domain_separator">%1$s</string>
     <string name="all_notes">Все заметки</string>
+    <string name="folder_all">Все</string>
     <string name="empty_notes_list">Здесь пока пусто</string>
     <string name="empty_notes_description">Список заметок пуст</string>
+    <string name="no_notes_title">Нет заметок</string>
+    <string name="no_notes_subtitle">Создайте первую заметку</string>
+    <string name="create_note">Создать заметку</string>
+    <string name="pin_note">Закрепить</string>
+    <string name="unpin_note">Открепить</string>
+    <string name="share_note">Поделиться</string>
+    <string name="word_count">%1$d слов · %2$d символов</string>
+
+    <!-- Виджеты -->
+    <string name="widget_small_name">Новая заметка</string>
+    <string name="widget_small_description">Быстро создать заметку</string>
+    <string name="widget_notes_preview_description">Последние заметки</string>
+    <string name="widget_habits_description">Привычки на сегодня</string>
+
+    <!-- Шорткаты -->
+    <string name="shortcut_note_short">Заметка</string>
+    <string name="shortcut_note_long">Новая заметка</string>
+    <string name="shortcut_task_short">Задача</string>
+    <string name="shortcut_task_long">Новая задача</string>
+    <string name="shortcut_voice_short">Голосовая</string>
+    <string name="shortcut_voice_long">Голосовая заметка</string>
+    <string name="shortcut_search_short">Поиск</string>
+    <string name="shortcut_search_long">Поиск по заметкам</string>
 
     <!-- Редактирование заметки -->
     <string name="note_editing">Редактирование</string>

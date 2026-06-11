@@ -14,7 +14,8 @@ data class Note(
     val tasks: List<Task> = emptyList(),
     val reminderDate: Long? = null,
     val photos: List<String> = emptyList(),
-    val groupId: String = "0"
+    val groupId: String = "0",
+    val isPinned: Boolean = false
 ) {
     override fun toString(): String {
         return """

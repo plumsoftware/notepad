@@ -33,10 +33,10 @@ import com.yandex.mobile.ads.appopenad.AppOpenAdEventListener
 import com.yandex.mobile.ads.appopenad.AppOpenAdLoadListener
 import com.yandex.mobile.ads.appopenad.AppOpenAdLoader
 import com.yandex.mobile.ads.common.AdError
-import com.yandex.mobile.ads.common.AdRequestConfiguration
+import com.yandex.mobile.ads.common.AdRequest
 import com.yandex.mobile.ads.common.AdRequestError
 import com.yandex.mobile.ads.common.ImpressionData
-import com.yandex.mobile.ads.common.MobileAds
+import com.yandex.mobile.ads.common.YandexAds
 import ru.plumsoftware.notepad.ui.NoteViewModel
 import ru.plumsoftware.notepad.ui.NoteViewModelFactory
 import ru.plumsoftware.notepad.ui.Screen
@@ -89,8 +89,12 @@ class MainActivity : ComponentActivity() {
 
         super.onCreate(savedInstanceState)
 
-        // События от виджета
+        // События от виджета и шорткатов
         val openAddNote = intent.getBooleanExtra("OPEN_ADD_NOTE", false)
+            || intent.getStringExtra("action") == "new_note"
+            || intent.getStringExtra("action") == "new_task"
+            || intent.getStringExtra("action") == "voice_note"
+        val launchAction = intent.getStringExtra("action")
 
         // Загружаем счетчик из SharedPreferences
         val sharedPreferences = getSharedPreferences("app_prefs", MODE_PRIVATE)
@@ -208,15 +212,14 @@ class MainActivity : ComponentActivity() {
                         requestPermissions.launch(permissionsToRequest)
                     }
 
-                    MobileAds.initialize(baseContext) {
-                        if (opensForAd == 5) {
-//                            if (showOpenAdsCounter == 0) {
-                                showOpenAds()
-//                            }
-                        } else {
+                    YandexAds.initialize(baseContext) {
+                        // Реклама при входе временно отключена
+//                        if (opensForAd == 5) {
+//                            showOpenAds()
+//                        } else {
                             opensForAd++
                             sharedPreferences.edit { putInt("open_counter", opensForAd) }
-                        }
+//                        }
                     }
                 }
 
@@ -251,11 +254,19 @@ class MainActivity : ComponentActivity() {
                             val viewModel: NoteViewModel = viewModel(
                                 factory = NoteViewModelFactory(application, openAddNote)
                             )
+                            LaunchedEffect(launchAction) {
+                                when (launchAction) {
+                                    "new_note", "new_task", "voice_note" ->
+                                        navController.navigate(Screen.AddNote.route)
+                                    else -> Unit
+                                }
+                            }
                             NoteListScreen(
                                 navController,
                                 viewModel,
                                 scrollToNoteId = noteId,
-                                themeState = themeState
+                                themeState = themeState,
+                                focusSearchOnStart = launchAction == "search"
                             )
                         }
 
@@ -274,6 +285,12 @@ class MainActivity : ComponentActivity() {
 
                         composable(Screen.AboutApp.route) {
                             AboutAppScreen(navController)
+                        }
+
+                        composable(Screen.Settings.route) {
+                            LaunchedEffect(Unit) {
+                                navController.popBackStack(Screen.NoteList.route, inclusive = false)
+                            }
                         }
 
                         composable(
@@ -383,8 +400,7 @@ class MainActivity : ComponentActivity() {
 
         // Создаем новый загрузчик
         appOpenLoader = AppOpenAdLoader(baseContext)
-        val adRequestConfiguration =
-            AdRequestConfiguration.Builder(App.platformConfig.adsConfig.openAdsId).build()
+        val adRequest = AdRequest.Builder(App.platformConfig.adsConfig.openAdsId).build()
 
         val appOpenAdEventListener = object : AppOpenAdEventListener {
             override fun onAdShown() {
@@ -434,8 +450,7 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-        appOpenLoader?.setAdLoadListener(appOpenAdLoadListener)
-        appOpenLoader?.loadAd(adRequestConfiguration)
+        appOpenLoader?.loadAd(adRequest, appOpenAdLoadListener)
     }
 
     private fun calculateRetryDelay(attempt: Int): Long {

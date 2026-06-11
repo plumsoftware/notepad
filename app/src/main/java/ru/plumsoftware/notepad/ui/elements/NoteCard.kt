@@ -1,10 +1,9 @@
 package ru.plumsoftware.notepad.ui.elements
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,37 +16,42 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.outlined.CheckBox
 import androidx.compose.material.icons.outlined.Circle
 import androidx.compose.material.icons.outlined.Folder
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.material.icons.outlined.Image
+import androidx.compose.material.icons.outlined.Mic
+import androidx.compose.material.icons.outlined.Notifications
+import androidx.compose.material.icons.outlined.PushPin
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.luminance
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.clickable
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import ru.plumsoftware.notepad.data.model.Group
 import ru.plumsoftware.notepad.data.model.Note
 import ru.plumsoftware.notepad.ui.formatDate
+import ru.plumsoftware.notepad.ui.theme.Dimens
+import ru.plumsoftware.notepad.ui.theme.resolveNoteColor
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun IOSNoteCard(
     note: Note,
@@ -58,59 +62,39 @@ fun IOSNoteCard(
     onImageClick: (String) -> Unit,
     onNoteUpdated: (Note) -> Unit
 ) {
-    // 1. Имя группы
-    val groupName = remember(note.groupId, groups) {
+    val groupInfo = remember(note.groupId, groups) {
         if (note.groupId == "0") null
-        else groups.find { it.id == note.groupId }?.title
+        else groups.find { it.id == note.groupId }
     }
 
-    val isSystemInDarkTheme = isSystemInDarkTheme()
+    val noteColor = resolveNoteColor(note.color)
+    val contentColor = MaterialTheme.colorScheme.onSurface
+    val secondaryColor = MaterialTheme.colorScheme.onSurfaceVariant
+    val shape = MaterialTheme.shapes.large
 
-    val backgroundColor = Color(note.color.toULong())
-    val isLight = backgroundColor.luminance() > 0.5f
-
-    // --- ЦВЕТА TEXTA ---
-    val contentColor = if (isLight) Color.Black.copy(alpha = 0.87f) else Color.White
-    val secondaryColor = if (isLight) Color(0xFF3C3C43).copy(alpha = 0.6f) else Color(0xFFEBEBF5).copy(alpha = 0.6f)
-    val tertiaryColor = if (isLight) Color(0xFF3C3C43).copy(alpha = 0.3f) else Color(0xFFEBEBF5).copy(alpha = 0.3f)
-
-    val displayedBackgroundColor = if (note.color == 0xFFFFFFFF.toLong() && isSystemInDarkTheme) {
-        Color(0xFF1C1C1E) // Цвет iOS карточки в dark mode
-    } else {
-        backgroundColor
-    }
-
-    Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .shadow(
-                elevation = 2.dp,
-                shape = RoundedCornerShape(14.dp),
-                spotColor = Color.Black.copy(alpha = 0.1f)
-            )
-            .pointerInput(Unit) {
-                detectTapGestures(
-                    onTap = { onClick() },
-                    onLongPress = { onLongClick() }
-                )
-            },
-        shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.cardColors(containerColor = displayedBackgroundColor)
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = shape,
+        color = noteColor,
+        border = BorderStroke(Dimens.cardBorderWidth, MaterialTheme.colorScheme.outlineVariant)
     ) {
-        Column(
-            modifier = Modifier.padding(top = 0.dp)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .combinedClickable(onClick = onClick, onLongClick = onLongClick),
         ) {
-            // ФОТО
+        Column {
             if (note.photos.isNotEmpty()) {
                 LazyRow(
                     modifier = Modifier
                         .fillMaxWidth()
-                        // Немного уменьшил высоту, так как теперь есть padding вокруг фото
                         .height(190.dp),
-                    // Добавляем отступы между элементами
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    // Добавляем отступы содержимого от краев карточки (14dp, как у текста ниже)
-                    contentPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 14.dp, bottom = 0.dp)
+                    horizontalArrangement = Arrangement.spacedBy(Dimens.spacingS),
+                    contentPadding = PaddingValues(
+                        start = Dimens.cardPaddingHorizontal,
+                        end = Dimens.cardPaddingHorizontal,
+                        top = Dimens.cardPaddingVertical
+                    )
                 ) {
                     items(note.photos) { photoPath ->
                         AsyncImage(
@@ -120,52 +104,88 @@ fun IOSNoteCard(
                             modifier = Modifier
                                 .width(200.dp)
                                 .fillMaxHeight()
-                                // Скругляем углы у самой картинки
-                                .clip(RoundedCornerShape(12.dp))
+                                .clip(MaterialTheme.shapes.medium)
                                 .clickable { onImageClick(photoPath) }
                         )
                     }
                 }
             }
 
-            Column(modifier = Modifier.padding(14.dp)) {
-                // ЗАГОЛОВОК
-                if (note.title.isNotBlank()) {
+            Column(
+                modifier = Modifier.padding(
+                    horizontal = Dimens.cardPaddingHorizontal,
+                    vertical = Dimens.cardPaddingVertical
+                )
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(Dimens.spacingXs),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        if (note.isPinned) {
+                            Icon(
+                                Icons.Outlined.PushPin,
+                                contentDescription = null,
+                                modifier = Modifier.size(Dimens.iconSizeSmall),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                        groupInfo?.let { group ->
+                            Box(
+                                modifier = Modifier
+                                    .size(Dimens.dotSize)
+                                    .clip(CircleShape)
+                                    .background(Color(group.color.toULong()))
+                            )
+                        }
+                    }
                     Text(
-                        text = note.title,
+                        formatDate(note.createdAt),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = secondaryColor
+                    )
+                }
+
+                if (note.title.isNotBlank()) {
+                    Spacer(Modifier.height(Dimens.spacingXs))
+                    Text(
+                        note.title,
                         style = MaterialTheme.typography.titleMedium,
                         color = contentColor,
+                        maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
-                    Spacer(modifier = Modifier.height(4.dp))
                 }
 
-                // ОПИСАНИЕ
                 if (note.description.isNotBlank()) {
+                    Spacer(Modifier.height(Dimens.spacingXs))
                     Text(
-                        text = note.description,
-                        style = MaterialTheme.typography.bodyLarge,
+                        note.description,
+                        style = MaterialTheme.typography.bodySmall,
                         color = secondaryColor,
+                        maxLines = 3,
                         overflow = TextOverflow.Ellipsis
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
                 }
 
-                // ЗАДАЧИ
                 if (note.tasks.isNotEmpty()) {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Spacer(Modifier.height(Dimens.spacingS))
+                    Column(verticalArrangement = Arrangement.spacedBy(Dimens.spacingS)) {
                         note.tasks.forEachIndexed { index, task ->
                             Row(
                                 verticalAlignment = Alignment.Top,
                                 modifier = Modifier
-                                    .fillMaxWidth() // Можно оставить 0.6f, если хочешь короткие
+                                    .fillMaxWidth()
                                     .clickable(
                                         interactionSource = remember { MutableInteractionSource() },
                                         indication = null
                                     ) {
-                                        val newStatus = !task.isChecked
                                         val updatedTasks = note.tasks.toMutableList().apply {
-                                            this[index] = task.copy(isChecked = newStatus)
+                                            this[index] = task.copy(isChecked = !task.isChecked)
                                         }
                                         onNoteUpdated(note.copy(tasks = updatedTasks))
                                     }
@@ -173,56 +193,63 @@ fun IOSNoteCard(
                                 Icon(
                                     imageVector = if (task.isChecked) Icons.Default.CheckCircle else Icons.Outlined.Circle,
                                     contentDescription = null,
-                                    tint = if (task.isChecked) secondaryColor else contentColor.copy(alpha = 0.4f),
-                                    modifier = Modifier.size(22.dp)
+                                    tint = secondaryColor,
+                                    modifier = Modifier.size(Dimens.iconSizeMedium)
                                 )
-                                Spacer(modifier = Modifier.width(10.dp))
+                                Spacer(modifier = Modifier.width(Dimens.spacingS))
                                 Text(
-                                    text = task.text,
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    color = if (task.isChecked) tertiaryColor else contentColor,
+                                    task.text,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = if (task.isChecked) secondaryColor else contentColor,
                                     textDecoration = if (task.isChecked) TextDecoration.LineThrough else null,
+                                    maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
                             }
                         }
                     }
-                    Spacer(modifier = Modifier.height(12.dp))
                 }
 
-                // ФУТЕР
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        modifier = Modifier.wrapContentWidth(),
-                        text = formatDate(note.createdAt),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = tertiaryColor
-                    )
-
-                    if (groupName != null) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                val tags = buildList {
+                    if (note.tasks.isNotEmpty()) add(Icons.Outlined.CheckBox to "Задачи")
+                    if (note.photos.isNotEmpty()) add(Icons.Outlined.Image to "Фото")
+                    if (note.reminderDate != null) add(Icons.Outlined.Notifications to "Напоминание")
+                }
+                if (tags.isNotEmpty()) {
+                    Spacer(Modifier.height(Dimens.spacingS))
+                    Row(horizontalArrangement = Arrangement.spacedBy(Dimens.spacingXs)) {
+                        tags.forEach { (icon, desc) ->
                             Icon(
-                                // Вектор или painterResource
-                                imageVector = Icons.Outlined.Folder,
-                                contentDescription = null,
-                                tint = tertiaryColor,
-                                modifier = Modifier.size(14.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                modifier = Modifier.wrapContentWidth(),
-                                text = groupName,
-                                style = MaterialTheme.typography.labelMedium,
-                                color = tertiaryColor
+                                icon,
+                                desc,
+                                modifier = Modifier.size(Dimens.iconSizeSmall),
+                                tint = secondaryColor
                             )
                         }
                     }
                 }
+
+                if (groupInfo != null) {
+                    Spacer(Modifier.height(Dimens.spacingS))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            Icons.Outlined.Folder,
+                            contentDescription = null,
+                            tint = secondaryColor,
+                            modifier = Modifier.size(Dimens.iconSizeSmall)
+                        )
+                        Spacer(modifier = Modifier.width(Dimens.spacingXs))
+                        Text(
+                            groupInfo.title,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = secondaryColor,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
             }
+        }
         }
     }
 }

@@ -67,6 +67,8 @@ import androidx.core.net.toUri
 import ru.plumsoftware.notepad.ui.NoteViewModel
 import ru.plumsoftware.notepad.ui.Screen
 import ru.plumsoftware.notepad.ui.elements.IOSPinInputScreen
+import ru.plumsoftware.notepad.ui.elements.ScreenHeaderTitle
+import androidx.compose.foundation.layout.statusBarsPadding
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -74,6 +76,36 @@ fun Settings(
     navController: NavController,
     themeState: ThemeState,
     viewModel: NoteViewModel
+) {
+    Column(
+        modifier = Modifier
+            .background(MaterialTheme.colorScheme.background)
+            .fillMaxSize()
+            .statusBarsPadding()
+    ) {
+        ScreenHeaderTitle(
+            title = stringResource(R.string.settings),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+                .padding(top = 4.dp, bottom = 4.dp)
+        )
+        SettingsContent(
+            navController = navController,
+            themeState = themeState,
+            viewModel = viewModel,
+            modifier = Modifier.weight(1f)
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SettingsContent(
+    navController: NavController,
+    themeState: ThemeState,
+    viewModel: NoteViewModel,
+    modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -141,21 +173,11 @@ fun Settings(
     val sectionColor = MaterialTheme.colorScheme.surface
 
     Column(
-        modifier = Modifier
-            .background(MaterialTheme.colorScheme.background)
-            .fillMaxSize()
+        modifier = modifier
+            .fillMaxWidth()
             .verticalScroll(rememberScrollState())
     ) {
-        Text(
-            stringResource(R.string.settings),
-            textAlign = TextAlign.Center,
-            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 4.dp)
-        )
-
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
         // --- СЕКЦИЯ 1: ВНЕШНИЙ ВИД ---
         IOSSettingsGroup(backgroundColor = sectionColor) {

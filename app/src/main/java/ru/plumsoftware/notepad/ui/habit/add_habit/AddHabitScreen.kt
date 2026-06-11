@@ -31,7 +31,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.yandex.mobile.ads.common.AdError
-import com.yandex.mobile.ads.common.AdRequestConfiguration
+import com.yandex.mobile.ads.common.AdRequest
+import ru.plumsoftware.notepad.ui.ads.YandexStickyBanner
 import com.yandex.mobile.ads.common.AdRequestError
 import com.yandex.mobile.ads.common.ImpressionData
 import com.yandex.mobile.ads.interstitial.InterstitialAd
@@ -66,36 +67,34 @@ fun AddHabitScreen(
     val maxRetries = 1
 
     val interstitialAdsLoader = remember { InterstitialAdLoader(activity) }
-    val interstitialConfig = remember {
-        AdRequestConfiguration.Builder(App.platformConfig.adsConfig.interstitialAdsId).build()
-    }
-
-    // --- ADS LOAD LOGIC ---
-    LaunchedEffect(interstitialRetryCount) {
-        if (myInterstitialAds == null && interstitialRetryCount < maxRetries) {
-            interstitialAdsLoader.setAdLoadListener(object : InterstitialAdLoadListener {
-                override fun onAdLoaded(interstitialAd: InterstitialAd) {
-                    myInterstitialAds = interstitialAd
-                    myInterstitialAds?.setAdEventListener(object : InterstitialAdEventListener {
-                        override fun onAdClicked() {}
-                        override fun onAdDismissed() {
-                            navController.navigateUp() // Выходим из экрана после закрытия рекламы
-                        }
-                        override fun onAdFailedToShow(adError: AdError) {
-                            navController.navigateUp() // Выходим, если реклама не смогла показаться
-                        }
-                        override fun onAdImpression(impressionData: ImpressionData?) {}
-                        override fun onAdShown() {}
-                    })
-                }
-
-                override fun onAdFailedToLoad(error: AdRequestError) {
-                    interstitialRetryCount++
-                }
-            })
-            interstitialAdsLoader.loadAd(interstitialConfig)
-        }
-    }
+    // Межстраничная реклама при создании привычки временно отключена
+//    LaunchedEffect(interstitialRetryCount) {
+//        if (myInterstitialAds == null && interstitialRetryCount < maxRetries) {
+//            interstitialAdsLoader.loadAd(
+//                AdRequest.Builder(App.platformConfig.adsConfig.interstitialAdsId).build(),
+//                object : InterstitialAdLoadListener {
+//                    override fun onAdLoaded(interstitialAd: InterstitialAd) {
+//                        myInterstitialAds = interstitialAd
+//                        myInterstitialAds?.setAdEventListener(object : InterstitialAdEventListener {
+//                            override fun onAdClicked() {}
+//                            override fun onAdDismissed() {
+//                                navController.navigateUp()
+//                            }
+//                            override fun onAdFailedToShow(adError: AdError) {
+//                                navController.navigateUp()
+//                            }
+//                            override fun onAdImpression(impressionData: ImpressionData?) {}
+//                            override fun onAdShown() {}
+//                        })
+//                    }
+//
+//                    override fun onAdFailedToLoad(error: AdRequestError) {
+//                        interstitialRetryCount++
+//                    }
+//                }
+//            )
+//        }
+//    }
 
     // --- ЛОГИКА ЭКРАНА ---
     val habits by viewModel.habits.collectAsState()
@@ -181,12 +180,12 @@ fun AddHabitScreen(
                 }
             }
 
-            // 2. Показываем рекламу ПРИ ВЫХОДЕ, если привычек >= 2
-            if (habits.size >= 2 && myInterstitialAds != null) {
-                myInterstitialAds?.show(activity)
-            } else {
+            // Межстраничная реклама при выходе временно отключена
+//            if (habits.size >= 2 && myInterstitialAds != null) {
+//                myInterstitialAds?.show(activity)
+//            } else {
                 navController.navigateUp()
-            }
+//            }
         }
     }
 
@@ -248,6 +247,9 @@ fun AddHabitScreen(
                     style = MaterialTheme.typography.bodyLarge
                 )
             }
+        },
+        bottomBar = {
+            YandexStickyBanner()
         }
     ) { padding ->
         Column(

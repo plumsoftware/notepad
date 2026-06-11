@@ -217,6 +217,12 @@ class NoteViewModel(application: Application, openAddNote: Boolean) : ViewModel(
         }
     }
 
+    fun togglePin(note: Note) {
+        viewModelScope.launch {
+            db.noteDao().update(note.copy(isPinned = !note.isPinned))
+        }
+    }
+
     fun moveNoteToGroup(note: Note, targetGroupId: String) {
         viewModelScope.launch {
             _isLoading.value = true

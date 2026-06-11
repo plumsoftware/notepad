@@ -14,7 +14,7 @@ import ru.plumsoftware.notepad.data.model.Note
 import ru.plumsoftware.notepad.data.model.habit.Habit
 import ru.plumsoftware.notepad.data.model.habit.HabitEntry
 
-@Database(entities = [Note::class, Group::class, Habit::class, HabitEntry::class], version = 7)
+@Database(entities = [Note::class, Group::class, Habit::class, HabitEntry::class], version = 8)
 @TypeConverters(Converters::class)
 abstract class NoteDatabase : RoomDatabase() {
     abstract fun noteDao(): NoteDao
@@ -68,6 +68,14 @@ abstract class NoteDatabase : RoomDatabase() {
             override fun migrate(database: SupportSQLiteDatabase) {
                 database.execSQL(
                     "ALTER TABLE notes ADD COLUMN groupId TEXT NOT NULL DEFAULT '0'"
+                )
+            }
+        }
+
+        val MIGRATION_7_8 = object : Migration(7, 8) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL(
+                    "ALTER TABLE notes ADD COLUMN isPinned INTEGER NOT NULL DEFAULT 0"
                 )
             }
         }
@@ -129,7 +137,8 @@ abstract class NoteDatabase : RoomDatabase() {
                         MIGRATION_3_4,
                         MIGRATION_4_5,
                         MIGRATION_5_6,
-                        MIGRATION_6_7
+                        MIGRATION_6_7,
+                        MIGRATION_7_8
                     )
                     .build()
                 INSTANCE = instance

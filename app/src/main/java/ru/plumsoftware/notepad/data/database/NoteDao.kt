@@ -11,13 +11,13 @@ import ru.plumsoftware.notepad.data.model.Note
 
 @Dao
 interface NoteDao {
-    @Query("SELECT * FROM notes WHERE title LIKE '%' || :query || '%' OR description LIKE '%' || :query || '%' AND groupId != '-1' ORDER BY createdAt DESC")
+    @Query("SELECT * FROM notes WHERE title LIKE '%' || :query || '%' OR description LIKE '%' || :query || '%' AND groupId != '-1' ORDER BY isPinned DESC, createdAt DESC")
     fun searchNotes(query: String): Flow<List<Note>>
 
-    @Query("SELECT * FROM notes WHERE groupId != '-1' ORDER BY createdAt DESC")
+    @Query("SELECT * FROM notes WHERE groupId != '-1' ORDER BY isPinned DESC, createdAt DESC")
     fun getAllNotes(): Flow<List<Note>>
 
-    @Query("SELECT * FROM notes WHERE (:groupId IS NULL OR groupId = :groupId) ORDER BY createdAt DESC")
+    @Query("SELECT * FROM notes WHERE (:groupId IS NULL OR groupId = :groupId) ORDER BY isPinned DESC, createdAt DESC")
     fun getNotesFilteredByGroup(groupId: String?): Flow<List<Note>>
 
 //    @Query("SELECT * FROM notes WHERE groupId = :groupId ORDER BY createdAt DESC")
@@ -56,7 +56,7 @@ interface NoteDao {
         WHERE 
             notes.groupId != '-1' 
             AND (:query IS NULL OR notes.title LIKE '%' || :query || '%' OR notes.description LIKE '%' || :query || '%')
-        ORDER BY notes.createdAt DESC
+        ORDER BY notes.isPinned DESC, notes.createdAt DESC
     """)
     fun getNormalNotesWithGroups(query: String? = null): Flow<List<NoteWithGroupInfo>>
 
@@ -69,7 +69,7 @@ interface NoteDao {
             NULL AS group_color
         FROM notes
         WHERE notes.groupId = '-1'
-        ORDER BY notes.createdAt DESC
+        ORDER BY notes.isPinned DESC, notes.createdAt DESC
     """)
     fun getSecureNotes(): Flow<List<NoteWithGroupInfo>>
 
@@ -81,14 +81,14 @@ interface NoteDao {
     @Query("SELECT COUNT(*) FROM notes WHERE groupId = '-1'")
     fun getSecretNotesCount(): Flow<Int>
 
-    @Query("SELECT * FROM notes WHERE groupId = :groupId ORDER BY createdAt DESC")
+    @Query("SELECT * FROM notes WHERE groupId = :groupId ORDER BY isPinned DESC, createdAt DESC")
     fun getNotesByGroupId(groupId: String): Flow<List<Note>>
 
     @Query("""
     SELECT * FROM notes 
     WHERE groupId = :groupId 
       AND (title LIKE '%' || :query || '%' OR description LIKE '%' || :query || '%')
-    ORDER BY createdAt DESC
+    ORDER BY isPinned DESC, createdAt DESC
     """)
     fun searchNotesInGroup(query: String, groupId: String): Flow<List<Note>>
 

@@ -69,7 +69,8 @@ import java.util.Locale
 @Composable
 fun HabitsContent(
     viewModel: NoteViewModel,
-    navController: NavController
+    navController: NavController,
+    showEmptyStateButton: Boolean = true
 ) {
     val habitsWithHistory by viewModel.habits.collectAsState()
     var showCreateHabitScreen by remember { mutableStateOf(false) }
@@ -152,12 +153,14 @@ fun HabitsContent(
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.onSurface.copy(0.6f)
                         )
-                        Spacer(modifier = Modifier.height(24.dp))
-                        Button(
-                            onClick = { navController.navigate("add_habit") },
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
-                        ) {
-                            Text(text = stringResource(R.string.habit_new))
+                        if (showEmptyStateButton) {
+                            Spacer(modifier = Modifier.height(24.dp))
+                            Button(
+                                onClick = { navController.navigate("add_habit") },
+                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                            ) {
+                                Text(text = stringResource(R.string.habit_new))
+                            }
                         }
                     }
                 }
@@ -203,6 +206,7 @@ fun HabitsContent(
                         }
 
                         val streak = remember(history) { calculateStreak(history) }
+                        val weekHistory = remember(history) { buildWeekHistory(history) }
 
                         Box(modifier = Modifier.animateItem()) {
                             HabitCard(
@@ -210,6 +214,7 @@ fun HabitsContent(
                                 emoji = habit.emoji,
                                 streak = streak,
                                 color = Color(habit.color.toULong()),
+                                weekHistory = weekHistory,
                                 isCompletedToday = isCompletedOnSelectedDate,
                                 onToggle = {
                                     // 🔥 2. Блокируем изменение, если дата не сегодня
@@ -405,4 +410,13 @@ fun getStartOfDay(): Long {
     calendar.set(java.util.Calendar.SECOND, 0)
     calendar.set(java.util.Calendar.MILLISECOND, 0)
     return calendar.timeInMillis
+}
+
+fun buildWeekHistory(history: List<HabitEntry>): List<Boolean> {
+    val calendar = Calendar.getInstance()
+    return (6 downTo 0).map { daysAgo ->
+        calendar.time = Date()
+        calendar.add(Calendar.DAY_OF_YEAR, -daysAgo)
+        checkIfCompletedForDate(history, calendar.time)
+    }
 }

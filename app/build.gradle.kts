@@ -15,8 +15,8 @@ android {
         applicationId = "ru.plumsoftware.notepad"
         minSdk = 24
         targetSdk = 36
-        versionCode = 24
-        versionName = "1.3.7"
+        versionCode = 25
+        versionName = "1.3.8"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -88,8 +88,8 @@ dependencies {
 
     implementation(libs.androidx.ui.text.google.fonts)
 
-    //noinspection MobileAdsSdkVersion
     implementation(libs.mobileads)
+    implementation(libs.mobileads.compose)
 
     // Glance widget
     // For AppWidgets support

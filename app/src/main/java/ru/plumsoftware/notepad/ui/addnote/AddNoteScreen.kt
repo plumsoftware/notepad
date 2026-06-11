@@ -59,9 +59,14 @@ import androidx.compose.material.icons.rounded.Call
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.CheckBox
 import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.RadioButtonUnchecked
+import ru.plumsoftware.notepad.ui.elements.ColorPickerSheet
+import ru.plumsoftware.notepad.ui.elements.NoteEditToolbar
+import ru.plumsoftware.notepad.ui.theme.Dimens
+import ru.plumsoftware.notepad.ui.theme.noteColorOptions
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.BottomSheetDefaults
@@ -136,7 +141,8 @@ import com.yandex.mobile.ads.interstitial.InterstitialAd
 import com.yandex.mobile.ads.interstitial.InterstitialAdLoadListener
 import com.yandex.mobile.ads.interstitial.InterstitialAdLoader
 import com.yandex.mobile.ads.common.AdError
-import com.yandex.mobile.ads.common.AdRequestConfiguration
+import com.yandex.mobile.ads.common.AdRequest
+import ru.plumsoftware.notepad.ui.ads.YandexStickyBanner
 import com.yandex.mobile.ads.common.AdRequestError
 import com.yandex.mobile.ads.common.ImpressionData
 import com.yandex.mobile.ads.interstitial.InterstitialAdEventListener
@@ -176,11 +182,8 @@ fun AddNoteScreen(
     val rewardedAdLoader = remember { RewardedAdLoader(context) }
     val interstitialAdsLoader = remember { InterstitialAdLoader(activity) }
 
-    val rewardedConfig = remember {
-        AdRequestConfiguration.Builder(App.platformConfig.adsConfig.rewardedAdsId).build()
-    }
-    val interstitialConfig = remember {
-        AdRequestConfiguration.Builder(App.platformConfig.adsConfig.interstitialAdsId).build()
+    val rewardedRequest = remember {
+        AdRequest.Builder(App.platformConfig.adsConfig.rewardedAdsId).build()
     }
 
     // --- ADS LOAD LOGIC ---
@@ -188,7 +191,7 @@ fun AddNoteScreen(
     LaunchedEffect(rewardedRetryCount) {
         if (rewardedAd == null && rewardedRetryCount < maxRetries) {
             isAdsLoading = true
-            rewardedAdLoader.setAdLoadListener(object : RewardedAdLoadListener {
+            rewardedAdLoader.loadAd(rewardedRequest, object : RewardedAdLoadListener {
                 override fun onAdLoaded(rewarded: RewardedAd) {
                     isAdsLoading = false
                     rewardedAd = rewarded
@@ -198,40 +201,41 @@ fun AddNoteScreen(
                     rewardedRetryCount++
                 }
             })
-            rewardedAdLoader.loadAd(rewardedConfig)
         } else {
             isAdsLoading = false
         }
     }
 
-    // Загрузка Interstitial
-    LaunchedEffect(interstitialRetryCount) {
-        if (myInterstitialAds == null && interstitialRetryCount < maxRetries) {
-            interstitialAdsLoader.setAdLoadListener(object : InterstitialAdLoadListener {
-                override fun onAdLoaded(interstitialAd: InterstitialAd) {
-                    myInterstitialAds = interstitialAd
-                    myInterstitialAds?.setAdEventListener(object : InterstitialAdEventListener {
-                        override fun onAdClicked() {}
-                        override fun onAdDismissed() {
-                            navController.navigateUp() // Выходим после закрытия рекламы
-                        }
-
-                        override fun onAdFailedToShow(adError: AdError) {
-                            navController.navigateUp() // Выходим, если произошла ошибка показа
-                        }
-
-                        override fun onAdImpression(impressionData: ImpressionData?) {}
-                        override fun onAdShown() {}
-                    })
-                }
-
-                override fun onAdFailedToLoad(error: AdRequestError) {
-                    interstitialRetryCount++
-                }
-            })
-            interstitialAdsLoader.loadAd(interstitialConfig)
-        }
-    }
+    // Межстраничная реклама при создании заметки временно отключена
+//    LaunchedEffect(interstitialRetryCount) {
+//        if (myInterstitialAds == null && interstitialRetryCount < maxRetries) {
+//            interstitialAdsLoader.loadAd(
+//                AdRequest.Builder(App.platformConfig.adsConfig.interstitialAdsId).build(),
+//                object : InterstitialAdLoadListener {
+//                    override fun onAdLoaded(interstitialAd: InterstitialAd) {
+//                        myInterstitialAds = interstitialAd
+//                        myInterstitialAds?.setAdEventListener(object : InterstitialAdEventListener {
+//                            override fun onAdClicked() {}
+//                            override fun onAdDismissed() {
+//                                navController.navigateUp()
+//                            }
+//
+//                            override fun onAdFailedToShow(adError: AdError) {
+//                                navController.navigateUp()
+//                            }
+//
+//                            override fun onAdImpression(impressionData: ImpressionData?) {}
+//                            override fun onAdShown() {}
+//                        })
+//                    }
+//
+//                    override fun onAdFailedToLoad(error: AdRequestError) {
+//                        interstitialRetryCount++
+//                    }
+//                }
+//            )
+//        }
+//    }
 
     // --- State ---
     val scrollState = rememberScrollState()
@@ -377,12 +381,12 @@ fun AddNoteScreen(
                 }
             }
 
-            // Всегда показываем рекламу на выходе
-            if (myInterstitialAds != null) {
-                myInterstitialAds?.show(activity)
-            } else {
+            // Межстраничная реклама при выходе временно отключена
+//            if (myInterstitialAds != null) {
+//                myInterstitialAds?.show(activity)
+//            } else {
                 navController.navigateUp()
-            }
+//            }
         }
     }
 
@@ -407,49 +411,15 @@ fun AddNoteScreen(
     }
 
     if (showColorSheet) {
-        ModalBottomSheet(
-            onDismissRequest = { showColorSheet = false },
-            containerColor = if (isLightBg) Color(0xFFF2F2F7) else Color(0xFF1C1C1E),
-            dragHandle = {
-                Box(
-                    modifier = Modifier
-                        .padding(top = 8.dp)
-                        .width(36.dp)
-                        .height(5.dp)
-                        .clip(CircleShape)
-                        .background(Color.Gray.copy(0.4f))
-                )
-            }
-        ) {
-            Column(
-                modifier = Modifier.padding(bottom = 40.dp, start = 16.dp, end = 16.dp, top = 16.dp)
-            ) {
-                Text(
-                    text = stringResource(R.string.note_color),
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                    color = if (isLightBg) Color.Black else Color.White,
-                    modifier = Modifier.padding(bottom = 16.dp)
-                )
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    items(availableColors) { color ->
-                        Box(
-                            modifier = Modifier
-                                .size(44.dp)
-                                .clip(CircleShape)
-                                .background(color)
-                                .border(
-                                    width = if (selectedColor == color) 3.dp else 1.dp,
-                                    color = if (selectedColor == color) MaterialTheme.colorScheme.primary else Color.Gray.copy(
-                                        0.3f
-                                    ),
-                                    shape = CircleShape
-                                )
-                                .clickable { selectedColor = color }
-                        )
-                    }
-                }
-            }
-        }
+        val palette = noteColorOptions()
+        ColorPickerSheet(
+            selectedColor = palette.find { it.color?.toArgb()?.toLong() == selectedColor.toArgb().toLong() }?.color,
+            onSelect = { color ->
+                selectedColor = color ?: Color.White
+                showColorSheet = false
+            },
+            onDismiss = { showColorSheet = false }
+        )
     }
 
     if (showAddTaskDialog) {
@@ -570,76 +540,64 @@ fun AddNoteScreen(
                     )
                 }
 
-                // Кнопка Сохранить
-                TextButton(
-                    onClick = performExit, // Используем performExit
-                    enabled = !isLoading && !isExiting,
-                    colors = ButtonDefaults.textButtonColors(contentColor = contentColor)
-                ) {
-                    Text(
-                        text = stringResource(R.string.save),
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
-                    )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(
+                        onClick = {
+                            val shareText = buildString {
+                                if (title.isNotBlank()) append(title)
+                                if (description.isNotBlank()) {
+                                    if (isNotEmpty()) append("\n\n")
+                                    append(description)
+                                }
+                            }
+                            if (shareText.isNotBlank()) {
+                                val intent = Intent(Intent.ACTION_SEND).apply {
+                                    type = "text/plain"
+                                    putExtra(Intent.EXTRA_TEXT, shareText)
+                                }
+                                context.startActivity(Intent.createChooser(intent, null))
+                            }
+                        }
+                    ) {
+                        Icon(
+                            Icons.Outlined.Share,
+                            contentDescription = stringResource(R.string.share_note),
+                            tint = actionItemsColor
+                        )
+                    }
+                    TextButton(
+                        onClick = performExit,
+                        enabled = !isLoading && !isExiting,
+                        colors = ButtonDefaults.textButtonColors(contentColor = contentColor)
+                    ) {
+                        Text(
+                            text = stringResource(R.string.save),
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                        )
+                    }
                 }
             }
         },
         bottomBar = {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 12.dp)
-                    .navigationBarsPadding()
-                    .imePadding(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(onClick = { showAddTaskDialog = true }) {
-                    Icon(
-                        Icons.Rounded.CheckBox,
-                        contentDescription = "Checklist",
-                        tint = contentColor,
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-                IconButton(onClick = {
-                    if (photos.size < 5) {
-                        if (photos.size == 4) showAddPhotoDialog =
-                            true else pickImages.launch("image/*")
-                    }
-                }) {
-                    Icon(
-                        Icons.Default.Image,
-                        contentDescription = "Photo",
-                        tint = contentColor,
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-
-                IconButton(onClick = onMicClick) {
-                    Icon(
-                        Icons.Rounded.Mic,
-                        contentDescription = "Voice input",
-                        tint = contentColor,
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-
-                IconButton(onClick = { showColorSheet = true }) {
-                    Icon(
-                        painterResource(R.drawable.palette_icon),
-                        contentDescription = "Color",
-                        tint = contentColor,
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-                IconButton(onClick = { showDatePicker = true; isReminder = true }) {
-                    Icon(
-                        imageVector = if (isReminder) Icons.Default.NotificationsActive else Icons.Default.NotificationsNone,
-                        contentDescription = "Reminder",
-                        tint = if (isReminder) contentColor else contentColor.copy(alpha = 0.5f),
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
+            Column {
+                YandexStickyBanner(
+                    reserveBottomNavBarSpace = false,
+                    includeNavigationBarsPadding = false,
+                )
+                val wordCount = description.trim().split(Regex("\\s+")).count { it.isNotEmpty() }
+                NoteEditToolbar(
+                    onTasksClick = { showAddTaskDialog = true },
+                    onImageClick = {
+                        if (photos.size < 5) {
+                            if (photos.size == 4) showAddPhotoDialog = true
+                            else pickImages.launch("image/*")
+                        }
+                    },
+                    onVoiceClick = onMicClick,
+                    onColorClick = { showColorSheet = true },
+                    onReminderClick = { showDatePicker = true; isReminder = true },
+                    wordCountText = stringResource(R.string.word_count, wordCount, description.length)
+                )
             }
         }
     ) { padding ->
@@ -1164,7 +1122,11 @@ fun getFriendlyDate(time: Long): String {
 }
 
 private fun loadRewardedAd(rewardedAdLoader: RewardedAdLoader?) {
-    val adRequestConfiguration =
-        AdRequestConfiguration.Builder(App.platformConfig.adsConfig.rewardedAdsId).build()
-    rewardedAdLoader?.loadAd(adRequestConfiguration)
+    rewardedAdLoader?.loadAd(
+        AdRequest.Builder(App.platformConfig.adsConfig.rewardedAdsId).build(),
+        object : RewardedAdLoadListener {
+            override fun onAdLoaded(rewardedAd: RewardedAd) {}
+            override fun onAdFailedToLoad(error: AdRequestError) {}
+        }
+    )
 }
