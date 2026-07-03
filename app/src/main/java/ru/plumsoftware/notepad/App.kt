@@ -11,15 +11,13 @@ class App : Application() {
         super.onCreate()
         App.applicationContext = this
 
-        val platformConfig = PlatformConfig.RuStoreConfig()
         val config = AppMetricaConfig.newConfigBuilder(platformConfig.appMetricaId).build()
-        // Initializing the AppMetrica SDK.
         AppMetrica.activate(this, config)
     }
 
     companion object {
         lateinit var applicationContext: Context
-        // Не забываем менять платформ конфиг в двух местах
-        val platformConfig = PlatformConfig.RuStoreConfig()
+
+        val platformConfig: PlatformConfig by lazy { PlatformConfig.current() }
     }
 }

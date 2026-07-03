@@ -21,6 +21,20 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    flavorDimensions += "store"
+
+    productFlavors {
+        create("rustore") {
+            dimension = "store"
+        }
+        create("huawei") {
+            dimension = "store"
+        }
+        create("googleplay") {
+            dimension = "store"
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false

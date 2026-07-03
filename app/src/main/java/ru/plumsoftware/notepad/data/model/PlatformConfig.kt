@@ -34,4 +34,15 @@ sealed class PlatformConfig (
         rateUrl = rateUrl,
         appMetricaId = appMetricaId
     )
+
+    companion object {
+        fun current(): PlatformConfig {
+            return when (ru.plumsoftware.notepad.BuildConfig.FLAVOR) {
+                "rustore" -> RuStoreConfig()
+                "huawei" -> HuaweiConfig()
+                "googleplay" -> GooglePlayConfig()
+                else -> RuStoreConfig()
+            }
+        }
+    }
 }
