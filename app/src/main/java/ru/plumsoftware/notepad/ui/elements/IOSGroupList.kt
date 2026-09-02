@@ -84,8 +84,11 @@ fun IOSGroupList(
         state = scrollState,
         modifier = Modifier
             .fillMaxWidth()
-            .padding(bottom = Dimens.spacingM),
-        contentPadding = PaddingValues(horizontal = Dimens.screenPaddingHorizontal),
+            .padding(bottom = Dimens.spacingS),
+        contentPadding = PaddingValues(
+            horizontal = Dimens.screenPaddingHorizontal,
+            vertical = Dimens.spacingS
+        ),
         horizontalArrangement = Arrangement.spacedBy(Dimens.spacingS),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -142,7 +145,7 @@ fun IOSGroupList(
 private fun FolderAddChip(onClick: () -> Unit) {
     Box(
         modifier = Modifier
-            .blueShadow(elevation = 8.dp, shape = MaterialTheme.shapes.medium)
+            .blueShadow(elevation = 12.dp, shape = MaterialTheme.shapes.medium)
             .size(36.dp)
             .clip(MaterialTheme.shapes.medium)
             .background(MaterialTheme.colorScheme.primary)
@@ -208,7 +211,7 @@ fun FolderChip(
         modifier = Modifier
             .then(
                 if (isSelected) Modifier.blueShadow(
-                    elevation = 8.dp,
+                    elevation = 12.dp,
                     shape = MaterialTheme.shapes.medium
                 ) else Modifier
             )

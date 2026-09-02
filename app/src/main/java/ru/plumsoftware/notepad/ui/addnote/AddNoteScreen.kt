@@ -591,7 +591,7 @@ fun AddNoteScreen(
                     // Кнопка «Готово» — синяя пилюля с синей тенью
                     Row(
                         modifier = Modifier
-                            .blueShadow(elevation = 10.dp, shape = RoundedCornerShape(14.dp))
+                            .blueShadow(elevation = 12.dp, shape = RoundedCornerShape(14.dp))
                             .clip(RoundedCornerShape(14.dp))
                             .background(MaterialTheme.colorScheme.primary)
                             .clickable(enabled = !isLoading && !isExiting) { performExit() }
