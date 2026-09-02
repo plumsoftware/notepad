@@ -9,7 +9,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Backspace
-import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -72,7 +72,7 @@ fun IOSPinInputScreen(
 
             // Заголовок
             Icon(
-                imageVector = Icons.Filled.Lock,
+                imageVector = Icons.Outlined.Lock,
                 contentDescription = null,
                 modifier = Modifier.size(40.dp).offset(x = offsetX.value.dp),
                 tint = MaterialTheme.colorScheme.primary
@@ -97,6 +97,12 @@ fun IOSPinInputScreen(
                     val filled = index < pin.length
                     Box(
                         modifier = Modifier
+                            .then(
+                                if (filled) Modifier.blueShadow(
+                                    elevation = 8.dp,
+                                    shape = CircleShape
+                                ) else Modifier
+                            )
                             .size(16.dp)
                             .clip(CircleShape)
                             .background(

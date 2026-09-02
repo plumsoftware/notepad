@@ -37,7 +37,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
@@ -57,6 +59,7 @@ fun IOSNoteCard(
     note: Note,
     groups: List<Group>,
     modifier: Modifier = Modifier,
+    elevated: Boolean = false,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
     onImageClick: (String) -> Unit,
@@ -68,12 +71,25 @@ fun IOSNoteCard(
     }
 
     val noteColor = resolveNoteColor(note.color)
-    val contentColor = MaterialTheme.colorScheme.onSurface
-    val secondaryColor = MaterialTheme.colorScheme.onSurfaceVariant
+    // Цвет текста подбираем под фон самой карточки, а не под тему —
+    // так на светлой карточке текст тёмный, на тёмной — светлый (читаемо в любой теме).
+    val isLightCard = noteColor.luminance() > 0.45f
+    val contentColor = if (isLightCard) Color(0xFF1A1A1E) else Color.White
+    val secondaryColor = contentColor.copy(alpha = 0.6f)
     val shape = MaterialTheme.shapes.large
 
     Surface(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .then(
+                if (elevated) Modifier.shadow(
+                    elevation = 16.dp,
+                    shape = shape,
+                    clip = false,
+                    ambientColor = noteColor,
+                    spotColor = noteColor
+                ) else Modifier
+            )
+            .fillMaxWidth(),
         shape = shape,
         color = noteColor,
         border = BorderStroke(Dimens.cardBorderWidth, MaterialTheme.colorScheme.outlineVariant)

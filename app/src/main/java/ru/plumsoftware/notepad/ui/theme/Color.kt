@@ -4,14 +4,16 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.luminance
 
 // --- Светлая тема (Material / Theme.kt) ---
-val primaryLight = Color(0xFF1C7FE3)
+val primaryLight = Color(0xFF2663EB)
 val onPrimaryLight = Color.White
 val primaryContainerLight = Color(0xFFE6F1FB)
 val onPrimaryContainerLight = Color(0xFF001C38)
 
-val backgroundLight = Color(0xFFF5F5F7)
+val backgroundLight = Color(0xFFF5F7FB)
 val onBackgroundLight = Color(0xFF1A1A1E)
 
 val surfaceLight = Color(0xFFFFFFFF)
@@ -55,8 +57,8 @@ val surfaceContainerHighLight = surfaceVariantLight
 val surfaceContainerHighestLight = outlineVariantLight
 
 // --- Тёмная тема ---
-val primaryDark = Color(0xFF4AA3F5)
-val onPrimaryDark = Color.Black
+val primaryDark = Color(0xFF2663EB)
+val onPrimaryDark = Color.White
 val primaryContainerDark = Color(0xFF1C3A5F)
 val onPrimaryContainerDark = Color.White
 
@@ -152,10 +154,14 @@ fun noteColorOptions(): List<NoteColorOption> {
 
 @Composable
 fun resolveNoteColor(colorLong: Long): Color {
-    if (colorLong == 0L) return MaterialTheme.colorScheme.surface
+    val scheme = MaterialTheme.colorScheme
+    if (colorLong == 0L) return scheme.surface
     val color = Color(colorLong.toULong())
-    if (colorLong == 0xFFFFFFFFL && isSystemInDarkTheme()) {
-        return surfaceDark
-    }
-    return color
+    // Тёмность определяем по самой схеме (яркости surface), а не по системному флагу,
+    // потому что тема переключается через AppCompatDelegate и может не совпадать с системой.
+    val isDark = scheme.surface.luminance() < 0.5f
+    if (!isDark) return color
+    // В тёмной теме светлый (в т.ч. белый) цвет заметки затемняем, слегка подкрашивая
+    // тёмную поверхность оттенком заметки — так белый текст остаётся читаемым.
+    return lerp(scheme.surface, color, 0.56f)
 }

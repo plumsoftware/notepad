@@ -3,6 +3,7 @@ package ru.plumsoftware.notepad.ui.elements
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -29,7 +30,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Cancel
-import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -79,22 +80,15 @@ fun IOSGroupList(
     val scrollState = rememberLazyListState()
     val haptic = LocalHapticFeedback.current
 
-    Surface(
+    LazyRow(
+        state = scrollState,
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = Dimens.screenPaddingHorizontal)
             .padding(bottom = Dimens.spacingM),
-        shape = MaterialTheme.shapes.medium,
-        color = MaterialTheme.colorScheme.surfaceVariant
+        contentPadding = PaddingValues(horizontal = Dimens.screenPaddingHorizontal),
+        horizontalArrangement = Arrangement.spacedBy(Dimens.spacingS),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        LazyRow(
-            state = scrollState,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(Dimens.spacingXs),
-            horizontalArrangement = Arrangement.spacedBy(Dimens.spacingXs),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
             item {
                 FolderAddChip(
                     onClick = {
@@ -141,7 +135,6 @@ fun IOSGroupList(
                     onLongClick = { onDeleteGroup(item.group) }
                 )
             }
-        }
     }
 }
 
@@ -149,16 +142,17 @@ fun IOSGroupList(
 private fun FolderAddChip(onClick: () -> Unit) {
     Box(
         modifier = Modifier
-            .height(32.dp)
-            .clip(MaterialTheme.shapes.small)
-            .clickable(onClick = onClick)
-            .padding(horizontal = Dimens.spacingM),
+            .blueShadow(elevation = 8.dp, shape = MaterialTheme.shapes.medium)
+            .size(36.dp)
+            .clip(MaterialTheme.shapes.medium)
+            .background(MaterialTheme.colorScheme.primary)
+            .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
         Icon(
             imageVector = Icons.Default.Add,
             contentDescription = stringResource(R.string.add_group),
-            tint = MaterialTheme.colorScheme.primary,
+            tint = MaterialTheme.colorScheme.onPrimary,
             modifier = Modifier.size(Dimens.iconSizeMedium)
         )
     }
@@ -175,7 +169,7 @@ fun FolderSecureChip(
         count = count,
         isSelected = isSelected,
         color = null,
-        leadingIcon = Icons.Default.Lock,
+        leadingIcon = Icons.Outlined.Lock,
         onClick = onClick
     )
 }
@@ -192,28 +186,42 @@ fun FolderChip(
 ) {
     val backgroundColor by animateColorAsState(
         targetValue = if (isSelected) {
-            MaterialTheme.colorScheme.surface
+            MaterialTheme.colorScheme.primary
         } else {
-            Color.Transparent
+            MaterialTheme.colorScheme.surface
         },
         animationSpec = tween(200),
         label = "folderBg"
     )
     val contentColor by animateColorAsState(
         targetValue = if (isSelected) {
-            MaterialTheme.colorScheme.onSurface
+            MaterialTheme.colorScheme.onPrimary
         } else {
-            MaterialTheme.colorScheme.onSurfaceVariant
+            MaterialTheme.colorScheme.onSurface
         },
         animationSpec = tween(200),
         label = "folderText"
     )
+    val borderColor = MaterialTheme.colorScheme.outlineVariant
 
     Box(
         modifier = Modifier
-            .height(32.dp)
-            .clip(MaterialTheme.shapes.small)
+            .then(
+                if (isSelected) Modifier.blueShadow(
+                    elevation = 8.dp,
+                    shape = MaterialTheme.shapes.medium
+                ) else Modifier
+            )
+            .height(36.dp)
+            .clip(MaterialTheme.shapes.medium)
             .background(backgroundColor)
+            .then(
+                if (!isSelected) Modifier.border(
+                    width = 0.5.dp,
+                    color = borderColor,
+                    shape = MaterialTheme.shapes.medium
+                ) else Modifier
+            )
             .pointerInput(Unit) {
                 detectTapGestures(
                     onTap = { onClick() },
@@ -257,12 +265,24 @@ fun FolderChip(
             )
 
             if (count > 0) {
-                Spacer(modifier = Modifier.width(Dimens.spacingXs))
-                Text(
-                    text = count.toString(),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = contentColor.copy(alpha = 0.6f)
-                )
+                Spacer(modifier = Modifier.width(Dimens.spacingS))
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(
+                            if (isSelected) MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.22f)
+                            else MaterialTheme.colorScheme.primaryContainer
+                        )
+                        .padding(horizontal = 6.dp, vertical = 1.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = count.toString(),
+                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
+                        color = if (isSelected) MaterialTheme.colorScheme.onPrimary
+                        else MaterialTheme.colorScheme.primary
+                    )
+                }
             }
         }
     }

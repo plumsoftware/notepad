@@ -503,7 +503,7 @@ fun NoteListScreen(
                             .fillMaxWidth()
                             .statusBarsPadding()
                             .padding(horizontal = Dimens.screenPaddingHorizontal)
-                            .padding(top = 4.dp, bottom = 4.dp)
+                            .padding(top = Dimens.spacingXl, bottom = Dimens.spacingS)
                     )
                     SettingsContent(
                         navController = navController,
@@ -532,7 +532,8 @@ fun NoteListScreen(
                     },
                     isGrid = listType == 1,
                     dateRange = dateRange,
-                    onDateRangeChange = { dateRange = it }
+                    onDateRangeChange = { dateRange = it },
+                    notesForCalendar = notes
                 )
 
                 IOSGroupList(
@@ -604,6 +605,7 @@ fun NoteListScreen(
                                                                 note = note,
                                                                 groups = groups.map { it.group },
                                                                 modifier = Modifier.fillMaxWidth(),
+                                                                elevated = showNoteMenu,
                                                                 onClick = {
                                                                     navController.navigate(
                                                                         Screen.EditNote.createRoute(note.id)
@@ -732,6 +734,7 @@ fun NoteListScreen(
                                                                 note = note,
                                                                 groups = groups.map { it.group },
                                                                 modifier = Modifier.fillMaxWidth(),
+                                                                elevated = showNoteMenu,
                                                                 onClick = {
                                                                     navController.navigate(
                                                                         Screen.EditNote.createRoute(note.id)

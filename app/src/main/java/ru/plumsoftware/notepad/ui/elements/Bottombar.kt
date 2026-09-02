@@ -17,10 +17,13 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.TextSnippet
+import androidx.compose.material.icons.automirrored.outlined.TextSnippet
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.ui.draw.clip
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -56,26 +59,26 @@ fun BottomBar(
     val activeColor = MaterialTheme.colorScheme.primary
     val inactiveColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
 
-    Column(
+    val fabSize = 54.dp
+
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.background.copy(alpha = 0.95f))
             .navigationBarsPadding()
+            .padding(horizontal = Dimens.spacingL, vertical = Dimens.spacingS)
     ) {
-        HorizontalDivider(
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f),
-            thickness = Dimens.cardBorderWidth
-        )
-
+        // Плавающая скруглённая панель (без тени)
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(Dimens.bottomBarHeight)
-                .padding(horizontal = Dimens.spacingXs),
+                .clip(MaterialTheme.shapes.extraLarge)
+                .background(MaterialTheme.colorScheme.surface)
+                .padding(horizontal = Dimens.spacingS),
             verticalAlignment = Alignment.CenterVertically
         ) {
             BottomTabItem(
-                icon = rememberVectorPainter(Icons.AutoMirrored.Filled.TextSnippet),
+                icon = rememberVectorPainter(Icons.AutoMirrored.Outlined.TextSnippet),
                 label = stringResource(R.string.notes),
                 isSelected = isHomeSelected,
                 activeColor = activeColor,
@@ -86,23 +89,8 @@ fun BottomBar(
                 }
             )
 
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxHeight()
-                    .clickable(
-                        interactionSource = androidx.compose.runtime.remember {
-                            MutableInteractionSource()
-                        },
-                        indication = null
-                    ) {
-                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        navController.navigate(Screen.AddNote.route)
-                    },
-                contentAlignment = Alignment.Center
-            ) {
-                NotepadCircleFabIcon()
-            }
+            // Пустое место под кнопку добавления
+            Spacer(modifier = Modifier.weight(1f))
 
             BottomTabItem(
                 icon = rememberVectorPainter(Icons.Outlined.Settings),
@@ -115,6 +103,24 @@ fun BottomBar(
                     onSettingsClick()
                 }
             )
+        }
+
+        // Кнопка добавления заметки — крупнее и приподнята над панелью (~15%)
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .offset(y = -(fabSize * 0.15f) - 4.dp)
+                .clickable(
+                    interactionSource = androidx.compose.runtime.remember {
+                        MutableInteractionSource()
+                    },
+                    indication = null
+                ) {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    navController.navigate(Screen.AddNote.route)
+                }
+        ) {
+            NotepadCircleFabIcon(modifier = Modifier.size(fabSize))
         }
     }
 }
@@ -134,17 +140,19 @@ fun NotepadCircleFab(
 
 @Composable
 fun NotepadCircleFabIcon(modifier: Modifier = Modifier) {
+    val shape = RoundedCornerShape(18.dp)
     Box(
         modifier = modifier
-            .size(38.dp)
-            .background(MaterialTheme.colorScheme.primary, CircleShape),
+            .blueShadow(elevation = 12.dp, shape = shape)
+            .clip(shape)
+            .background(MaterialTheme.colorScheme.primary),
         contentAlignment = Alignment.Center
     ) {
         Icon(
             imageVector = Icons.Rounded.Add,
             contentDescription = stringResource(R.string.add),
             tint = Color.White,
-            modifier = Modifier.size(22.dp)
+            modifier = Modifier.size(28.dp)
         )
     }
 }

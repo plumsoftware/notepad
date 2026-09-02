@@ -88,7 +88,7 @@ fun Settings(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp)
-                .padding(top = 4.dp, bottom = 4.dp)
+                .padding(top = 24.dp, bottom = 8.dp)
         )
         SettingsContent(
             navController = navController,
@@ -180,6 +180,7 @@ fun SettingsContent(
         Spacer(modifier = Modifier.height(12.dp))
 
         // --- СЕКЦИЯ 1: ВНЕШНИЙ ВИД ---
+        SettingsSectionHeader("ОФОРМЛЕНИЕ")
         IOSSettingsGroup(backgroundColor = sectionColor) {
             IOSSettingsItem(
                 icon = Icons.Default.DarkMode,
@@ -207,6 +208,7 @@ fun SettingsContent(
         )
 
         // --- СЕКЦИЯ 2: КОНФИДЕНЦИАЛЬНОСТЬ (БЕЗОПАСНОСТЬ) ---
+        SettingsSectionHeader("ПРИВАТНОСТЬ")
         IOSSettingsGroup(backgroundColor = sectionColor) {
             IOSSettingsItem(
                 icon = Icons.Default.Lock,
@@ -244,6 +246,7 @@ fun SettingsContent(
         )
 
         // --- СЕКЦИЯ 3: РАЗРЕШЕНИЯ ДОСТУПА ---
+        SettingsSectionHeader("ДОСТУП")
         IOSSettingsGroup(backgroundColor = sectionColor) {
             // Уведомления
             IOSSettingsItem(
@@ -347,6 +350,7 @@ fun SettingsContent(
         )
 
         // --- СЕКЦИЯ 4: СИСТЕМА И ИНФОРМАЦИЯ ---
+        SettingsSectionHeader("О ПРИЛОЖЕНИИ")
         IOSSettingsGroup(backgroundColor = sectionColor) {
             IOSSettingsItem(
                 icon = Icons.Default.Info,
@@ -468,6 +472,16 @@ fun PermissionStatusText(isGranted: Boolean) {
             modifier = Modifier.size(14.dp)
         )
     }
+}
+
+@Composable
+fun SettingsSectionHeader(text: String) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.labelMedium,
+        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+        modifier = Modifier.padding(start = 32.dp, end = 16.dp, bottom = 8.dp)
+    )
 }
 
 @Composable

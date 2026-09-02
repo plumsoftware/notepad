@@ -246,6 +246,7 @@ fun HomeTopBar(
     isGrid: Boolean,
     dateRange: NoteDateRange?,
     onDateRangeChange: (NoteDateRange?) -> Unit,
+    notesForCalendar: List<Note> = emptyList(),
     modifier: Modifier = Modifier
 ) {
     var showDatePicker by remember { mutableStateOf(false) }
@@ -253,48 +254,35 @@ fun HomeTopBar(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .statusBarsPadding()
             .background(MaterialTheme.colorScheme.background)
+            .statusBarsPadding()
+            .padding(top = Dimens.spacingL)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = Dimens.screenPaddingHorizontal)
-                .padding(bottom = Dimens.spacingS),
+                .padding(bottom = Dimens.spacingM),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(Dimens.spacingL),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                HomeSectionTitle(
-                    title = stringResource(R.string.notes),
-                    isActive = activeSection == MainScreenRouteState.Main,
-                    onClick = { onSectionSelected(MainScreenRouteState.Main) }
-                )
-                HomeSectionTitle(
-                    title = stringResource(R.string.habits_title),
-                    isActive = activeSection == MainScreenRouteState.Habits,
-                    onClick = { onSectionSelected(MainScreenRouteState.Habits) }
-                )
-            }
+            HomeSectionTitle(
+                title = stringResource(R.string.notes),
+                isActive = true,
+                onClick = { onSectionSelected(MainScreenRouteState.Main) }
+            )
 
-            Row(horizontalArrangement = Arrangement.spacedBy(Dimens.spacingXs)) {
-                IconButton(onClick = onLayoutToggle) {
-                    Icon(
-                        if (isGrid) Icons.Outlined.ViewList else Icons.Outlined.GridView,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                }
-                IconButton(onClick = onFilterClick) {
-                    Icon(
-                        Icons.Outlined.FilterList,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                }
+            Row(horizontalArrangement = Arrangement.spacedBy(Dimens.spacingS)) {
+                TopBarActionButton(
+                    icon = if (isGrid) Icons.Outlined.ViewList else Icons.Outlined.GridView,
+                    highlighted = true,
+                    onClick = onLayoutToggle
+                )
+                TopBarActionButton(
+                    icon = Icons.Outlined.FilterList,
+                    highlighted = false,
+                    onClick = onFilterClick
+                )
             }
         }
 
@@ -320,12 +308,11 @@ fun HomeTopBar(
     }
 
     if (showDatePicker) {
-        NoteDateRangePickerDialog(
-            onDismiss = { showDatePicker = false },
-            onConfirm = { range ->
-                onDateRangeChange(range)
-                showDatePicker = false
-            }
+        NoteCalendarRangeDialog(
+            notes = notesForCalendar,
+            initialRange = dateRange,
+            onConfirm = { range -> onDateRangeChange(range) },
+            onDismiss = { showDatePicker = false }
         )
     }
 }
@@ -511,6 +498,32 @@ fun ScreenHeaderTitle(
         color = MaterialTheme.colorScheme.onBackground,
         modifier = modifier
     )
+}
+
+@Composable
+private fun TopBarActionButton(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    highlighted: Boolean,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .size(36.dp)
+            .clip(MaterialTheme.shapes.medium)
+            .background(
+                if (highlighted) MaterialTheme.colorScheme.primaryContainer
+                else MaterialTheme.colorScheme.surfaceVariant
+            )
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            icon,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(Dimens.iconSizeMedium)
+        )
+    }
 }
 
 @Composable

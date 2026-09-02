@@ -49,19 +49,22 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBackIos
+import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
+import androidx.compose.material.icons.outlined.AddPhotoAlternate
+import androidx.compose.material.icons.outlined.Folder
+import androidx.compose.material.icons.outlined.MicNone
+import androidx.compose.material.icons.outlined.Notifications
+import androidx.compose.material.icons.rounded.AddCircleOutline
+import androidx.compose.foundation.layout.offset
+import ru.plumsoftware.notepad.ui.dialog.MoveToGroupDialog
+import ru.plumsoftware.notepad.ui.elements.blueShadow
+import ru.plumsoftware.notepad.ui.settings.IOSSwitch
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Image
-import androidx.compose.material.icons.filled.KeyboardArrowLeft
-import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.NotificationsActive
-import androidx.compose.material.icons.filled.NotificationsNone
-import androidx.compose.material.icons.rounded.Call
 import androidx.compose.material.icons.rounded.Check
-import androidx.compose.material.icons.rounded.CheckBox
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.rounded.Mic
-import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.RadioButtonUnchecked
 import ru.plumsoftware.notepad.ui.elements.ColorPickerSheet
 import ru.plumsoftware.notepad.ui.elements.NoteEditToolbar
@@ -109,6 +112,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -252,6 +256,11 @@ fun AddNoteScreen(
     }
     var photos by remember { mutableStateOf<List<String>>(note?.photos ?: emptyList()) }
 
+    // Папка (выбор через существующий MoveToGroupDialog)
+    var selectedGroupId by remember { mutableStateOf(note?.groupId ?: "0") }
+    var showMoveDialog by remember { mutableStateOf(false) }
+    val groupsWithCount by viewModel.groups.collectAsState()
+
     // UI Logic
     var isReminder by remember { mutableStateOf(note?.reminderDate != null) }
     var reminderDate by remember { mutableStateOf(note?.reminderDate) }
@@ -287,20 +296,11 @@ fun AddNoteScreen(
         mutableStateOf(note?.color?.let { Color(it.toULong()) } ?: availableColors.first())
     }
 
-    val animatedBackgroundColor by animateColorAsState(
-        targetValue = selectedColor,
-        animationSpec = tween(durationMillis = 500),
-        label = "bgColor"
-    )
-
-    val isLightBg = luminance(selectedColor.toArgb()) > 0.5f
-    val isNeutralBg =
-        selectedColor == Color.White || selectedColor == Color.Black || selectedColor == Color.Transparent
-
-    val actionItemsColor =
-        if (isNeutralBg) MaterialTheme.colorScheme.primary else if (isLightBg) Color.Black else Color.White
-    val contentColor = if (isLightBg) Color.Black else Color.White
-    val placeholderColor = contentColor.copy(alpha = 0.4f)
+    // Фон приложения не перекрашивается под цвет заметки — он всегда нейтральный,
+    // а карточки и текстовые поля белые (surface). Цвет заметки сохраняется как её свойство.
+    val actionItemsColor = MaterialTheme.colorScheme.primary
+    val contentColor = MaterialTheme.colorScheme.onSurface
+    val placeholderColor = MaterialTheme.colorScheme.onSurfaceVariant
 
     // --- Helpers: Фото и Голос ---
     val pickImages =
@@ -364,7 +364,7 @@ fun AddNoteScreen(
                     createdAt = note?.createdAt ?: System.currentTimeMillis(),
                     reminderDate = if (isReminder) reminderDate else null,
                     photos = photos,
-                    groupId = note?.groupId ?: "0"
+                    groupId = selectedGroupId
                 )
 
                 if (isEditing) {
@@ -403,8 +403,8 @@ fun AddNoteScreen(
             onDismiss = { showVoiceDialog = false },
             onResult = { recognizedText ->
                 val separator =
-                    if (description.isNotEmpty() && !description.endsWith(" ")) " " else ""
-                description += "$separator$recognizedText"
+                    if (title.isNotEmpty() && !title.endsWith(" ")) " " else ""
+                title += "$separator$recognizedText"
                 showVoiceDialog = false
             }
         )
@@ -497,6 +497,17 @@ fun AddNoteScreen(
         FullscreenImageDialog(imagePath = it, onDismiss = { fullscreenImagePath = null })
     }
 
+    if (showMoveDialog) {
+        MoveToGroupDialog(
+            groups = groupsWithCount.map { it.group },
+            onDismiss = { showMoveDialog = false },
+            onGroupSelected = { groupId ->
+                selectedGroupId = groupId
+                showMoveDialog = false
+            }
+        )
+    }
+
     if (isAdsLoading) {
         Box(
             modifier = Modifier
@@ -508,71 +519,96 @@ fun AddNoteScreen(
         }
     }
 
+    val cardColor = MaterialTheme.colorScheme.surface
+    val cardBorderColor = MaterialTheme.colorScheme.outlineVariant
+    val sectionLabelColor = MaterialTheme.colorScheme.onSurfaceVariant
+
     Scaffold(
-        containerColor = animatedBackgroundColor,
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 8.dp, vertical = 8.dp)
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
                     .statusBarsPadding(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Кнопка Назад
-                Row(
+                // Кнопка Назад — скруглённый квадрат
+                Box(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .clickable(enabled = !isExiting) { performExit() } // Используем performExit
-                        .padding(start = 8.dp, end = 8.dp, top = 8.dp, bottom = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                        .size(40.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(cardColor)
+                        .clickable(enabled = !isExiting) { performExit() },
+                    contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBackIos,
-                        contentDescription = null,
+                        contentDescription = stringResource(R.string.back_button),
                         tint = actionItemsColor,
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Text(
-                        text = stringResource(R.string.back_button),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = actionItemsColor
+                        modifier = Modifier
+                            .size(18.dp)
+                            .offset(x = 3.dp)
                     )
                 }
 
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(
-                        onClick = {
-                            val shareText = buildString {
-                                if (title.isNotBlank()) append(title)
-                                if (description.isNotBlank()) {
-                                    if (isNotEmpty()) append("\n\n")
-                                    append(description)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(cardColor)
+                            .clickable {
+                                val shareText = buildString {
+                                    if (title.isNotBlank()) append(title)
+                                    if (description.isNotBlank()) {
+                                        if (isNotEmpty()) append("\n\n")
+                                        append(description)
+                                    }
                                 }
-                            }
-                            if (shareText.isNotBlank()) {
-                                val intent = Intent(Intent.ACTION_SEND).apply {
-                                    type = "text/plain"
-                                    putExtra(Intent.EXTRA_TEXT, shareText)
+                                if (shareText.isNotBlank()) {
+                                    val intent = Intent(Intent.ACTION_SEND).apply {
+                                        type = "text/plain"
+                                        putExtra(Intent.EXTRA_TEXT, shareText)
+                                    }
+                                    context.startActivity(Intent.createChooser(intent, null))
                                 }
-                                context.startActivity(Intent.createChooser(intent, null))
-                            }
-                        }
+                            },
+                        contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             Icons.Outlined.Share,
                             contentDescription = stringResource(R.string.share_note),
-                            tint = actionItemsColor
+                            tint = actionItemsColor,
+                            modifier = Modifier.size(20.dp)
                         )
                     }
-                    TextButton(
-                        onClick = performExit,
-                        enabled = !isLoading && !isExiting,
-                        colors = ButtonDefaults.textButtonColors(contentColor = contentColor)
+
+                    // Кнопка «Готово» — синяя пилюля с синей тенью
+                    Row(
+                        modifier = Modifier
+                            .blueShadow(elevation = 10.dp, shape = RoundedCornerShape(14.dp))
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(MaterialTheme.colorScheme.primary)
+                            .clickable(enabled = !isLoading && !isExiting) { performExit() }
+                            .padding(horizontal = 18.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
+                        Icon(
+                            Icons.Rounded.Check,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onPrimary,
+                            modifier = Modifier.size(18.dp)
+                        )
                         Text(
-                            text = stringResource(R.string.save),
-                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                            text = stringResource(R.string.done),
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                            color = MaterialTheme.colorScheme.onPrimary
                         )
                     }
                 }
@@ -585,18 +621,15 @@ fun AddNoteScreen(
                     includeNavigationBarsPadding = false,
                 )
                 val wordCount = description.trim().split(Regex("\\s+")).count { it.isNotEmpty() }
-                NoteEditToolbar(
-                    onTasksClick = { showAddTaskDialog = true },
-                    onImageClick = {
-                        if (photos.size < 5) {
-                            if (photos.size == 4) showAddPhotoDialog = true
-                            else pickImages.launch("image/*")
-                        }
-                    },
-                    onVoiceClick = onMicClick,
-                    onColorClick = { showColorSheet = true },
-                    onReminderClick = { showDatePicker = true; isReminder = true },
-                    wordCountText = stringResource(R.string.word_count, wordCount, description.length)
+                Text(
+                    text = stringResource(R.string.word_count, wordCount, description.length),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = contentColor.copy(alpha = 0.5f),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .navigationBarsPadding()
+                        .padding(vertical = 12.dp),
+                    textAlign = TextAlign.Center
                 )
             }
         }
@@ -605,7 +638,7 @@ fun AddNoteScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(top = 12.dp)
+                .padding(top = 8.dp)
                 .verticalScroll(scrollState)
         ) {
             Text(
@@ -618,40 +651,65 @@ fun AddNoteScreen(
                 textAlign = TextAlign.Center
             )
 
-            Box(modifier = Modifier.padding(horizontal = 20.dp)) {
-                if (title.isEmpty()) {
-                    Text(
-                        text = stringResource(R.string.title),
-                        style = MaterialTheme.typography.displaySmall.copy(fontWeight = FontWeight.Bold),
-                        color = placeholderColor
+            // --- Заголовок + микрофон ---
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(modifier = Modifier.weight(1f)) {
+                    if (title.isEmpty()) {
+                        Text(
+                            text = stringResource(R.string.title),
+                            style = MaterialTheme.typography.displaySmall.copy(fontWeight = FontWeight.Bold),
+                            color = placeholderColor
+                        )
+                    }
+                    BasicTextField(
+                        value = title,
+                        onValueChange = { title = it },
+                        textStyle = MaterialTheme.typography.displaySmall.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = contentColor
+                        ),
+                        cursorBrush = SolidColor(contentColor),
+                        modifier = Modifier.fillMaxWidth()
                     )
                 }
-                BasicTextField(
-                    value = title,
-                    onValueChange = { title = it },
-                    textStyle = MaterialTheme.typography.displaySmall.copy(
-                        fontWeight = FontWeight.Bold,
-                        color = contentColor
-                    ),
-                    cursorBrush = SolidColor(contentColor),
-                    modifier = Modifier.fillMaxWidth()
-                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(cardColor)
+                        .clickable { onMicClick() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Outlined.MicNone,
+                        contentDescription = null,
+                        tint = actionItemsColor,
+                        modifier = Modifier.size(28.dp)
+                    )
+                }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
+            // --- Описание (карточка) ---
             Box(
                 modifier = Modifier
-                    .padding(horizontal = 20.dp)
+                    .padding(horizontal = 16.dp)
                     .fillMaxWidth()
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(cardColor)
+                    .padding(horizontal = 16.dp, vertical = 14.dp)
             ) {
-                if (description.isEmpty() && tasks.isEmpty()) {
+                if (description.isEmpty()) {
                     Text(
                         text = stringResource(R.string.desc),
-                        style = MaterialTheme.typography.bodyLarge.copy(
-                            fontSize = 17.sp,
-                            lineHeight = 24.sp
-                        ),
+                        style = MaterialTheme.typography.bodyLarge.copy(fontSize = 16.sp, lineHeight = 23.sp),
                         color = placeholderColor
                     )
                 }
@@ -660,8 +718,8 @@ fun AddNoteScreen(
                     onValueChange = { description = it },
                     textStyle = MaterialTheme.typography.bodyLarge.copy(
                         color = contentColor,
-                        fontSize = 17.sp,
-                        lineHeight = 24.sp
+                        fontSize = 16.sp,
+                        lineHeight = 23.sp
                     ),
                     cursorBrush = SolidColor(contentColor),
                     modifier = Modifier.fillMaxWidth()
@@ -670,54 +728,53 @@ fun AddNoteScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            if (isReminder && reminderDate != null) {
-                Row(
-                    modifier = Modifier
-                        .padding(horizontal = 20.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(contentColor.copy(alpha = 0.08f))
-                        .clickable { isReminder = false; reminderDate = null }
-                        .padding(horizontal = 12.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        Icons.Default.Notifications,
-                        null,
-                        tint = contentColor,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
+            // --- ЗАДАЧИ ---
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = stringResource(R.string.tasks).uppercase(),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = sectionLabelColor
+                )
+                if (tasks.isNotEmpty()) {
+                    val done = tasks.count { it.isChecked }
                     Text(
-                        text = formatDate(reminderDate!!),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = contentColor
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Icon(
-                        Icons.Default.Close,
-                        null,
-                        tint = contentColor.copy(0.6f),
-                        modifier = Modifier.size(16.dp)
+                        text = "$done / ${tasks.size}",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = sectionLabelColor
                     )
                 }
-                Spacer(modifier = Modifier.height(24.dp))
             }
-
-            if (tasks.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Column(
+                modifier = Modifier
+                    .padding(horizontal = 16.dp)
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(cardColor)
+            ) {
                 tasks.forEachIndexed { index, task ->
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 20.dp, vertical = 6.dp),
-                        verticalAlignment = Alignment.Top
+                            .padding(horizontal = 14.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(
                             imageVector = if (task.isChecked) Icons.Rounded.CheckCircle else Icons.Rounded.RadioButtonUnchecked,
                             contentDescription = null,
-                            tint = if (task.isChecked) contentColor.copy(0.5f) else contentColor,
+                            tint = if (task.isChecked) MaterialTheme.colorScheme.primary else contentColor.copy(0.5f),
                             modifier = Modifier
                                 .size(24.dp)
-                                .clickable {
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null
+                                ) {
                                     val isCh = !task.isChecked
                                     tasks = tasks.toMutableList()
                                         .apply { this[index] = task.copy(isChecked = isCh) }
@@ -727,7 +784,7 @@ fun AddNoteScreen(
                         Text(
                             text = task.text,
                             style = MaterialTheme.typography.bodyLarge.copy(
-                                color = if (task.isChecked) contentColor.copy(0.5f) else contentColor,
+                                color = if (task.isChecked) contentColor.copy(0.4f) else contentColor,
                                 textDecoration = if (task.isChecked) TextDecoration.LineThrough else null
                             ),
                             modifier = Modifier.weight(1f)
@@ -742,50 +799,272 @@ fun AddNoteScreen(
                                 }
                         )
                     }
+                    HorizontalDivider(
+                        modifier = Modifier.padding(start = 14.dp),
+                        color = contentColor.copy(alpha = 0.08f),
+                        thickness = 0.5.dp
+                    )
                 }
-                Spacer(modifier = Modifier.height(24.dp))
-            }
-            if (photos.isNotEmpty()) {
-                LazyRow(
-                    contentPadding = PaddingValues(horizontal = 20.dp),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { showAddTaskDialog = true }
+                        .padding(horizontal = 14.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    items(photos) { path ->
-                        Box {
-                            AsyncImage(
-                                model = path,
-                                contentDescription = null,
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier
-                                    .height(140.dp)
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .clickable { fullscreenImagePath = path }
+                    Icon(
+                        Icons.Rounded.AddCircleOutline,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = stringResource(R.string.new_task),
+                        style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold),
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // --- ФОТО ---
+            Text(
+                text = stringResource(R.string.photos).uppercase(),
+                style = MaterialTheme.typography.labelMedium,
+                color = sectionLabelColor,
+                modifier = Modifier.padding(horizontal = 20.dp)
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            LazyRow(
+                contentPadding = PaddingValues(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                items(photos) { path ->
+                    Box {
+                        AsyncImage(
+                            model = path,
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .size(110.dp)
+                                .clip(RoundedCornerShape(14.dp))
+                                .clickable { fullscreenImagePath = path }
+                        )
+                        Box(
+                            modifier = Modifier
+                                .padding(6.dp)
+                                .size(22.dp)
+                                .clip(CircleShape)
+                                .background(Color.Black.copy(0.6f))
+                                .clickable {
+                                    photos = photos.toMutableList().apply { remove(path) }
+                                    deleteImagesFromStorage(context, listOf(path))
+                                }
+                                .align(Alignment.TopEnd),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                Icons.Default.Close,
+                                null,
+                                tint = Color.White,
+                                modifier = Modifier.size(14.dp)
                             )
-                            Box(
-                                modifier = Modifier
-                                    .padding(6.dp)
-                                    .size(22.dp)
-                                    .clip(CircleShape)
-                                    .background(Color.Black.copy(0.6f))
-                                    .clickable {
-                                        photos = photos.toMutableList().apply { remove(path) }
-                                        deleteImagesFromStorage(context, listOf(path))
-                                    }
-                                    .align(Alignment.TopEnd),
-                                contentAlignment = Alignment.Center
-                            ) {
+                        }
+                    }
+                }
+                if (photos.size < 5) {
+                    item {
+                        Column(
+                            modifier = Modifier
+                                .size(110.dp)
+                                .clip(RoundedCornerShape(14.dp))
+                                .background(cardColor)
+                                .clickable {
+                                    if (photos.size == 4) showAddPhotoDialog = true
+                                    else pickImages.launch("image/*")
+                                },
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            Icon(
+                                Icons.Outlined.AddPhotoAlternate,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(28.dp)
+                            )
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(
+                                text = stringResource(R.string.add),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = contentColor.copy(alpha = 0.6f)
+                            )
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // --- ЦВЕТ ЗАМЕТКИ ---
+            Text(
+                text = stringResource(R.string.note_color).uppercase(),
+                style = MaterialTheme.typography.labelMedium,
+                color = sectionLabelColor,
+                modifier = Modifier.padding(horizontal = 20.dp)
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Box(
+                modifier = Modifier
+                    .padding(horizontal = 16.dp)
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(cardColor)
+            ) {
+                LazyRow(
+                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 14.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    items(availableColors) { color ->
+                        val isSelected = selectedColor == color
+                        val swatchShape = RoundedCornerShape(12.dp)
+                        // Тот же цвет, но темнее — для обводки и галочки выбранного элемента.
+                        val darker = lerp(color, Color.Black, 0.35f)
+                        Box(
+                            modifier = Modifier
+                                .size(38.dp)
+                                .clip(swatchShape)
+                                .background(color)
+                                .border(
+                                    width = if (isSelected) 2.dp else 0.5.dp,
+                                    color = if (isSelected) darker
+                                    else contentColor.copy(alpha = 0.15f),
+                                    shape = swatchShape
+                                )
+                                .clickable { selectedColor = color },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (isSelected) {
                                 Icon(
-                                    Icons.Default.Close,
-                                    null,
-                                    tint = Color.White,
-                                    modifier = Modifier.size(14.dp)
+                                    Icons.Rounded.Check,
+                                    contentDescription = null,
+                                    tint = darker,
+                                    modifier = Modifier.size(18.dp)
                                 )
                             }
                         }
                     }
                 }
-                Spacer(modifier = Modifier.height(100.dp))
             }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // --- НАПОМИНАНИЕ ---
+            Row(
+                modifier = Modifier
+                    .padding(horizontal = 16.dp)
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(cardColor)
+                    .padding(horizontal = 14.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(32.dp)
+                        .clip(RoundedCornerShape(9.dp))
+                        .background(Color(0xFFFFE7C2)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Outlined.Notifications,
+                        contentDescription = null,
+                        tint = Color(0xFFFF9500),
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(R.string.remind),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = contentColor
+                    )
+                    if (isReminder && reminderDate != null) {
+                        Text(
+                            text = formatDate(reminderDate!!),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = contentColor.copy(alpha = 0.5f)
+                        )
+                    }
+                }
+                IOSSwitch(
+                    checked = isReminder && reminderDate != null,
+                    onCheckedChange = { checked ->
+                        if (checked) {
+                            isReminder = true
+                            showDatePicker = true
+                        } else {
+                            isReminder = false
+                            reminderDate = null
+                        }
+                    }
+                )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // --- ПАПКА ---
+            val currentGroupTitle = groupsWithCount
+                .firstOrNull { it.group.id == selectedGroupId }?.group?.title
+            Row(
+                modifier = Modifier
+                    .padding(horizontal = 16.dp)
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(cardColor)
+                    .clickable { showMoveDialog = true }
+                    .padding(horizontal = 14.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(32.dp)
+                        .clip(RoundedCornerShape(9.dp))
+                        .background(MaterialTheme.colorScheme.primaryContainer),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Outlined.Folder,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(12.dp))
+                Text(
+                    text = stringResource(R.string.move_to_folder),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = contentColor,
+                    modifier = Modifier.weight(1f)
+                )
+                Text(
+                    text = currentGroupTitle ?: stringResource(R.string.folder_all),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = contentColor.copy(alpha = 0.5f)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Icon(
+                    Icons.AutoMirrored.Filled.ArrowForwardIos,
+                    contentDescription = null,
+                    tint = contentColor.copy(alpha = 0.3f),
+                    modifier = Modifier.size(14.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(80.dp))
         }
 
         if (isLoading) LoadingDialog()

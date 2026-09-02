@@ -9,14 +9,14 @@ plugins {
 
 android {
     namespace = "ru.plumsoftware.notepad"
-    compileSdk = 36
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "ru.plumsoftware.notepad"
         minSdk = 24
-        targetSdk = 36
-        versionCode = 25
-        versionName = "1.3.8"
+        targetSdk = 37
+        versionCode = 26
+        versionName = "1.4.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
