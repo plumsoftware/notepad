@@ -1,6 +1,7 @@
 package ru.plumsoftware.notepad.data.database
 
 import android.app.Application
+import android.util.Log
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
@@ -126,24 +127,57 @@ abstract class NoteDatabase : RoomDatabase() {
 
         fun getDatabase(application: Application): NoteDatabase {
             return INSTANCE ?: synchronized(this) {
-                val instance = Room.databaseBuilder(
-                    application,
-                    NoteDatabase::class.java,
-                    "note_database"
-                )
-                    .addMigrations(
-                        MIGRATION_1_2,
-                        MIGRATION_2_3,
-                        MIGRATION_3_4,
-                        MIGRATION_4_5,
-                        MIGRATION_5_6,
-                        MIGRATION_6_7,
-                        MIGRATION_7_8
+                val instance = try {
+                    // Основная попытка: честно применяем все миграции, ничего не теряем.
+                    val db = buildDatabase(application, destructiveFallback = false)
+                    // Room открывает файл и гоняет миграции ЛЕНИВО, при первом реальном
+                    // обращении к базе. Форсируем это обращение прямо здесь, синхронно,
+                    // чтобы поймать возможную ошибку миграции сейчас, а не в случайном
+                    // месте UI на каждом следующем запуске приложения.
+                    db.openHelper.writableDatabase
+                    db
+                } catch (e: Exception) {
+                    // Если миграция не смогла привести старую базу к текущей схеме
+                    // (например, из-за несовместимых данных на устройстве конкретного
+                    // пользователя), раньше приложение просто НЕ ОТКРЫВАЛОСЬ — вообще
+                    // никогда, при каждом запуске падало на этом месте.
+                    // Лучше пересоздать базу (потеряв только повреждённые данные),
+                    // чем навсегда заблокировать пользователю доступ к приложению.
+                    Log.e(
+                        "NoteDatabase",
+                        "DB migration failed, recreating database as a last resort to avoid a permanent crash loop",
+                        e
                     )
-                    .build()
+                    val db = buildDatabase(application, destructiveFallback = true)
+                    db.openHelper.writableDatabase
+                    db
+                }
                 INSTANCE = instance
                 instance
             }
+        }
+
+        private fun buildDatabase(
+            application: Application,
+            destructiveFallback: Boolean
+        ): NoteDatabase {
+            val builder = Room.databaseBuilder(
+                application,
+                NoteDatabase::class.java,
+                "note_database"
+            ).addMigrations(
+                MIGRATION_1_2,
+                MIGRATION_2_3,
+                MIGRATION_3_4,
+                MIGRATION_4_5,
+                MIGRATION_5_6,
+                MIGRATION_6_7,
+                MIGRATION_7_8
+            )
+            if (destructiveFallback) {
+                builder.fallbackToDestructiveMigration()
+            }
+            return builder.build()
         }
     }
 }

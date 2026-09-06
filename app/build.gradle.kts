@@ -15,8 +15,8 @@ android {
         applicationId = "ru.plumsoftware.notepad"
         minSdk = 24
         targetSdk = 37
-        versionCode = 26
-        versionName = "1.4.0"
+        versionCode = 27
+        versionName = "1.4.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

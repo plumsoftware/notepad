@@ -1,5 +1,6 @@
 package ru.plumsoftware.notepad.data.convertor
 
+import android.util.Log
 import androidx.room.TypeConverter
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -14,7 +15,12 @@ class Converters {
 
     @TypeConverter
     fun toTaskList(tasksString: String): List<Task> {
-        return Json.decodeFromString(tasksString)
+        return try {
+            Json.decodeFromString(tasksString)
+        } catch (e: Exception) {
+            Log.e("Converters", "Corrupted tasks JSON, falling back to empty list: $tasksString", e)
+            emptyList()
+        }
     }
 
     @TypeConverter
@@ -32,9 +38,16 @@ class Converters {
         return Json.encodeToString(photos)
     }
 
+    // Та же защита, что и для toTaskList — одна повреждённая запись
+    // не должна блокировать открытие всего приложения навсегда.
     @TypeConverter
     fun toStringList(photosString: String): List<String> {
-        return Json.decodeFromString(photosString)
+        return try {
+            Json.decodeFromString(photosString)
+        } catch (e: Exception) {
+            Log.e("Converters", "Corrupted photos JSON, falling back to empty list: $photosString", e)
+            emptyList()
+        }
     }
 
     // Для списков дней (Например: "1,2,3" -> List<Int>)
@@ -46,7 +59,7 @@ class Converters {
     @TypeConverter
     fun toIntList(data: String?): List<Int> {
         if (data.isNullOrEmpty()) return emptyList()
-        return data.split(",").map { it.toInt() }
+        return data.split(",").mapNotNull { it.trim().toIntOrNull() }
     }
 
     // Для Enum (Ежедневно/По дням)
