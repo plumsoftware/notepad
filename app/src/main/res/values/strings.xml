@@ -45,6 +45,12 @@
     <string name="widget_small_description">Быстро создать заметку</string>
     <string name="widget_notes_preview_description">Последние заметки</string>
     <string name="widget_habits_description">Привычки на сегодня</string>
+    <string name="widget_today_name">Сегодня</string>
+    <string name="widget_today_description">Заметки за сегодня</string>
+    <string name="widget_agenda_name">Ближайшее</string>
+    <string name="widget_agenda_description">Ближайшие напоминания и календарь</string>
+    <string name="widget_pinned_name">Закреплённое</string>
+    <string name="widget_pinned_description">Закреплённая заметка</string>
 
     <!-- Шорткаты -->
     <string name="shortcut_note_short">Заметка</string>
@@ -70,6 +76,57 @@
     <string name="when_to_remind_about_event">Когда напомнить?</string>
     <string name="select_time">Выберите время</string>
     <string name="back_button">Назад</string>
+
+    <!-- Форматирование и ссылки -->
+    <string name="format_bold">Ж</string>
+    <string name="format_italic">К</string>
+    <string name="format_underline">Ч</string>
+    <string name="format_strikethrough">Ч</string>
+    <string name="open_link_title">Открыть ссылку?</string>
+    <string name="open_link_confirm">Открыть</string>
+    <string name="call_number_title">Позвонить?</string>
+    <string name="call_number_confirm">Позвонить</string>
+    <string name="cant_open_link">Не удалось открыть</string>
+
+    <!-- Рингтон -->
+    <string name="ringtone_label">Рингтон</string>
+    <string name="ringtone_default">По умолчанию</string>
+    <string name="ringtone_none">Без звука</string>
+    <string name="select_ringtone">Выберите рингтон</string>
+
+    <!-- Теги -->
+    <string name="tags_label">Теги</string>
+    <string name="create_tag">Новый тег</string>
+    <string name="enter_tag_name">Название тега</string>
+    <string name="add_tag">+ тег</string>
+
+    <!-- Файлы -->
+    <string name="files_label">Файлы</string>
+    <string name="add_file">Добавить файл</string>
+    <string name="file_limit_reached">Можно прикрепить не более 5 файлов</string>
+    <string name="cant_open_file">Не удалось открыть файл</string>
+
+    <!-- Голосовая заметка -->
+    <string name="voice_tab_text">Текст</string>
+    <string name="voice_tab_voice">Голос</string>
+    <string name="voice_record">Запись</string>
+    <string name="voice_rerecord">Перезаписать</string>
+    <string name="voice_transcription">Расшифровка</string>
+    <string name="voice_transcribing">Расшифровка…</string>
+    <string name="voice_delete">Удалить запись</string>
+    <string name="show_more">Ещё</string>
+
+    <!-- Корзина -->
+    <string name="trash_title">Корзина</string>
+    <string name="settings_trash">Корзина</string>
+    <string name="trash_empty_title">Корзина пуста</string>
+    <string name="trash_empty_desc">Удалённые заметки хранятся здесь 30 дней</string>
+    <string name="trash_clear">Очистить</string>
+    <string name="trash_restore">Восстановить</string>
+    <string name="trash_delete_forever">Удалить навсегда</string>
+    <string name="trash_clear_confirm_title">Очистить корзину?</string>
+    <string name="trash_clear_confirm_desc">Все заметки в корзине будут удалены безвозвратно.</string>
+    <string name="trash_auto_clean_hint">Заметки в корзине автоматически удаляются через 30 дней.</string>
 
     <!-- Папки (Группы) -->
     <string name="create_group">Новая папка</string>
@@ -183,6 +240,40 @@
 
     <string name="onboard_voice_title">Голосовой ввод</string>
     <string name="onboard_voice_desc">Создавайте заметки на ходу. Нажмите на иконку микрофона, чтобы быстро надиктовать текст.</string>
+
+    <!-- Онбординг (новый) -->
+    <string name="ob_page_indicator">%1$d из %2$d</string>
+    <string name="ob_format_title">Пишите так, как удобно</string>
+    <string name="ob_format_desc">Жирный, курсив и подчёркивание, чек-листы и заголовки. Телефоны и ссылки приложение находит само и делает кликабельными.</string>
+    <string name="ob_voice_title">Голос вместо клавиатуры</string>
+    <string name="ob_voice_desc">Запишите заметку голосом и слушайте её прямо в списке. Рядом храните фото и файлы любого формата.</string>
+    <string name="ob_safe_title">Ничего не потеряется</string>
+    <string name="ob_safe_desc">Напоминания со своим рингтоном, календарь, корзина на 30 дней и виджеты для быстрого доступа.</string>
+    <string name="ob_perm_title">Нужны разрешения</string>
+    <string name="ob_perm_desc">Без них приложение работает, но часть функций будет недоступна. Можно изменить позже в настройках.</string>
+    <string name="ob_allow_start">Разрешить и начать</string>
+    <string name="ob_not_now">Не сейчас</string>
+
+    <string name="ob_files_title">Файлы</string>
+    <string name="ob_files_desc">PDF, таблицы, аудио</string>
+    <string name="ob_photo_title">Фото</string>
+    <string name="ob_photo_desc">Камера и галерея</string>
+    <string name="ob_transcribe">Расшифровка голоса в текст одним тапом</string>
+    <string name="ob_calendar_title">Календарь</string>
+    <string name="ob_calendar_desc">Все даты и напоминания</string>
+    <string name="ob_trash_title">Корзина</string>
+    <string name="ob_trash_desc">Хранит 30 дней</string>
+    <string name="ob_widgets">Виджеты на экране</string>
+    <string name="ob_note_title">Смета на сентябрь</string>
+    <string name="ob_reminder_when">20 сентября, 23:34</string>
+    <string name="ob_reminder_sub">Рингтон «Капля» · каждый день</string>
+
+    <string name="ob_perm_notif">Уведомления</string>
+    <string name="ob_perm_notif_desc">Напоминания о заметках и задачах</string>
+    <string name="ob_perm_mic">Микрофон</string>
+    <string name="ob_perm_mic_desc">Голосовые заметки и расшифровка</string>
+    <string name="ob_perm_media">Фото и файлы</string>
+    <string name="ob_perm_media_desc">Вложения в заметках</string>
 
     <!-- Templates -->
     <string name="templates_title">Готовые шаблоны</string>

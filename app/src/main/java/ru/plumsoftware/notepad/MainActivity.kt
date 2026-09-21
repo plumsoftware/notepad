@@ -287,6 +287,13 @@ class MainActivity : ComponentActivity() {
                             AboutAppScreen(navController)
                         }
 
+                        composable(Screen.Trash.route) {
+                            val viewModel: NoteViewModel = viewModel(
+                                factory = NoteViewModelFactory(application, false)
+                            )
+                            ru.plumsoftware.notepad.ui.trash.TrashScreen(navController, viewModel)
+                        }
+
                         composable(Screen.Settings.route) {
                             LaunchedEffect(Unit) {
                                 navController.popBackStack(Screen.NoteList.route, inclusive = false)

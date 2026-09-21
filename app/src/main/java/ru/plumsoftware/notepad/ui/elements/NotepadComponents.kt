@@ -128,7 +128,8 @@ enum class SortOrder(val label: String) {
     OLDEST("Сначала старые"),
     WITH_REMINDERS("С напоминаниями"),
     WITH_PHOTOS("С фото"),
-    WITH_TASKS("С задачами");
+    WITH_TASKS("С задачами"),
+    WITH_TAGS("С тегами");
 
     companion object {
         fun fromIndex(index: Int): SortOrder = entries.getOrElse(index) { NEWEST }
@@ -597,7 +598,10 @@ fun SortBottomSheet(
         Text(
             stringResource(R.string.filter_dialog_title),
             style = MaterialTheme.typography.titleLarge,
-            modifier = Modifier.padding(horizontal = Dimens.screenPaddingHorizontal)
+            modifier = Modifier.padding(
+                horizontal = Dimens.screenPaddingHorizontal,
+                vertical = Dimens.spacingS
+            )
         )
         Spacer(Modifier.height(Dimens.spacingL))
 

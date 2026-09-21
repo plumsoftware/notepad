@@ -12,15 +12,17 @@ import ru.plumsoftware.notepad.data.convertor.Converters
 import ru.plumsoftware.notepad.data.database.habit.HabitDao
 import ru.plumsoftware.notepad.data.model.Group
 import ru.plumsoftware.notepad.data.model.Note
+import ru.plumsoftware.notepad.data.model.Tag
 import ru.plumsoftware.notepad.data.model.habit.Habit
 import ru.plumsoftware.notepad.data.model.habit.HabitEntry
 
-@Database(entities = [Note::class, Group::class, Habit::class, HabitEntry::class], version = 8)
+@Database(entities = [Note::class, Group::class, Habit::class, HabitEntry::class, Tag::class], version = 9)
 @TypeConverters(Converters::class)
 abstract class NoteDatabase : RoomDatabase() {
     abstract fun noteDao(): NoteDao
     abstract fun groupDao(): GroupDao
     abstract fun habitDao(): HabitDao
+    abstract fun tagDao(): TagDao
 
     companion object {
         @Volatile
@@ -77,6 +79,34 @@ abstract class NoteDatabase : RoomDatabase() {
             override fun migrate(database: SupportSQLiteDatabase) {
                 database.execSQL(
                     "ALTER TABLE notes ADD COLUMN isPinned INTEGER NOT NULL DEFAULT 0"
+                )
+            }
+        }
+
+        val MIGRATION_8_9 = object : Migration(8, 9) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                // Новые поля заметки
+                database.execSQL("ALTER TABLE notes ADD COLUMN descriptionSpans TEXT NOT NULL DEFAULT '[]'")
+                database.execSQL("ALTER TABLE notes ADD COLUMN tagIds TEXT NOT NULL DEFAULT '[]'")
+                database.execSQL("ALTER TABLE notes ADD COLUMN files TEXT NOT NULL DEFAULT '[]'")
+                database.execSQL("ALTER TABLE notes ADD COLUMN voicePath TEXT")
+                database.execSQL("ALTER TABLE notes ADD COLUMN voiceTranscription TEXT")
+                database.execSQL("ALTER TABLE notes ADD COLUMN ringtoneUri TEXT")
+                database.execSQL("ALTER TABLE notes ADD COLUMN ringtoneTitle TEXT")
+                database.execSQL("ALTER TABLE notes ADD COLUMN isDeleted INTEGER NOT NULL DEFAULT 0")
+                database.execSQL("ALTER TABLE notes ADD COLUMN deletedAt INTEGER")
+
+                // Таблица тегов
+                database.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `tags` (
+                        `id` TEXT NOT NULL,
+                        `title` TEXT NOT NULL,
+                        `color` INTEGER NOT NULL,
+                        `createdAt` INTEGER NOT NULL,
+                        PRIMARY KEY(`id`)
+                    )
+                """.trimIndent()
                 )
             }
         }
@@ -172,7 +202,8 @@ abstract class NoteDatabase : RoomDatabase() {
                 MIGRATION_4_5,
                 MIGRATION_5_6,
                 MIGRATION_6_7,
-                MIGRATION_7_8
+                MIGRATION_7_8,
+                MIGRATION_8_9
             )
             if (destructiveFallback) {
                 builder.fallbackToDestructiveMigration()

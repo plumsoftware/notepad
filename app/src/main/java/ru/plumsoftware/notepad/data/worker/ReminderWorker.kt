@@ -14,8 +14,12 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import androidx.work.Worker
 import androidx.work.WorkerParameters
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.json.Json
 import ru.plumsoftware.notepad.MainActivity
 import ru.plumsoftware.notepad.R
+import ru.plumsoftware.notepad.data.model.NoteFormatting
+import ru.plumsoftware.notepad.data.model.TextSpan
 
 class ReminderWorker(
     val appContext: Context,
@@ -26,16 +30,23 @@ class ReminderWorker(
         val noteId = inputData.getString("noteId") ?: return Result.failure()
         val noteTitle = inputData.getString("noteTitle") ?: return Result.failure()
         val noteDescription = inputData.getString("noteDescription") ?: ""
+        val noteSpansJson = inputData.getString("noteSpans")
+        val ringtoneUriString = inputData.getString("ringtoneUri")
+        val ringtoneUri: android.net.Uri? = ringtoneUriString?.let { android.net.Uri.parse(it) }
 
-        // ИСПРАВЛЕНИЕ 1: Единый ID канала (тот же, что в MainActivity, или создадим заново)
-        val channelId = "note_reminder_channel_v2"
-        val channelName = "Note Reminders"
-
-        // ИСПРАВЛЕНИЕ 2: Создаем канал прямо тут, чтобы гарантировать его существование
         val notificationManager = ContextCompat.getSystemService(
             appContext,
             NotificationManager::class.java
         ) as NotificationManager
+
+        // Канал зависит от выбранного рингтона: звук канала фиксируется при создании,
+        // поэтому для разных рингтонов используем разные каналы.
+        val channelId = if (ringtoneUri != null) {
+            "note_reminder_ringtone_${ringtoneUriString.hashCode()}"
+        } else {
+            "note_reminder_channel_v2"
+        }
+        val channelName = "Note Reminders"
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
@@ -44,7 +55,14 @@ class ReminderWorker(
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
                 description = "Channel for note reminders"
-                enableVibration(true) // Включаем вибрацию
+                enableVibration(true)
+                if (ringtoneUri != null) {
+                    val audioAttributes = android.media.AudioAttributes.Builder()
+                        .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                        .setUsage(android.media.AudioAttributes.USAGE_NOTIFICATION)
+                        .build()
+                    setSound(ringtoneUri, audioAttributes)
+                }
             }
             notificationManager.createNotificationChannel(channel)
         }
@@ -70,7 +88,21 @@ class ReminderWorker(
             R.drawable.full_icon // Или любая существующая иконка
         }
 
-        val contentText = noteDescription.ifBlank { "Напоминание" }
+        // Учитываем форматирование (жирный/курсив/подчёркнутый/зачёркнутый) в тексте уведомления
+        val spans: List<TextSpan> = try {
+            if (noteSpansJson.isNullOrBlank()) emptyList()
+            else Json.decodeFromString(noteSpansJson)
+        } catch (e: Exception) {
+            emptyList()
+        }
+        val contentText: CharSequence = if (noteDescription.isBlank()) {
+            "Напоминание"
+        } else {
+            androidx.core.text.HtmlCompat.fromHtml(
+                NoteFormatting.spansToHtml(noteDescription, spans),
+                androidx.core.text.HtmlCompat.FROM_HTML_MODE_LEGACY
+            )
+        }
 
         val notificationBuilder = NotificationCompat.Builder(appContext, channelId)
             .setSmallIcon(smallIcon)
@@ -81,6 +113,12 @@ class ReminderWorker(
             .setAutoCancel(true)
             .setDefaults(NotificationCompat.DEFAULT_ALL)
             .setStyle(NotificationCompat.BigTextStyle().bigText(contentText))
+            .apply {
+                // На Android < 8 звук берётся из уведомления, а не из канала
+                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O && ringtoneUri != null) {
+                    setSound(ringtoneUri)
+                }
+            }
 
         // ИСПРАВЛЕНИЕ 3: Проверка разрешений для Android 13+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {

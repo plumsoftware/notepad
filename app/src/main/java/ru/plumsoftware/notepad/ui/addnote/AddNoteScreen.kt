@@ -113,6 +113,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -140,6 +141,23 @@ import ru.plumsoftware.notepad.ui.dialog.LoadingDialog
 import ru.plumsoftware.notepad.ui.formatDate
 import ru.plumsoftware.notepad.ui.player.playSound
 import ru.plumsoftware.notepad.ui.player.rememberExoPlayer
+import ru.plumsoftware.notepad.ui.player.VoiceRecorderSection
+import ru.plumsoftware.notepad.ui.RichTextVisualTransformation
+import ru.plumsoftware.notepad.ui.shiftSpansOnEdit
+import ru.plumsoftware.notepad.ui.toggleStyle
+import ru.plumsoftware.notepad.data.model.TextSpanStyle
+import ru.plumsoftware.notepad.data.model.Tag
+import ru.plumsoftware.notepad.data.model.NoteFile
+import ru.plumsoftware.notepad.data.filesaver.saveDocumentToInternalStorage
+import ru.plumsoftware.notepad.data.filesaver.deleteFilesFromStorage
+import androidx.compose.material.icons.filled.FormatBold
+import androidx.compose.material.icons.filled.FormatItalic
+import androidx.compose.material.icons.filled.FormatStrikethrough
+import androidx.compose.material.icons.filled.FormatUnderlined
+import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.outlined.AttachFile
+import androidx.compose.material.icons.outlined.InsertDriveFile
+import androidx.compose.material.icons.automirrored.outlined.Label
 import java.util.UUID
 import com.yandex.mobile.ads.interstitial.InterstitialAd
 import com.yandex.mobile.ads.interstitial.InterstitialAdLoadListener
@@ -248,7 +266,25 @@ fun AddNoteScreen(
 
     // Data States
     var title by remember { mutableStateOf(note?.title ?: "") }
-    var description by remember { mutableStateOf(note?.description ?: "") }
+    var descriptionTfv by remember {
+        mutableStateOf(androidx.compose.ui.text.input.TextFieldValue(note?.description ?: ""))
+    }
+    var descriptionSpans by remember {
+        mutableStateOf(note?.descriptionSpans ?: emptyList())
+    }
+    // Вкладка Текст/Голос (для голосовых заметок сразу открываем «Голос»)
+    var isVoiceTab by remember { mutableStateOf(note?.voicePath != null) }
+    // Голосовая заметка
+    var voicePath by remember { mutableStateOf(note?.voicePath) }
+    var voiceTranscription by remember { mutableStateOf(note?.voiceTranscription) }
+    // Рингтон
+    var ringtoneUri by remember { mutableStateOf(note?.ringtoneUri) }
+    var ringtoneTitle by remember { mutableStateOf(note?.ringtoneTitle) }
+    // Теги
+    var selectedTagIds by remember { mutableStateOf(note?.tagIds ?: emptyList()) }
+    var showCreateTagDialog by remember { mutableStateOf(false) }
+    // Файлы
+    var files by remember { mutableStateOf(note?.files ?: emptyList()) }
     var tasks by remember {
         mutableStateOf<MutableList<Task>>(
             note?.tasks?.toMutableList() ?: mutableListOf()
@@ -260,6 +296,7 @@ fun AddNoteScreen(
     var selectedGroupId by remember { mutableStateOf(note?.groupId ?: "0") }
     var showMoveDialog by remember { mutableStateOf(false) }
     val groupsWithCount by viewModel.groups.collectAsState()
+    val allTags by viewModel.tags.collectAsState()
 
     // UI Logic
     var isReminder by remember { mutableStateOf(note?.reminderDate != null) }
@@ -328,6 +365,94 @@ fun AddNoteScreen(
         }
     }
 
+    // Разрешение микрофона для вкладки «Голос»
+    val voicePermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            isVoiceTab = true
+        } else {
+            Toast.makeText(context, "Требуется разрешение на микрофон", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    val onVoiceTabClick = {
+        if (ContextCompat.checkSelfPermission(
+                context, android.Manifest.permission.RECORD_AUDIO
+            ) == PackageManager.PERMISSION_GRANTED
+        ) {
+            isVoiceTab = true
+        } else {
+            voicePermissionLauncher.launch(android.Manifest.permission.RECORD_AUDIO)
+        }
+    }
+
+    // Выбор документов (pdf/word/excel и т.п.)
+    val pickDocument = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        uri?.let {
+            if (files.size < 5) {
+                saveDocumentToInternalStorage(context, it)?.let { nf ->
+                    files = files + nf
+                }
+            } else {
+                Toast.makeText(context, R.string.file_limit_reached, Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    // Выбор рингтона с устройства
+    val ringtonePicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val uri: android.net.Uri? = if (android.os.Build.VERSION.SDK_INT >= 33) {
+                result.data?.getParcelableExtra(
+                    android.media.RingtoneManager.EXTRA_RINGTONE_PICKED_URI,
+                    android.net.Uri::class.java
+                )
+            } else {
+                @Suppress("DEPRECATION")
+                result.data?.getParcelableExtra(android.media.RingtoneManager.EXTRA_RINGTONE_PICKED_URI)
+            }
+            if (uri != null) {
+                ringtoneUri = uri.toString()
+                ringtoneTitle = try {
+                    android.media.RingtoneManager.getRingtone(context, uri)?.getTitle(context)
+                } catch (e: Exception) {
+                    null
+                }
+            } else {
+                // Выбрано «Без звука»
+                ringtoneUri = null
+                ringtoneTitle = context.getString(R.string.ringtone_none)
+            }
+        }
+    }
+
+    val openRingtonePicker = {
+        val intent = android.content.Intent(android.media.RingtoneManager.ACTION_RINGTONE_PICKER).apply {
+            putExtra(
+                android.media.RingtoneManager.EXTRA_RINGTONE_TYPE,
+                android.media.RingtoneManager.TYPE_NOTIFICATION
+            )
+            putExtra(
+                android.media.RingtoneManager.EXTRA_RINGTONE_TITLE,
+                context.getString(R.string.select_ringtone)
+            )
+            putExtra(android.media.RingtoneManager.EXTRA_RINGTONE_SHOW_SILENT, true)
+            putExtra(android.media.RingtoneManager.EXTRA_RINGTONE_SHOW_DEFAULT, true)
+            ringtoneUri?.let {
+                putExtra(
+                    android.media.RingtoneManager.EXTRA_RINGTONE_EXISTING_URI,
+                    android.net.Uri.parse(it)
+                )
+            }
+        }
+        ringtonePicker.launch(intent)
+    }
+
     val onMicClick = {
         if (ContextCompat.checkSelfPermission(
                 context,
@@ -349,22 +474,34 @@ fun AddNoteScreen(
     // ==========================================
     var isExiting by remember { mutableStateOf(false) } // Защита от двойного клика
 
-    val performExit: () -> Unit = {
+    val performExit: (Boolean) -> Unit = { playSaveSound ->
         if (!isExiting) {
             isExiting = true
 
-            // Сохраняем, если есть текст
-            if (title.isNotBlank() || description.isNotBlank()) {
+            // Сохраняем, если есть текст, голос или вложения
+            if (title.isNotBlank() || descriptionTfv.text.isNotBlank() ||
+                voicePath != null || photos.isNotEmpty() || files.isNotEmpty() ||
+                tasks.isNotEmpty()
+            ) {
                 val updatedNote = Note(
                     id = note?.id ?: UUID.randomUUID().toString(),
                     title = title,
-                    description = description,
+                    description = descriptionTfv.text,
                     color = selectedColor.value.toLong(),
                     tasks = tasks,
                     createdAt = note?.createdAt ?: System.currentTimeMillis(),
                     reminderDate = if (isReminder) reminderDate else null,
                     photos = photos,
-                    groupId = selectedGroupId
+                    groupId = selectedGroupId,
+                    descriptionSpans = descriptionSpans,
+                    tagIds = selectedTagIds,
+                    files = files,
+                    voicePath = voicePath,
+                    voiceTranscription = voiceTranscription,
+                    ringtoneUri = ringtoneUri,
+                    ringtoneTitle = ringtoneTitle,
+                    isDeleted = note?.isDeleted ?: false,
+                    deletedAt = note?.deletedAt
                 )
 
                 if (isEditing) {
@@ -373,10 +510,10 @@ fun AddNoteScreen(
                             context,
                             note?.photos?.filterNot { photos.contains(it) } ?: emptyList())
                     }
-                    playSound(context, exoPlayer, R.raw.note_create)
+                    if (playSaveSound) playSound(context, exoPlayer, R.raw.note_create)
                     viewModel.updateNote(updatedNote, context)
                 } else {
-                    playSound(context, exoPlayer, R.raw.note_create)
+                    if (playSaveSound) playSound(context, exoPlayer, R.raw.note_create)
                     viewModel.addNote(updatedNote)
                 }
             }
@@ -392,7 +529,7 @@ fun AddNoteScreen(
 
     // Перехват системного жеста "Назад" (Свайп / Нижняя кнопка телефона)
     androidx.activity.compose.BackHandler(enabled = !isExiting) {
-        performExit()
+        performExit(false)
     }
 
 
@@ -508,6 +645,18 @@ fun AddNoteScreen(
         )
     }
 
+    if (showCreateTagDialog) {
+        ru.plumsoftware.notepad.ui.elements.IOSCreateTagDialog(
+            onDismiss = { showCreateTagDialog = false },
+            onCreate = { title, color ->
+                showCreateTagDialog = false
+                val tag = Tag(title = title, color = color.toLong())
+                viewModel.addTag(tag)
+                selectedTagIds = selectedTagIds + tag.id
+            }
+        )
+    }
+
     if (isAdsLoading) {
         Box(
             modifier = Modifier
@@ -540,7 +689,7 @@ fun AddNoteScreen(
                         .size(40.dp)
                         .clip(RoundedCornerShape(12.dp))
                         .background(cardColor)
-                        .clickable(enabled = !isExiting) { performExit() },
+                        .clickable(enabled = !isExiting) { performExit(false) },
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
@@ -565,9 +714,9 @@ fun AddNoteScreen(
                             .clickable {
                                 val shareText = buildString {
                                     if (title.isNotBlank()) append(title)
-                                    if (description.isNotBlank()) {
+                                    if (descriptionTfv.text.isNotBlank()) {
                                         if (isNotEmpty()) append("\n\n")
-                                        append(description)
+                                        append(descriptionTfv.text)
                                     }
                                 }
                                 if (shareText.isNotBlank()) {
@@ -594,7 +743,7 @@ fun AddNoteScreen(
                             .blueShadow(elevation = 12.dp, shape = RoundedCornerShape(14.dp))
                             .clip(RoundedCornerShape(14.dp))
                             .background(MaterialTheme.colorScheme.primary)
-                            .clickable(enabled = !isLoading && !isExiting) { performExit() }
+                            .clickable(enabled = !isLoading && !isExiting) { performExit(true) }
                             .padding(horizontal = 18.dp, vertical = 10.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -620,9 +769,10 @@ fun AddNoteScreen(
                     reserveBottomNavBarSpace = false,
                     includeNavigationBarsPadding = false,
                 )
-                val wordCount = description.trim().split(Regex("\\s+")).count { it.isNotEmpty() }
+                val descText = descriptionTfv.text
+                val wordCount = descText.trim().split(Regex("\\s+")).count { it.isNotEmpty() }
                 Text(
-                    text = stringResource(R.string.word_count, wordCount, description.length),
+                    text = stringResource(R.string.word_count, wordCount, descText.length),
                     style = MaterialTheme.typography.labelMedium,
                     color = contentColor.copy(alpha = 0.5f),
                     modifier = Modifier
@@ -697,32 +847,97 @@ fun AddNoteScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // --- Описание (карточка) ---
-            Box(
+            // --- Переключатель Текст / Голос ---
+            TextVoiceSegmentedToggle(
+                isVoice = isVoiceTab,
+                onSelect = { voice -> if (voice) onVoiceTabClick() else isVoiceTab = false },
                 modifier = Modifier
                     .padding(horizontal = 16.dp)
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(cardColor)
-                    .padding(horizontal = 16.dp, vertical = 14.dp)
-            ) {
-                if (description.isEmpty()) {
-                    Text(
-                        text = stringResource(R.string.desc),
-                        style = MaterialTheme.typography.bodyLarge.copy(fontSize = 16.sp, lineHeight = 23.sp),
-                        color = placeholderColor
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            if (!isVoiceTab) {
+                // --- Панель форматирования ---
+                val linkColor = MaterialTheme.colorScheme.primary
+                NoteFormatToolbar(
+                    modifier = Modifier
+                        .padding(horizontal = 16.dp)
+                        .fillMaxWidth(),
+                    onToggle = { style ->
+                        val sel = descriptionTfv.selection
+                        if (!sel.collapsed) {
+                            descriptionSpans = toggleStyle(
+                                descriptionSpans, sel.min, sel.max, style
+                            )
+                        }
+                    }
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // --- Описание (карточка) с форматированием ---
+                Box(
+                    modifier = Modifier
+                        .padding(horizontal = 16.dp)
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(cardColor)
+                        .padding(horizontal = 16.dp, vertical = 14.dp)
+                ) {
+                    if (descriptionTfv.text.isEmpty()) {
+                        Text(
+                            text = stringResource(R.string.desc),
+                            style = MaterialTheme.typography.bodyLarge.copy(fontSize = 16.sp, lineHeight = 23.sp),
+                            color = placeholderColor
+                        )
+                    }
+                    BasicTextField(
+                        value = descriptionTfv,
+                        onValueChange = { newValue ->
+                            descriptionSpans = shiftSpansOnEdit(
+                                descriptionTfv.text, newValue.text, descriptionSpans
+                            )
+                            descriptionTfv = newValue
+                        },
+                        textStyle = MaterialTheme.typography.bodyLarge.copy(
+                            color = contentColor,
+                            fontSize = 16.sp,
+                            lineHeight = 23.sp
+                        ),
+                        visualTransformation = RichTextVisualTransformation(
+                            spans = descriptionSpans,
+                            linkColor = linkColor
+                        ),
+                        cursorBrush = SolidColor(contentColor),
+                        // Полноценное многострочное поле: не однострочное, с комфортной высотой
+                        singleLine = false,
+                        minLines = 6,
+                        modifier = Modifier.fillMaxWidth()
                     )
                 }
-                BasicTextField(
-                    value = description,
-                    onValueChange = { description = it },
-                    textStyle = MaterialTheme.typography.bodyLarge.copy(
-                        color = contentColor,
-                        fontSize = 16.sp,
-                        lineHeight = 23.sp
-                    ),
-                    cursorBrush = SolidColor(contentColor),
-                    modifier = Modifier.fillMaxWidth()
+            } else {
+                // --- Голосовая заметка ---
+                VoiceRecorderSection(
+                    voicePath = voicePath,
+                    transcription = voiceTranscription,
+                    accentColor = voiceAccentFromNote(selectedColor),
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    onRecorded = { path, transcript ->
+                        voicePath?.let { old ->
+                            ru.plumsoftware.notepad.data.filesaver.deleteFilesFromStorage(listOf(old))
+                        }
+                        voicePath = path
+                        voiceTranscription = transcript
+                    },
+                    onDelete = {
+                        voicePath?.let { old ->
+                            ru.plumsoftware.notepad.data.filesaver.deleteFilesFromStorage(listOf(old))
+                        }
+                        voicePath = null
+                        voiceTranscription = null
+                    }
                 )
             }
 
@@ -907,6 +1122,98 @@ fun AddNoteScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
+            // --- ФАЙЛЫ ---
+            Text(
+                text = stringResource(R.string.files_label).uppercase(),
+                style = MaterialTheme.typography.labelMedium,
+                color = sectionLabelColor,
+                modifier = Modifier.padding(horizontal = 20.dp)
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Column(
+                modifier = Modifier
+                    .padding(horizontal = 16.dp)
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(cardColor)
+            ) {
+                files.forEach { file ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { openDocument(context, file) }
+                            .padding(horizontal = 14.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            Icons.Outlined.InsertDriveFile,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(
+                            text = file.name,
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = contentColor,
+                            maxLines = 1,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Icon(
+                            Icons.Default.Close, null,
+                            tint = contentColor.copy(0.3f),
+                            modifier = Modifier
+                                .size(20.dp)
+                                .clickable {
+                                    deleteFilesFromStorage(listOf(file.path))
+                                    files = files.filterNot { it.path == file.path }
+                                }
+                        )
+                    }
+                    HorizontalDivider(
+                        modifier = Modifier.padding(start = 14.dp),
+                        color = contentColor.copy(alpha = 0.08f),
+                        thickness = 0.5.dp
+                    )
+                }
+                if (files.size < 5) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                pickDocument.launch(
+                                    arrayOf(
+                                        "application/pdf",
+                                        "application/msword",
+                                        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                                        "application/vnd.ms-excel",
+                                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                                        "text/plain"
+                                    )
+                                )
+                            }
+                            .padding(horizontal = 14.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            Icons.Outlined.AttachFile,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(
+                            text = stringResource(R.string.add_file),
+                            style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold),
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
             // --- ЦВЕТ ЗАМЕТКИ ---
             Text(
                 text = stringResource(R.string.note_color).uppercase(),
@@ -1016,6 +1323,56 @@ fun AddNoteScreen(
 
             Spacer(modifier = Modifier.height(12.dp))
 
+            // --- РИНГТОН ---
+            Row(
+                modifier = Modifier
+                    .padding(horizontal = 16.dp)
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(cardColor)
+                    .clickable { openRingtonePicker() }
+                    .padding(horizontal = 14.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(32.dp)
+                        .clip(RoundedCornerShape(9.dp))
+                        .background(Color(0xFFE7E0FF)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Default.MusicNote,
+                        contentDescription = null,
+                        tint = Color(0xFF6E56CF),
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(12.dp))
+                Text(
+                    text = stringResource(R.string.ringtone_label),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = contentColor,
+                    modifier = Modifier.weight(1f)
+                )
+                Text(
+                    text = ringtoneTitle ?: stringResource(R.string.ringtone_default),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = contentColor.copy(alpha = 0.5f),
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Icon(
+                    Icons.AutoMirrored.Filled.ArrowForwardIos,
+                    contentDescription = null,
+                    tint = contentColor.copy(alpha = 0.3f),
+                    modifier = Modifier.size(14.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
             // --- ПАПКА ---
             val currentGroupTitle = groupsWithCount
                 .firstOrNull { it.group.id == selectedGroupId }?.group?.title
@@ -1063,6 +1420,31 @@ fun AddNoteScreen(
                     modifier = Modifier.size(14.dp)
                 )
             }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // --- ТЕГИ ---
+            Text(
+                text = stringResource(R.string.tags_label).uppercase(),
+                style = MaterialTheme.typography.labelMedium,
+                color = sectionLabelColor,
+                modifier = Modifier.padding(horizontal = 20.dp)
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            NoteTagsRow(
+                allTags = allTags,
+                selectedTagIds = selectedTagIds,
+                contentColor = contentColor,
+                onToggleTag = { id ->
+                    selectedTagIds = if (selectedTagIds.contains(id)) {
+                        selectedTagIds.filterNot { it == id }
+                    } else {
+                        selectedTagIds + id
+                    }
+                },
+                onAddTag = { showCreateTagDialog = true },
+                modifier = Modifier.padding(horizontal = 16.dp)
+            )
 
             Spacer(modifier = Modifier.height(80.dp))
         }
@@ -1398,6 +1780,168 @@ fun IOSAdsDialog(onDismiss: () -> Unit, onWatch: () -> Unit) {
 
 fun getFriendlyDate(time: Long): String {
     return SimpleDateFormat("d MMMM, HH:mm", Locale.getDefault()).format(Date(time))
+}
+
+// Акцент голосового плеера, производный от выбранного цвета заметки.
+fun voiceAccentFromNote(selectedColor: Color): Color {
+    return if (selectedColor.luminance() > 0.85f) {
+        Color(0xFFFF3B30)
+    } else {
+        lerp(selectedColor, Color.Black, 0.4f)
+    }
+}
+
+fun openDocument(context: Context, file: NoteFile) {
+    try {
+        val f = java.io.File(file.path)
+        val uri = androidx.core.content.FileProvider.getUriForFile(
+            context, "${context.packageName}.fileprovider", f
+        )
+        val intent = Intent(Intent.ACTION_VIEW).apply {
+            setDataAndType(uri, file.mime)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        context.startActivity(intent)
+    } catch (e: Exception) {
+        Toast.makeText(context, R.string.cant_open_file, Toast.LENGTH_SHORT).show()
+    }
+}
+
+@Composable
+fun TextVoiceSegmentedToggle(
+    isVoice: Boolean,
+    onSelect: (Boolean) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .clip(RoundedCornerShape(14.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .padding(4.dp)
+    ) {
+        listOf(false to R.string.voice_tab_text, true to R.string.voice_tab_voice).forEach { (voice, label) ->
+            val selected = isVoice == voice
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(11.dp))
+                    .background(if (selected) MaterialTheme.colorScheme.surface else Color.Transparent)
+                    .clickable { onSelect(voice) }
+                    .padding(vertical = 10.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = stringResource(label),
+                    style = MaterialTheme.typography.titleSmall,
+                    color = if (selected) MaterialTheme.colorScheme.onSurface
+                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun NoteFormatToolbar(
+    onToggle: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .clip(RoundedCornerShape(14.dp))
+            .background(MaterialTheme.colorScheme.surface)
+            .padding(4.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        val buttons = listOf(
+            TextSpanStyle.BOLD to Icons.Default.FormatBold,
+            TextSpanStyle.ITALIC to Icons.Default.FormatItalic,
+            TextSpanStyle.UNDERLINE to Icons.Default.FormatUnderlined,
+            TextSpanStyle.STRIKETHROUGH to Icons.Default.FormatStrikethrough
+        )
+        buttons.forEach { (style, icon) ->
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(10.dp))
+                    .clickable { onToggle(style) }
+                    .padding(vertical = 10.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = style,
+                    tint = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.size(22.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun NoteTagsRow(
+    allTags: List<Tag>,
+    selectedTagIds: List<String>,
+    contentColor: Color,
+    onToggleTag: (String) -> Unit,
+    onAddTag: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    androidx.compose.foundation.layout.FlowRow(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        allTags.forEach { tag ->
+            val selected = selectedTagIds.contains(tag.id)
+            val color = Color(tag.color.toULong())
+            Row(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(if (selected) color.copy(alpha = 0.25f) else MaterialTheme.colorScheme.surface)
+                    .border(
+                        width = 1.dp,
+                        color = if (selected) color else MaterialTheme.colorScheme.outlineVariant,
+                        shape = RoundedCornerShape(10.dp)
+                    )
+                    .clickable { onToggleTag(tag.id) }
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(8.dp)
+                        .clip(CircleShape)
+                        .background(color)
+                )
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    text = "#${tag.title}",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = if (selected) lerp(color, contentColor, 0.4f) else contentColor
+                )
+            }
+        }
+        // Кнопка «+ тег»
+        Row(
+            modifier = Modifier
+                .clip(RoundedCornerShape(10.dp))
+                .background(MaterialTheme.colorScheme.surface)
+                .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(10.dp))
+                .clickable { onAddTag() }
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = stringResource(R.string.add_tag),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary
+            )
+        }
+    }
 }
 
 private fun loadRewardedAd(rewardedAdLoader: RewardedAdLoader?) {

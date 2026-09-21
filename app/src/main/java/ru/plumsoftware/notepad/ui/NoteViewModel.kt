@@ -19,10 +19,14 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.launch
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import ru.plumsoftware.notepad.data.database.NoteDatabase
+import ru.plumsoftware.notepad.data.filesaver.deleteFilesFromStorage
 import ru.plumsoftware.notepad.data.filesaver.deleteImagesFromStorage
 import ru.plumsoftware.notepad.data.model.Group
 import ru.plumsoftware.notepad.data.model.Note
+import ru.plumsoftware.notepad.data.model.Tag
 import ru.plumsoftware.notepad.data.worker.ReminderWorker
 import java.util.concurrent.TimeUnit
 import androidx.core.content.edit
@@ -130,6 +134,16 @@ class NoteViewModel(application: Application, openAddNote: Boolean) : ViewModel(
     val secretNotesCount = db.noteDao().getSecretNotesCount()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
+    // Теги
+    val tags = db.tagDao().getAllTags()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    // Корзина
+    val trashedNotes = db.noteDao().getTrashedNotes()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    val trashedNotesCount = db.noteDao().getTrashedNotesCount()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+
     val openAddNoteScreen = MutableStateFlow(openAddNote)
     val needToShowRateDialog = MutableStateFlow(false)
 
@@ -149,6 +163,7 @@ class NoteViewModel(application: Application, openAddNote: Boolean) : ViewModel(
 
     init {
         loadRatePreferences()
+        cleanupTrash()
     }
 
     // --- ACTIONS ---
@@ -206,15 +221,77 @@ class NoteViewModel(application: Application, openAddNote: Boolean) : ViewModel(
         }
     }
 
+    // "Удаление" заметки = перемещение в корзину (мягкое удаление).
+    // Файлы (фото/документы/голос) сохраняются на случай восстановления.
     fun deleteNote(note: Note, context: Context) {
         viewModelScope.launch {
             try {
-                db.noteDao().delete(note)
+                db.noteDao().softDelete(note.id, System.currentTimeMillis())
                 workManager.cancelUniqueWork("reminder_${note.id}")
-                deleteImagesFromStorage(context, note.photos)
             } finally {
             }
         }
+    }
+
+    // --- КОРЗИНА ---
+
+    fun restoreNote(note: Note) {
+        viewModelScope.launch {
+            db.noteDao().restore(note.id)
+            // Возвращаем напоминание, если оно ещё в будущем
+            val restored = note.copy(isDeleted = false, deletedAt = null)
+            if (restored.reminderDate != null && restored.reminderDate > System.currentTimeMillis()) {
+                scheduleReminder(restored)
+            }
+        }
+    }
+
+    fun permanentlyDeleteNote(note: Note, context: Context) {
+        viewModelScope.launch {
+            db.noteDao().delete(note)
+            workManager.cancelUniqueWork("reminder_${note.id}")
+            deleteNoteFiles(context, note)
+        }
+    }
+
+    fun emptyTrash(context: Context) {
+        viewModelScope.launch {
+            val notes = db.noteDao().getAllTrashedOnce()
+            notes.forEach { note ->
+                workManager.cancelUniqueWork("reminder_${note.id}")
+                deleteNoteFiles(context, note)
+            }
+            db.noteDao().emptyTrash()
+        }
+    }
+
+    // Автоочистка корзины: заметки старше 30 дней удаляются окончательно.
+    private fun cleanupTrash() {
+        viewModelScope.launch {
+            val threshold = System.currentTimeMillis() - TRASH_RETENTION_MS
+            val expired = db.noteDao().getExpiredTrash(threshold)
+            expired.forEach { note ->
+                workManager.cancelUniqueWork("reminder_${note.id}")
+                deleteNoteFiles(appContext, note)
+            }
+            db.noteDao().deleteExpiredTrash(threshold)
+        }
+    }
+
+    private fun deleteNoteFiles(context: Context, note: Note) {
+        deleteImagesFromStorage(context, note.photos)
+        deleteFilesFromStorage(note.files.map { it.path })
+        note.voicePath?.let { deleteFilesFromStorage(listOf(it)) }
+    }
+
+    // --- ТЕГИ ---
+
+    fun addTag(tag: Tag) {
+        viewModelScope.launch { db.tagDao().insert(tag) }
+    }
+
+    fun deleteTag(tag: Tag) {
+        viewModelScope.launch { db.tagDao().delete(tag) }
     }
 
     fun togglePin(note: Note) {
@@ -281,7 +358,9 @@ class NoteViewModel(application: Application, openAddNote: Boolean) : ViewModel(
                         workDataOf(
                             "noteId" to note.id,
                             "noteTitle" to note.title,
-                            "noteDescription" to note.description
+                            "noteDescription" to note.description,
+                            "noteSpans" to Json.encodeToString(note.descriptionSpans),
+                            "ringtoneUri" to note.ringtoneUri
                         )
                     )
                     .build()
@@ -456,5 +535,6 @@ class NoteViewModel(application: Application, openAddNote: Boolean) : ViewModel(
         const val SECURE_FOLDER_ID = "-1"
         private const val PREFS_NAME = "secure_prefs"
         private const val KEY_PIN = "secure_pin"
+        const val TRASH_RETENTION_MS = 30L * 24 * 60 * 60 * 1000 // 30 дней
     }
 }

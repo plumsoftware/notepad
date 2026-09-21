@@ -152,6 +152,7 @@ fun NoteListScreen(
     var searchQuery by remember { mutableStateOf("") }
     val notes by viewModel.notes.collectAsState()
     val groups by viewModel.groups.collectAsState()
+    val allTags by viewModel.tags.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val lazyListState = rememberLazyListState()
     val firstVisibleItemIndex by remember { derivedStateOf { lazyListState.firstVisibleItemIndex } }
@@ -320,6 +321,7 @@ fun NoteListScreen(
             2 -> list.filter { it.reminderDate != null }
             3 -> list.filter { it.photos.isNotEmpty() }
             4 -> list.filter { it.tasks.isNotEmpty() }
+            5 -> list.filter { it.tagIds.isNotEmpty() }
             else -> list
         }
         val pinFirst = compareByDescending<Note> { it.isPinned }
@@ -604,6 +606,7 @@ fun NoteListScreen(
                                                             IOSNoteCard(
                                                                 note = note,
                                                                 groups = groups.map { it.group },
+                                                                tags = allTags,
                                                                 modifier = Modifier.fillMaxWidth(),
                                                                 elevated = showNoteMenu,
                                                                 onClick = {
@@ -733,6 +736,7 @@ fun NoteListScreen(
                                                             IOSNoteCard(
                                                                 note = note,
                                                                 groups = groups.map { it.group },
+                                                                tags = allTags,
                                                                 modifier = Modifier.fillMaxWidth(),
                                                                 elevated = showNoteMenu,
                                                                 onClick = {

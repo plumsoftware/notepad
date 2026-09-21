@@ -43,6 +43,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
 import androidx.compose.material.icons.filled.BatteryStd
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Info
@@ -344,6 +345,42 @@ fun SettingsContent(
         }
         Text(
             text = "Разрешения нужны для создания голосовых заметок, прикрепления фото и стабильной работы напоминаний.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+            modifier = Modifier.padding(start = 32.dp, top = 8.dp, bottom = 24.dp, end = 16.dp)
+        )
+
+        // --- КОРЗИНА ---
+        SettingsSectionHeader(stringResource(R.string.settings_trash).uppercase())
+        val trashCount by viewModel.trashedNotesCount.collectAsState()
+        IOSSettingsGroup(backgroundColor = sectionColor) {
+            IOSSettingsItem(
+                icon = Icons.Default.Delete,
+                iconColor = Color(0xFF8E8E93),
+                title = stringResource(R.string.settings_trash),
+                showDivider = false,
+                onClick = { navController.navigate(Screen.Trash.route) },
+                trailingContent = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (trashCount > 0) {
+                            Text(
+                                text = trashCount.toString(),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                        }
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowForwardIos, null,
+                            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
+                            modifier = Modifier.size(14.dp)
+                        )
+                    }
+                }
+            )
+        }
+        Text(
+            text = stringResource(R.string.trash_auto_clean_hint),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
             modifier = Modifier.padding(start = 32.dp, top = 8.dp, bottom = 24.dp, end = 16.dp)

@@ -15,7 +15,22 @@ data class Note(
     val reminderDate: Long? = null,
     val photos: List<String> = emptyList(),
     val groupId: String = "0",
-    val isPinned: Boolean = false
+    val isPinned: Boolean = false,
+    // Форматирование тела заметки (жирный/курсив/подчёркнутый/зачёркнутый)
+    val descriptionSpans: List<TextSpan> = emptyList(),
+    // Прикреплённые теги
+    val tagIds: List<String> = emptyList(),
+    // Прикреплённые документы (pdf/word/excel)
+    val files: List<NoteFile> = emptyList(),
+    // Голосовая заметка
+    val voicePath: String? = null,
+    val voiceTranscription: String? = null,
+    // Рингтон для уведомления-напоминания
+    val ringtoneUri: String? = null,
+    val ringtoneTitle: String? = null,
+    // Корзина
+    val isDeleted: Boolean = false,
+    val deletedAt: Long? = null
 ) {
     override fun toString(): String {
         return """

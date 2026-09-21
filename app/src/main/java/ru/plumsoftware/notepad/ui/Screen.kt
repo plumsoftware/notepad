@@ -10,4 +10,6 @@ sealed class Screen(val route: String) {
     }
 
     data object AddHabit : Screen("add_habit")
+
+    data object Trash : Screen("trash")
 }

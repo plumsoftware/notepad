@@ -4,7 +4,9 @@ import android.util.Log
 import androidx.room.TypeConverter
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import ru.plumsoftware.notepad.data.model.NoteFile
 import ru.plumsoftware.notepad.data.model.Task
+import ru.plumsoftware.notepad.data.model.TextSpan
 import ru.plumsoftware.notepad.data.model.habit.HabitFrequency
 
 class Converters {
@@ -46,6 +48,36 @@ class Converters {
             Json.decodeFromString(photosString)
         } catch (e: Exception) {
             Log.e("Converters", "Corrupted photos JSON, falling back to empty list: $photosString", e)
+            emptyList()
+        }
+    }
+
+    @TypeConverter
+    fun fromTextSpanList(spans: List<TextSpan>): String {
+        return Json.encodeToString(spans)
+    }
+
+    @TypeConverter
+    fun toTextSpanList(data: String): List<TextSpan> {
+        return try {
+            Json.decodeFromString(data)
+        } catch (e: Exception) {
+            Log.e("Converters", "Corrupted spans JSON, falling back to empty list: $data", e)
+            emptyList()
+        }
+    }
+
+    @TypeConverter
+    fun fromNoteFileList(files: List<NoteFile>): String {
+        return Json.encodeToString(files)
+    }
+
+    @TypeConverter
+    fun toNoteFileList(data: String): List<NoteFile> {
+        return try {
+            Json.decodeFromString(data)
+        } catch (e: Exception) {
+            Log.e("Converters", "Corrupted files JSON, falling back to empty list: $data", e)
             emptyList()
         }
     }
