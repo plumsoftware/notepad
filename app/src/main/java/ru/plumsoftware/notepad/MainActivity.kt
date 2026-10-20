@@ -8,9 +8,6 @@ import android.app.NotificationManager
 import android.content.Context
 import android.os.Build
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
-import android.util.Log
 import androidx.core.view.WindowCompat
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -28,14 +25,6 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.yandex.mobile.ads.appopenad.AppOpenAd
-import com.yandex.mobile.ads.appopenad.AppOpenAdEventListener
-import com.yandex.mobile.ads.appopenad.AppOpenAdLoadListener
-import com.yandex.mobile.ads.appopenad.AppOpenAdLoader
-import com.yandex.mobile.ads.common.AdError
-import com.yandex.mobile.ads.common.AdRequest
-import com.yandex.mobile.ads.common.AdRequestError
-import com.yandex.mobile.ads.common.ImpressionData
 import com.yandex.mobile.ads.common.YandexAds
 import ru.plumsoftware.notepad.ui.NoteViewModel
 import ru.plumsoftware.notepad.ui.NoteViewModelFactory
@@ -74,12 +63,6 @@ import ru.plumsoftware.notepad.ui.onboarding.OnboardingScreen
 import ru.plumsoftware.notepad.ui.habit.add_habit.AddHabitScreen
 
 class MainActivity : ComponentActivity() {
-    private var showOpenAdsCounter = 0
-    private var opensForAd = 0
-    private var currentAdLoadAttempt = 0
-    private val maxAdLoadAttempts = 5
-    private var handler: Handler? = null
-    private var appOpenLoader: AppOpenAdLoader? = null
 
     @SuppressLint("StateFlowValueCalledInComposition")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -96,9 +79,7 @@ class MainActivity : ComponentActivity() {
             || intent.getStringExtra("action") == "voice_note"
         val launchAction = intent.getStringExtra("action")
 
-        // Загружаем счетчик из SharedPreferences
         val sharedPreferences = getSharedPreferences("app_prefs", MODE_PRIVATE)
-        opensForAd = sharedPreferences.getInt("open_counter", 0)
 
         // Загружаем настройку темы при запуске
         val isDarkTheme = getDarkThemePreference(this)
@@ -163,7 +144,6 @@ class MainActivity : ComponentActivity() {
                         permissions.entries.forEach { (permission, granted) ->
                             if (!granted && shouldShowRequestPermissionRationale(permission)) {
                                 showPermissionRationale = permission
-                                showOpenAdsCounter++
                             }
                         }
                     }
@@ -212,15 +192,8 @@ class MainActivity : ComponentActivity() {
                         requestPermissions.launch(permissionsToRequest)
                     }
 
-                    YandexAds.initialize(baseContext) {
-                        // Реклама при входе временно отключена
-//                        if (opensForAd == 5) {
-//                            showOpenAds()
-//                        } else {
-                            opensForAd++
-                            sharedPreferences.edit { putInt("open_counter", opensForAd) }
-//                        }
-                    }
+                    // SDK нужен для нативной и межстраничной рекламы; реклама при входе отключена
+                    YandexAds.initialize(baseContext) {}
                 }
 
                 showPermissionRationale?.let { permission ->
@@ -377,98 +350,6 @@ class MainActivity : ComponentActivity() {
                     }
                 }
             }
-        }
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        // Очищаем handler при уничтожении активности
-        handler?.removeCallbacksAndMessages(null)
-        handler = null
-    }
-
-    private fun showOpenAds() {
-//        currentAdLoadAttempt = 0
-        loadOpenAdWithRetry()
-    }
-
-    private fun loadOpenAdWithRetry() {
-        // Увеличиваем счетчик попыток
-//        currentAdLoadAttempt++
-
-//        if (currentAdLoadAttempt > maxAdLoadAttempts) {
-            // Достигнуто максимальное количество попыток
-//            Log.d("AdLoad", "Max load attempts reached: $maxAdLoadAttempts")
-//            showOpenAdsCounter = 1 // Сбрасываем счетчик показа
-//            return
-//        }
-
-        Log.d("AdLoad", "Attempting to load ad (attempt $currentAdLoadAttempt/$maxAdLoadAttempts)")
-
-        // Создаем новый загрузчик
-        appOpenLoader = AppOpenAdLoader(baseContext)
-        val adRequest = AdRequest.Builder(App.platformConfig.adsConfig.openAdsId).build()
-
-        val appOpenAdEventListener = object : AppOpenAdEventListener {
-            override fun onAdShown() {
-                Log.d("AdLoad", "Ad shown successfully")
-//                showOpenAdsCounter = 1 // Увеличиваем счетчик показа
-            }
-
-            override fun onAdDismissed() {
-                Log.d("AdLoad", "Ad dismissed")
-            }
-
-            override fun onAdFailedToShow(adError: AdError) {
-                Log.d("AdLoad", "Ad failed to show: $adError")
-            }
-
-            override fun onAdClicked() {
-                Log.d("AdLoad", "Ad clicked")
-            }
-
-            override fun onAdImpression(impressionData: ImpressionData?) {
-                Log.d("AdLoad", "Ad impression recorded")
-            }
-        }
-
-        val appOpenAdLoadListener = object : AppOpenAdLoadListener {
-            override fun onAdFailedToLoad(error: AdRequestError) {
-                Log.d("AdLoad", "Ad failed to load: ${error}. Attempt $currentAdLoadAttempt/$maxAdLoadAttempts")
-
-                // Рассчитываем задержку для следующей попытки (экспоненциальная задержка)
-//                val retryDelay = calculateRetryDelay(currentAdLoadAttempt)
-
-                // Планируем следующую попытку через задержку
-//                handler = Handler(Looper.getMainLooper())
-//                handler?.postDelayed({
-//                    loadOpenAdWithRetry()
-//                }, retryDelay)
-            }
-
-            override fun onAdLoaded(appOpenAd: AppOpenAd) {
-                Log.d("AdLoad", "Ad loaded successfully on attempt $currentAdLoadAttempt")
-
-                appOpenAd.setAdEventListener(appOpenAdEventListener)
-                appOpenAd.show(this@MainActivity)
-
-                // Сброс счетчика попыток при успешной загрузке
-//                currentAdLoadAttemptAttempt = 0
-            }
-        }
-
-        appOpenLoader?.loadAd(adRequest, appOpenAdLoadListener)
-    }
-
-    private fun calculateRetryDelay(attempt: Int): Long {
-        // Экспоненциальная задержка с джиттером для избежания перегрузки
-        return when (attempt) {
-            1 -> 1000L // 1 секунда
-            2 -> 2000L // 2 секунды
-            3 -> 4000L // 4 секунды
-            4 -> 8000L // 8 секунд
-            5 -> 16000L // 16 секунд
-            else -> 1000L
         }
     }
 }

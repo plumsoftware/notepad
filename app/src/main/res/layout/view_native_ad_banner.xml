@@ -1,0 +1,185 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Карточка слайдера нативной рекламы под поиском. Высоту (55dp) задаёт Compose-контейнер.
+    Размеры медиа и строки предупреждения выставляются в коде (NativeAdBinding) под конкретное объявление.
+    Все ассеты, которые пришли в объявлении, должны быть видимы — иначе Яндекс не засчитает показ.
+-->
+<com.yandex.mobile.ads.nativeads.NativeAdView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="6dp"
+            android:paddingTop="4dp"
+            android:paddingEnd="4dp"
+            android:paddingBottom="4dp">
+
+            <!-- Картинка медийного объявления: ширина по пропорциям креатива -->
+            <com.yandex.mobile.ads.nativeads.MediaView
+                android:id="@+id/native_ad_media"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:layout_marginEnd="8dp"
+                android:visibility="gone" />
+
+            <ImageView
+                android:id="@+id/native_ad_icon"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:layout_marginEnd="8dp"
+                android:contentDescription="@null"
+                android:scaleType="centerCrop"
+                android:visibility="gone" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:gravity="center_vertical"
+                android:orientation="vertical">
+
+                <!-- Заголовок должен быть виден целиком: до 2 строк с автоуменьшением шрифта -->
+                <androidx.appcompat.widget.AppCompatTextView
+                    android:id="@+id/native_ad_title"
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_weight="1"
+                    app:autoSizeMaxTextSize="13sp"
+                    app:autoSizeMinTextSize="8sp"
+                    app:autoSizeStepGranularity="0.5sp"
+                    app:autoSizeTextType="uniform"
+                    android:gravity="center_vertical"
+                    android:includeFontPadding="false"
+                    android:maxLines="2"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/native_ad_body"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="end"
+                    android:includeFontPadding="false"
+                    android:maxLines="1"
+                    android:textSize="10sp"
+                    android:visibility="gone" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <ImageView
+                        android:id="@+id/native_ad_favicon"
+                        android:layout_width="12dp"
+                        android:layout_height="12dp"
+                        android:layout_marginEnd="4dp"
+                        android:contentDescription="@null"
+                        android:visibility="gone" />
+
+                    <TextView
+                        android:id="@+id/native_ad_sponsored"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:includeFontPadding="false"
+                        android:maxLines="1"
+                        android:textSize="9sp" />
+
+                    <TextView
+                        android:id="@+id/native_ad_age"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="4dp"
+                        android:includeFontPadding="false"
+                        android:maxLines="1"
+                        android:textSize="9sp"
+                        android:visibility="gone" />
+
+                    <TextView
+                        android:id="@+id/native_ad_domain"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="4dp"
+                        android:includeFontPadding="false"
+                        android:maxLines="1"
+                        android:textSize="9sp"
+                        android:visibility="gone" />
+
+                    <TextView
+                        android:id="@+id/native_ad_price"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="4dp"
+                        android:layout_weight="1"
+                        android:ellipsize="end"
+                        android:includeFontPadding="false"
+                        android:maxLines="1"
+                        android:textSize="9sp"
+                        android:visibility="gone" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- Справа: «⋮» в правом верхнем углу, под ним кнопка действия -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:layout_marginStart="6dp"
+                android:gravity="end"
+                android:orientation="vertical">
+
+                <ImageView
+                    android:id="@+id/native_ad_feedback"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:contentDescription="@null"
+                    android:src="@drawable/ic_native_ad_more" />
+
+                <Space
+                    android:layout_width="0dp"
+                    android:layout_height="0dp"
+                    android:layout_weight="1" />
+
+                <TextView
+                    android:id="@+id/native_ad_call_to_action"
+                    android:layout_width="wrap_content"
+                    android:layout_height="22dp"
+                    android:ellipsize="end"
+                    android:gravity="center"
+                    android:maxLines="1"
+                    android:maxWidth="100dp"
+                    android:paddingHorizontal="8dp"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    android:visibility="gone" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- Предупреждение на всю ширину: высоту считаем от minimumRequiredArea -->
+        <androidx.appcompat.widget.AppCompatTextView
+            android:id="@+id/native_ad_warning"
+            android:layout_width="match_parent"
+            android:layout_height="10dp"
+            app:autoSizeMaxTextSize="10sp"
+            app:autoSizeMinTextSize="6sp"
+            app:autoSizeStepGranularity="0.5sp"
+            app:autoSizeTextType="uniform"
+            android:gravity="center"
+            android:includeFontPadding="false"
+            android:maxLines="1"
+            android:paddingHorizontal="6dp"
+            android:visibility="gone" />
+    </LinearLayout>
+
+</com.yandex.mobile.ads.nativeads.NativeAdView>

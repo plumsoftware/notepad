@@ -18,4 +18,6 @@ object TextSpanStyle {
     const val ITALIC = "I"
     const val UNDERLINE = "U"
     const val STRIKETHROUGH = "S"
+
+    val ALL = listOf(BOLD, ITALIC, UNDERLINE, STRIKETHROUGH)
 }

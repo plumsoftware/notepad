@@ -25,9 +25,6 @@
     <string name="daily_planner">Календарь</string>
     <string name="date_range_start">Начальная дата</string>
     <string name="date_range_end">Конечная дата</string>
-    <string name="ad_label">Реклама</string>
-    <string name="ad_by_yandex">Яндекс</string>
-    <string name="ad_domain_separator">%1$s</string>
     <string name="all_notes">Все заметки</string>
     <string name="folder_all">Все</string>
     <string name="empty_notes_list">Здесь пока пусто</string>
@@ -178,8 +175,6 @@
     <string name="app_version_">Версия %s</string>
     <string name="rate_app_title">Вам нравится приложение?</string>
     <string name="watch_ad">Смотреть</string>
-    <string name="photo_add_ads_promo_title">Лимит фото</string>
-    <string name="photo_add_ads_promo_description">Посмотрите короткую рекламу, чтобы добавить больше фото.</string>
 
     <!-- Secure Folder -->
     <string name="secure_folder">Скрытые</string>

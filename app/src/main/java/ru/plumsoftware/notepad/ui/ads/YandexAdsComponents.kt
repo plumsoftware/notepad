@@ -51,17 +51,3 @@ fun YandexStickyBanner(
             ),
     )
 }
-
-/** @see HomeNativeAdCard */
-@Composable
-fun YandexNativeAdCard(
-    slotIndex: Int,
-    modifier: Modifier = Modifier,
-    adUnitId: String = App.platformConfig.adsConfig.nativeAdsId,
-) {
-    HomeNativeAdCard(
-        slotIndex = slotIndex,
-        modifier = modifier,
-        adUnitId = adUnitId,
-    )
-}

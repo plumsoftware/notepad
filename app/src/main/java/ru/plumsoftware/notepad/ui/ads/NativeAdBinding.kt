@@ -12,171 +12,165 @@ import android.widget.TextView
 import com.yandex.mobile.ads.common.AdBindingResult
 import com.yandex.mobile.ads.nativeads.MediaView
 import com.yandex.mobile.ads.nativeads.NativeAd
+import com.yandex.mobile.ads.nativeads.NativeAdAssets
 import com.yandex.mobile.ads.nativeads.NativeAdView
 import com.yandex.mobile.ads.nativeads.NativeAdViewBinder
 import ru.plumsoftware.notepad.R
+import kotlin.math.ceil
 
-internal fun NativeAd.shouldUseImageLayout(): Boolean {
-    val assets = adAssets ?: return false
-    if (assets.image != null) return true
-    val media = assets.media ?: return false
-    if (media.hasVideo) return true
-    return media.aspectRatio >= 1.3f
-}
+// Минимальная высота строки предупреждения, при которой текст ещё читается
+private const val WARNING_MIN_HEIGHT_DP = 10f
 
-internal fun inflateAndBindNativeAd(
+// Запас сверх минимальной площади предупреждения из объявления
+private const val WARNING_AREA_SAFETY = 1.25f
+
+// Вертикальные отступы основной строки карточки (paddingTop + paddingBottom в разметке)
+private const val CONTENT_VERTICAL_PADDING_DP = 8f
+
+private const val MEDIA_MAX_WIDTH_DP = 120f
+
+/**
+ * Инфлейтит и привязывает карточку слайдера высотой [cardHeightDp].
+ * null — если объявление нельзя корректно показать в такой карточке
+ * (видео требует MediaView от 300×160 dp) или SDK отказался биндить.
+ */
+internal fun inflateNativeAdBanner(
     context: Context,
     nativeAd: NativeAd,
-    isDarkTheme: Boolean = false,
+    isDarkTheme: Boolean,
+    cardHeightDp: Float,
 ): NativeAdView? {
-    val layoutCandidates = if (nativeAd.shouldUseImageLayout()) {
-        listOf(
-            R.layout.view_native_ad_image to true,
-            R.layout.view_native_ad_compact to false,
-        )
-    } else {
-        listOf(
-            R.layout.view_native_ad_compact to false,
-            R.layout.view_native_ad_image to true,
-        )
-    }
+    val assets = nativeAd.adAssets ?: return null
+    if (assets.media?.hasVideo == true) return null
 
-    for ((layoutId, isImageLayout) in layoutCandidates) {
-        val nativeAdView = LayoutInflater.from(context)
-            .inflate(layoutId, null) as NativeAdView
-        if (bindNativeAd(nativeAdView, nativeAd, isImageLayout, isDarkTheme)) {
-            markNativeAdLayout(nativeAdView, isImageLayout)
-            return nativeAdView
-        }
-    }
-    return null
-}
-
-internal fun bindNativeAd(
-    nativeAdView: NativeAdView,
-    nativeAd: NativeAd,
-    isImageLayout: Boolean,
-    isDarkTheme: Boolean = false,
-): Boolean {
-    val media = nativeAdView.findViewById<MediaView>(R.id.native_ad_media)
-    val icon = nativeAdView.findViewById<ImageView>(R.id.native_ad_icon)
-    val favicon = nativeAdView.findViewById<ImageView>(R.id.native_ad_favicon)
-    val title = nativeAdView.findViewById<TextView>(R.id.native_ad_title)
-    val body = nativeAdView.findViewById<TextView>(R.id.native_ad_body)
-    val callToAction = nativeAdView.findViewById<TextView>(R.id.native_ad_call_to_action)
-    val warning = nativeAdView.findViewById<TextView>(R.id.native_ad_warning)
-    val domain = nativeAdView.findViewById<TextView>(R.id.native_ad_domain)
-    val sponsored = nativeAdView.findViewById<TextView>(R.id.native_ad_sponsored)
-    val feedback = nativeAdView.findViewById<ImageView>(R.id.native_ad_feedback)
-    val age = nativeAdView.findViewById<TextView>(R.id.native_ad_age)
-    val price = nativeAdView.findViewById<TextView>(R.id.native_ad_price)
+    val nativeAdView = LayoutInflater.from(context)
+        .inflate(R.layout.view_native_ad_banner, null) as NativeAdView
+    if (!prepareBannerLayout(nativeAdView, assets, cardHeightDp)) return null
 
     val binder = NativeAdViewBinder.Builder(nativeAdView)
-        .setMediaView(media)
-        .setIconView(icon)
-        .setFaviconView(favicon)
-        .setTitleView(title)
-        .setBodyView(body)
-        .setCallToActionView(callToAction)
-        .setWarningView(warning)
-        .setDomainView(domain)
-        .setSponsoredView(sponsored)
-        .setFeedbackView(feedback)
-        .setAgeView(age)
-        .setPriceView(price)
+        .setMediaView(nativeAdView.findViewById(R.id.native_ad_media))
+        .setIconView(nativeAdView.findViewById(R.id.native_ad_icon))
+        .setFaviconView(nativeAdView.findViewById(R.id.native_ad_favicon))
+        .setTitleView(nativeAdView.findViewById(R.id.native_ad_title))
+        .setBodyView(nativeAdView.findViewById(R.id.native_ad_body))
+        .setCallToActionView(nativeAdView.findViewById(R.id.native_ad_call_to_action))
+        .setWarningView(nativeAdView.findViewById(R.id.native_ad_warning))
+        .setDomainView(nativeAdView.findViewById(R.id.native_ad_domain))
+        .setSponsoredView(nativeAdView.findViewById(R.id.native_ad_sponsored))
+        .setFeedbackView(nativeAdView.findViewById(R.id.native_ad_feedback))
+        .setAgeView(nativeAdView.findViewById(R.id.native_ad_age))
+        .setPriceView(nativeAdView.findViewById(R.id.native_ad_price))
         .build()
 
-    val bound = when (nativeAd.bindNativeAd(binder)) {
-        is AdBindingResult.Failure -> false
-        AdBindingResult.Success -> true
-    }
-    if (!bound) return false
+    // Failure — в объявлении есть обязательный ассет, для которого у нас нет View (например, рейтинг)
+    if (nativeAd.bindNativeAd(binder) is AdBindingResult.Failure) return null
 
-    applyNativeAdStyle(
-        nativeAdView = nativeAdView,
-        context = nativeAdView.context,
-        isImageLayout = isImageLayout,
-        isDarkTheme = isDarkTheme,
-    )
+    applyBannerStyle(nativeAdView, isDarkTheme)
+    return nativeAdView
+}
+
+/**
+ * Показывает ровно те элементы, которые пришли в объявлении, и подгоняет размеры
+ * медиа и предупреждения под карточку. false — если предупреждение не помещается.
+ */
+private fun prepareBannerLayout(
+    nativeAdView: NativeAdView,
+    assets: NativeAdAssets,
+    cardHeightDp: Float,
+): Boolean {
+    val density = nativeAdView.resources.displayMetrics.density
+    fun View.showIf(present: Boolean) {
+        visibility = if (present) View.VISIBLE else View.GONE
+    }
+
+    // Предупреждение растягиваем на всю ширину: его доля площади = высота строки / высота карточки
+    val warningView = nativeAdView.findViewById<TextView>(R.id.native_ad_warning)
+    val warning = assets.warning?.takeIf { it.value.isNotBlank() }
+    var warningHeightDp = 0f
+    if (warning != null) {
+        val required = warning.minimumRequiredArea
+        // SDK может отдать долю (0.1) или проценты (10) — приводим к доле
+        val fraction = if (required > 1f) required / 100f else required
+        warningHeightDp = maxOf(
+            WARNING_MIN_HEIGHT_DP,
+            ceil(fraction * cardHeightDp * WARNING_AREA_SAFETY),
+        )
+        // Если предупреждение съедает больше половины карточки — объявление в слайдер не берём
+        if (warningHeightDp > cardHeightDp / 2) return false
+        warningView.layoutParams = warningView.layoutParams.apply {
+            height = (warningHeightDp * density).toInt()
+        }
+    }
+    warningView.showIf(warning != null)
+
+    // Картинка медийного объявления — во всю высоту строки, ширина по пропорциям креатива
+    val mediaView = nativeAdView.findViewById<MediaView>(R.id.native_ad_media)
+    val media = assets.media
+    if (media != null) {
+        val rowHeightDp = cardHeightDp - warningHeightDp - CONTENT_VERTICAL_PADDING_DP
+        val ratio = media.aspectRatio.takeIf { it > 0f } ?: 1f
+        val widthDp = (rowHeightDp * ratio).coerceIn(rowHeightDp * 0.5f, MEDIA_MAX_WIDTH_DP)
+        mediaView.layoutParams = mediaView.layoutParams.apply {
+            width = (widthDp * density).toInt()
+        }
+    }
+    mediaView.showIf(media != null)
+
+    nativeAdView.findViewById<View>(R.id.native_ad_icon).showIf(assets.icon != null)
+    nativeAdView.findViewById<View>(R.id.native_ad_favicon).showIf(assets.favicon != null)
+
+    val hasTitle = !assets.title.isNullOrBlank()
+    nativeAdView.findViewById<View>(R.id.native_ad_title).showIf(hasTitle)
+    nativeAdView.findViewById<TextView>(R.id.native_ad_body).apply {
+        showIf(!assets.body.isNullOrBlank())
+        // Без заголовка текст объявления получает его место
+        maxLines = if (hasTitle) 1 else 2
+    }
+    nativeAdView.findViewById<View>(R.id.native_ad_sponsored).showIf(!assets.sponsored.isNullOrBlank())
+    nativeAdView.findViewById<View>(R.id.native_ad_age).showIf(!assets.age.isNullOrBlank())
+    nativeAdView.findViewById<View>(R.id.native_ad_domain).showIf(!assets.domain.isNullOrBlank())
+    nativeAdView.findViewById<View>(R.id.native_ad_price).showIf(!assets.price.isNullOrBlank())
+    nativeAdView.findViewById<View>(R.id.native_ad_call_to_action)
+        .showIf(!assets.callToAction.isNullOrBlank())
     return true
 }
 
-internal fun applyNativeAdStyle(
-    nativeAdView: NativeAdView,
-    context: Context,
-    isImageLayout: Boolean,
-    isDarkTheme: Boolean,
-) {
+private fun applyBannerStyle(nativeAdView: NativeAdView, isDarkTheme: Boolean) {
+    val context = nativeAdView.context
+    val density = context.resources.displayMetrics.density
     val textColors = nativeAdTextColors(isDarkTheme)
-    val icon = nativeAdView.findViewById<ImageView>(R.id.native_ad_icon)
-    val media = nativeAdView.findViewById<MediaView>(R.id.native_ad_media)
-    val title = nativeAdView.findViewById<TextView>(R.id.native_ad_title)
-    val body = nativeAdView.findViewById<TextView>(R.id.native_ad_body)
-    val callToAction = nativeAdView.findViewById<TextView>(R.id.native_ad_call_to_action)
-    val warning = nativeAdView.findViewById<TextView>(R.id.native_ad_warning)
-    val domain = nativeAdView.findViewById<TextView>(R.id.native_ad_domain)
-    val sponsored = nativeAdView.findViewById<TextView>(R.id.native_ad_sponsored)
-    val feedback = nativeAdView.findViewById<ImageView>(R.id.native_ad_feedback)
 
-    val cornerRadiusPx = 5f * context.resources.displayMetrics.density
-    val outlineProvider = object : ViewOutlineProvider() {
+    val cornerRadiusPx = 6f * density
+    val roundedOutline = object : ViewOutlineProvider() {
         override fun getOutline(view: View, outline: Outline) {
             outline.setRoundRect(0, 0, view.width, view.height, cornerRadiusPx)
         }
     }
-
-    icon?.let { view ->
-        view.clipToOutline = true
-        view.outlineProvider = outlineProvider
-    }
-    if (!isImageLayout) {
-        val hasIcon = icon?.drawable != null
-        if (hasIcon) {
-            media?.visibility = View.GONE
-        } else {
-            icon?.visibility = View.GONE
-            media?.let { view ->
-                view.visibility = View.VISIBLE
-                view.clipToOutline = true
-                view.outlineProvider = outlineProvider
-            }
+    listOf(R.id.native_ad_icon, R.id.native_ad_media).forEach { id ->
+        nativeAdView.findViewById<View>(id).apply {
+            clipToOutline = true
+            outlineProvider = roundedOutline
         }
     }
 
-    sponsored?.apply {
-        text = context.getString(R.string.ad_label)
-        setTextColor(textColors.secondary)
+    nativeAdView.findViewById<TextView>(R.id.native_ad_title).setTextColor(textColors.primary)
+    listOf(
+        R.id.native_ad_body,
+        R.id.native_ad_sponsored,
+        R.id.native_ad_age,
+        R.id.native_ad_domain,
+        R.id.native_ad_price,
+    ).forEach { id -> nativeAdView.findViewById<TextView>(id).setTextColor(textColors.secondary) }
+
+    // Юридический текст — контрастным основным цветом
+    nativeAdView.findViewById<TextView>(R.id.native_ad_warning).setTextColor(textColors.primary)
+
+    nativeAdView.findViewById<TextView>(R.id.native_ad_call_to_action).apply {
+        setBackgroundResource(R.drawable.bg_native_ad_cta_light)
+        setTextColor(0xFF007AFF.toInt())
     }
 
-    val advertiser = domain?.text?.toString()?.trim().orEmpty()
-    domain?.setTextColor(textColors.secondary)
-    domain?.text = when {
-        advertiser.isBlank() -> context.getString(
-            R.string.ad_domain_separator,
-            context.getString(R.string.ad_by_yandex),
-        )
-        else -> context.getString(R.string.ad_domain_separator, advertiser)
-    }
-
-    title?.apply {
-        text = text?.toString()
-            ?.removePrefix("[Demo Ad]")
-            ?.removePrefix("[Demo Ad] ")
-            ?.trim()
-        setTextColor(textColors.primary)
-    }
-
-    body?.apply {
-        visibility = if (text.isNullOrBlank() || !isImageLayout) View.GONE else View.VISIBLE
-        setTextColor(textColors.secondary)
-    }
-    warning?.apply {
-        visibility = if (text.isNullOrBlank()) View.GONE else View.VISIBLE
-        setTextColor(textColors.secondary)
-    }
-    callToAction?.visibility = if (callToAction.text.isNullOrBlank()) View.GONE else View.VISIBLE
-
-    feedback?.apply {
+    nativeAdView.findViewById<ImageView>(R.id.native_ad_feedback).apply {
         alpha = 1f
         visibility = View.VISIBLE
         val feedbackColors = nativeAdFeedbackColors(isDarkTheme)
@@ -187,27 +181,10 @@ internal fun applyNativeAdStyle(
         setImageDrawable(null)
         setImageResource(R.drawable.ic_native_ad_more)
         scaleType = ImageView.ScaleType.CENTER_INSIDE
-        val insetPx = (6f * context.resources.displayMetrics.density).toInt()
+        val insetPx = (4f * density).toInt()
         setPadding(insetPx, insetPx, insetPx, insetPx)
         setColorFilter(feedbackColors.icon, PorterDuff.Mode.SRC_IN)
     }
-
-    callToAction?.setBackgroundResource(
-        if (isImageLayout) {
-            R.drawable.bg_native_ad_cta_solid
-        } else {
-            R.drawable.bg_native_ad_cta_light
-        },
-    )
-    if (!isImageLayout) {
-        callToAction?.setTextColor(0xFF007AFF.toInt())
-    } else {
-        callToAction?.setTextColor(0xFFFFFFFF.toInt())
-    }
-}
-
-internal fun markNativeAdLayout(nativeAdView: NativeAdView, isImageLayout: Boolean) {
-    nativeAdView.setTag(R.id.native_ad_is_image_layout, isImageLayout)
 }
 
 private data class NativeAdTextColors(

@@ -25,9 +25,6 @@
     <string name="daily_planner">日历</string>
     <string name="date_range_start">开始日期</string>
     <string name="date_range_end">结束日期</string>
-    <string name="ad_label">广告</string>
-    <string name="ad_by_yandex">Yandex</string>
-    <string name="ad_domain_separator">%1$s</string>
     <string name="all_notes">所有笔记</string>
     <string name="empty_notes_list">暂无笔记</string>
     <string name="empty_notes_description">空列表</string>
@@ -97,8 +94,6 @@
     <string name="app_version_">版本 %s</string>
     <string name="rate_app_title">喜欢这个应用吗？</string>
     <string name="watch_ad">观看广告</string>
-    <string name="photo_add_ads_promo_title">添加更多照片</string>
-    <string name="photo_add_ads_promo_description">观看短视频广告以添加更多照片。</string>
 
     <!-- Secure Folder -->
     <string name="secure_folder">已隐藏</string>

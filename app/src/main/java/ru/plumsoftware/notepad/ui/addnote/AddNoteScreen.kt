@@ -145,6 +145,9 @@ import ru.plumsoftware.notepad.ui.player.VoiceRecorderSection
 import ru.plumsoftware.notepad.ui.RichTextVisualTransformation
 import ru.plumsoftware.notepad.ui.shiftSpansOnEdit
 import ru.plumsoftware.notepad.ui.toggleStyle
+import ru.plumsoftware.notepad.ui.applyTypingStyles
+import ru.plumsoftware.notepad.ui.ads.InterstitialAdPacing
+import ru.plumsoftware.notepad.ui.stylesForSelection
 import ru.plumsoftware.notepad.data.model.TextSpanStyle
 import ru.plumsoftware.notepad.data.model.Tag
 import ru.plumsoftware.notepad.data.model.NoteFile
@@ -159,20 +162,7 @@ import androidx.compose.material.icons.outlined.AttachFile
 import androidx.compose.material.icons.outlined.InsertDriveFile
 import androidx.compose.material.icons.automirrored.outlined.Label
 import java.util.UUID
-import com.yandex.mobile.ads.interstitial.InterstitialAd
-import com.yandex.mobile.ads.interstitial.InterstitialAdLoadListener
-import com.yandex.mobile.ads.interstitial.InterstitialAdLoader
-import com.yandex.mobile.ads.common.AdError
-import com.yandex.mobile.ads.common.AdRequest
 import ru.plumsoftware.notepad.ui.ads.YandexStickyBanner
-import com.yandex.mobile.ads.common.AdRequestError
-import com.yandex.mobile.ads.common.ImpressionData
-import com.yandex.mobile.ads.interstitial.InterstitialAdEventListener
-import com.yandex.mobile.ads.rewarded.Reward
-import com.yandex.mobile.ads.rewarded.RewardedAd
-import com.yandex.mobile.ads.rewarded.RewardedAdEventListener
-import com.yandex.mobile.ads.rewarded.RewardedAdLoadListener
-import com.yandex.mobile.ads.rewarded.RewardedAdLoader
 import kotlinx.coroutines.launch
 import ru.plumsoftware.notepad.App
 import java.text.SimpleDateFormat
@@ -189,75 +179,10 @@ fun AddNoteScreen(
     viewModel: NoteViewModel,
     note: Note? = null
 ) {
-    // --- ADS STATE ---
-    var rewardedAd: RewardedAd? by remember { mutableStateOf(null) }
-    var myInterstitialAds: InterstitialAd? by remember { mutableStateOf(null) }
-
-    var isAdsLoading by remember { mutableStateOf(false) }
-
-    var rewardedRetryCount by remember { mutableIntStateOf(0) }
-    var interstitialRetryCount by remember { mutableIntStateOf(0) }
-    val maxRetries = 5
-
     val context = LocalContext.current
 
-    val rewardedAdLoader = remember { RewardedAdLoader(context) }
-    val interstitialAdsLoader = remember { InterstitialAdLoader(activity) }
-
-    val rewardedRequest = remember {
-        AdRequest.Builder(App.platformConfig.adsConfig.rewardedAdsId).build()
-    }
-
-    // --- ADS LOAD LOGIC ---
-    // Загрузка Rewarded
-    LaunchedEffect(rewardedRetryCount) {
-        if (rewardedAd == null && rewardedRetryCount < maxRetries) {
-            isAdsLoading = true
-            rewardedAdLoader.loadAd(rewardedRequest, object : RewardedAdLoadListener {
-                override fun onAdLoaded(rewarded: RewardedAd) {
-                    isAdsLoading = false
-                    rewardedAd = rewarded
-                }
-
-                override fun onAdFailedToLoad(error: AdRequestError) {
-                    rewardedRetryCount++
-                }
-            })
-        } else {
-            isAdsLoading = false
-        }
-    }
-
-    // Межстраничная реклама при создании заметки временно отключена
-//    LaunchedEffect(interstitialRetryCount) {
-//        if (myInterstitialAds == null && interstitialRetryCount < maxRetries) {
-//            interstitialAdsLoader.loadAd(
-//                AdRequest.Builder(App.platformConfig.adsConfig.interstitialAdsId).build(),
-//                object : InterstitialAdLoadListener {
-//                    override fun onAdLoaded(interstitialAd: InterstitialAd) {
-//                        myInterstitialAds = interstitialAd
-//                        myInterstitialAds?.setAdEventListener(object : InterstitialAdEventListener {
-//                            override fun onAdClicked() {}
-//                            override fun onAdDismissed() {
-//                                navController.navigateUp()
-//                            }
-//
-//                            override fun onAdFailedToShow(adError: AdError) {
-//                                navController.navigateUp()
-//                            }
-//
-//                            override fun onAdImpression(impressionData: ImpressionData?) {}
-//                            override fun onAdShown() {}
-//                        })
-//                    }
-//
-//                    override fun onAdFailedToLoad(error: AdRequestError) {
-//                        interstitialRetryCount++
-//                    }
-//                }
-//            )
-//        }
-//    }
+    // Сколько заметок было до сохранения — от этого зависит межстраничная реклама
+    val notesCountBeforeSave by viewModel.totalNotesCount.collectAsState()
 
     // --- State ---
     val scrollState = rememberScrollState()
@@ -272,6 +197,8 @@ fun AddNoteScreen(
     var descriptionSpans by remember {
         mutableStateOf(note?.descriptionSpans ?: emptyList())
     }
+    // Стили, которыми печатается новый текст (включаются кнопками панели форматирования)
+    var activeStyles by remember { mutableStateOf(emptySet<String>()) }
     // Вкладка Текст/Голос (для голосовых заметок сразу открываем «Голос»)
     var isVoiceTab by remember { mutableStateOf(note?.voicePath != null) }
     // Голосовая заметка
@@ -307,7 +234,6 @@ fun AddNoteScreen(
     var showDatePicker by remember { mutableStateOf(false) }
     var showTimePicker by remember { mutableStateOf(false) }
     var showAddTaskDialog by remember { mutableStateOf(false) }
-    var showAddPhotoDialog by remember { mutableStateOf(false) }
     var showColorSheet by remember { mutableStateOf(false) }
     var showVoiceDialog by remember { mutableStateOf(false) }
     var fullscreenImagePath by remember { mutableStateOf<String?>(null) }
@@ -514,16 +440,13 @@ fun AddNoteScreen(
                     viewModel.updateNote(updatedNote, context)
                 } else {
                     if (playSaveSound) playSound(context, exoPlayer, R.raw.note_create)
+                    val previousNotesCount = notesCountBeforeSave.toLong()
                     viewModel.addNote(updatedNote)
+                    InterstitialAdPacing.onNoteCreated(activity, previousNotesCount)
                 }
             }
 
-            // Межстраничная реклама при выходе временно отключена
-//            if (myInterstitialAds != null) {
-//                myInterstitialAds?.show(activity)
-//            } else {
-                navController.navigateUp()
-//            }
+            navController.navigateUp()
         }
     }
 
@@ -565,20 +488,6 @@ fun AddNoteScreen(
             onAdd = { text ->
                 tasks.add(Task(text = text))
                 showAddTaskDialog = false
-            }
-        )
-    }
-
-    if (showAddPhotoDialog) {
-        IOSAdsDialog(
-            onDismiss = { showAddPhotoDialog = false },
-            onWatch = {
-                showAddPhotoDialog = false
-                showAd(rewardedAd, rewardedAdLoader, activity) {
-                    scope.launch {
-                        pickImages.launch("image/*")
-                    }
-                }
             }
         )
     }
@@ -655,17 +564,6 @@ fun AddNoteScreen(
                 selectedTagIds = selectedTagIds + tag.id
             }
         )
-    }
-
-    if (isAdsLoading) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(color = Color.Black.copy(alpha = 0.4f)),
-            contentAlignment = Alignment.Center
-        ) {
-            LoadingDialog()
-        }
     }
 
     val cardColor = MaterialTheme.colorScheme.surface
@@ -865,12 +763,21 @@ fun AddNoteScreen(
                     modifier = Modifier
                         .padding(horizontal = 16.dp)
                         .fillMaxWidth(),
+                    activeStyles = activeStyles,
                     onToggle = { style ->
                         val sel = descriptionTfv.selection
-                        if (!sel.collapsed) {
+                        if (sel.collapsed) {
+                            // Без выделения кнопка включает/выключает стиль для дальнейшего набора
+                            activeStyles = if (style in activeStyles) {
+                                activeStyles - style
+                            } else {
+                                activeStyles + style
+                            }
+                        } else {
                             descriptionSpans = toggleStyle(
                                 descriptionSpans, sel.min, sel.max, style
                             )
+                            activeStyles = stylesForSelection(descriptionSpans, sel.min, sel.max)
                         }
                     }
                 )
@@ -896,9 +803,29 @@ fun AddNoteScreen(
                     BasicTextField(
                         value = descriptionTfv,
                         onValueChange = { newValue ->
-                            descriptionSpans = shiftSpansOnEdit(
-                                descriptionTfv.text, newValue.text, descriptionSpans
-                            )
+                            val oldValue = descriptionTfv
+                            val newSel = newValue.selection
+                            if (oldValue.text != newValue.text) {
+                                var spans = shiftSpansOnEdit(
+                                    oldValue.text, newValue.text, descriptionSpans
+                                )
+                                // Сколько символов вставлено перед курсором (с учётом заменённого выделения)
+                                val insertedLen = newValue.text.length -
+                                    (oldValue.text.length - oldValue.selection.length)
+                                if (newSel.collapsed && insertedLen in 1..newSel.end) {
+                                    // Набранный текст получает ровно активные стили
+                                    spans = applyTypingStyles(
+                                        spans, newSel.end - insertedLen, newSel.end, activeStyles
+                                    )
+                                } else {
+                                    // Удаление: стиль снова берём из текста у курсора
+                                    activeStyles = stylesForSelection(spans, newSel.min, newSel.max)
+                                }
+                                descriptionSpans = spans
+                            } else if (oldValue.selection != newSel) {
+                                // Курсор переместили — панель показывает стиль текста в новом месте
+                                activeStyles = stylesForSelection(descriptionSpans, newSel.min, newSel.max)
+                            }
                             descriptionTfv = newValue
                         },
                         textStyle = MaterialTheme.typography.bodyLarge.copy(
@@ -1096,10 +1023,7 @@ fun AddNoteScreen(
                                 .size(110.dp)
                                 .clip(RoundedCornerShape(14.dp))
                                 .background(cardColor)
-                                .clickable {
-                                    if (photos.size == 4) showAddPhotoDialog = true
-                                    else pickImages.launch("image/*")
-                                },
+                                .clickable { pickImages.launch("image/*") },
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.Center
                         ) {
@@ -1453,39 +1377,6 @@ fun AddNoteScreen(
     }
 }
 
-private fun showAd(
-    rewardedAd: RewardedAd?,
-    rewardedAdLoader: RewardedAdLoader?,
-    activity: Activity?,
-    onRewarded: () -> Unit
-) {
-    if (rewardedAd != null && activity != null) {
-        var isEarnedReward = false
-        rewardedAd.setAdEventListener(object : RewardedAdEventListener {
-            override fun onAdShown() {}
-            override fun onRewarded(reward: Reward) {
-                isEarnedReward = true
-            }
-
-            override fun onAdFailedToShow(adError: AdError) {
-                onRewarded()
-            }
-
-            override fun onAdDismissed() {
-                if (isEarnedReward) {
-                    onRewarded()
-                }
-            }
-
-            override fun onAdClicked() {}
-            override fun onAdImpression(impressionData: ImpressionData?) {}
-        })
-        rewardedAd.show(activity)
-    } else {
-        onRewarded()
-    }
-}
-
 // --- ВСПОМОГАТЕЛЬНЫЕ ДИАЛОГИ ---
 
 @Composable
@@ -1702,82 +1593,6 @@ fun IOSAddTaskDialog(onDismiss: () -> Unit, onAdd: (String) -> Unit) {
     }
 }
 
-@Composable
-fun IOSAdsDialog(onDismiss: () -> Unit, onWatch: () -> Unit) {
-    Dialog(
-        onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false)
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null
-                ) { onDismiss() }, contentAlignment = Alignment.Center
-        ) {
-            Column(
-                modifier = Modifier
-                    .width(280.dp)
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.95f))
-                    .clickable(enabled = false) {},
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    stringResource(R.string.photo_add_ads_promo_title),
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(top = 16.dp, bottom = 4.dp),
-                    style = MaterialTheme.typography.titleMedium
-                )
-                Text(
-                    stringResource(R.string.photo_add_ads_promo_description),
-                    style = MaterialTheme.typography.bodySmall,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(horizontal = 16.dp)
-                )
-                HorizontalDivider(
-                    modifier = Modifier.padding(top = 16.dp),
-                    color = Color.Gray.copy(0.3f)
-                )
-                Row(modifier = Modifier.height(44.dp)) {
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxHeight()
-                            .clickable { onDismiss() },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            stringResource(R.string.cancel),
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                    Box(
-                        modifier = Modifier
-                            .width(0.5.dp)
-                            .fillMaxHeight()
-                            .background(Color.Gray.copy(0.3f))
-                    )
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxHeight()
-                            .clickable { onWatch() },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            stringResource(R.string.watch_ad),
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
 fun getFriendlyDate(time: Long): String {
     return SimpleDateFormat("d MMMM, HH:mm", Locale.getDefault()).format(Date(time))
 }
@@ -1845,6 +1660,7 @@ fun TextVoiceSegmentedToggle(
 
 @Composable
 fun NoteFormatToolbar(
+    activeStyles: Set<String>,
     onToggle: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -1862,10 +1678,15 @@ fun NoteFormatToolbar(
             TextSpanStyle.STRIKETHROUGH to Icons.Default.FormatStrikethrough
         )
         buttons.forEach { (style, icon) ->
+            val isActive = style in activeStyles
             Box(
                 modifier = Modifier
                     .weight(1f)
                     .clip(RoundedCornerShape(10.dp))
+                    .background(
+                        if (isActive) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                        else Color.Transparent
+                    )
                     .clickable { onToggle(style) }
                     .padding(vertical = 10.dp),
                 contentAlignment = Alignment.Center
@@ -1873,7 +1694,8 @@ fun NoteFormatToolbar(
                 Icon(
                     imageVector = icon,
                     contentDescription = style,
-                    tint = MaterialTheme.colorScheme.onSurface,
+                    tint = if (isActive) MaterialTheme.colorScheme.primary
+                    else MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.size(22.dp)
                 )
             }
@@ -1942,14 +1764,4 @@ fun NoteTagsRow(
             )
         }
     }
-}
-
-private fun loadRewardedAd(rewardedAdLoader: RewardedAdLoader?) {
-    rewardedAdLoader?.loadAd(
-        AdRequest.Builder(App.platformConfig.adsConfig.rewardedAdsId).build(),
-        object : RewardedAdLoadListener {
-            override fun onAdLoaded(rewardedAd: RewardedAd) {}
-            override fun onAdFailedToLoad(error: AdRequestError) {}
-        }
-    )
 }

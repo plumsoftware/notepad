@@ -204,9 +204,18 @@ fun isRangeFullyStyled(spans: List<TextSpan>, start: Int, end: Int, style: Strin
 }
 
 /** Переключает стиль [style] на диапазоне [start, end): добавляет либо снимает его. */
-fun toggleStyle(spans: List<TextSpan>, start: Int, end: Int, style: String): List<TextSpan> {
+fun toggleStyle(spans: List<TextSpan>, start: Int, end: Int, style: String): List<TextSpan> =
+    setStyle(spans, start, end, style, enabled = !isRangeFullyStyled(spans, start, end, style))
+
+/** Включает ([enabled] = true) или снимает стиль [style] на диапазоне [start, end). */
+fun setStyle(
+    spans: List<TextSpan>,
+    start: Int,
+    end: Int,
+    style: String,
+    enabled: Boolean
+): List<TextSpan> {
     if (start >= end) return spans
-    val fullyStyled = isRangeFullyStyled(spans, start, end, style)
     val result = mutableListOf<TextSpan>()
 
     // Разрезаем существующие спаны этого стиля по границам диапазона; чужие стили не трогаем
@@ -220,11 +229,29 @@ fun toggleStyle(spans: List<TextSpan>, start: Int, end: Int, style: String): Lis
         if (s.end > end) result.add(s.copy(start = maxOf(s.start, end)))
         // Часть внутри [start, end) удаляется (при снятии) либо будет пересоздана ниже
     }
-    if (!fullyStyled) {
+    if (enabled) {
         result.add(TextSpan(start = start, end = end, style = style))
     }
     return result.filter { it.end > it.start }.let { mergeSpans(it) }
 }
+
+/** Делает только что набранный текст [start, end) ровно стилями [active]: недостающие добавляет, лишние снимает. */
+fun applyTypingStyles(spans: List<TextSpan>, start: Int, end: Int, active: Set<String>): List<TextSpan> =
+    TextSpanStyle.ALL.fold(spans) { acc, style -> setStyle(acc, start, end, style, style in active) }
+
+/**
+ * Стили, которые показываются на панели форматирования для выделения [start, end).
+ * Курсор без выделения берёт стиль символа слева от себя (как в текстовых редакторах),
+ * выделение — только стили, покрывающие его целиком.
+ */
+fun stylesForSelection(spans: List<TextSpan>, start: Int, end: Int): Set<String> =
+    if (start == end) {
+        val index = start - 1
+        if (index < 0) emptySet()
+        else spans.filter { index >= it.start && index < it.end }.map { it.style }.toSet()
+    } else {
+        TextSpanStyle.ALL.filter { isRangeFullyStyled(spans, start, end, it) }.toSet()
+    }
 
 /** Склеивает соседние/перекрывающиеся спаны одного стиля. */
 private fun mergeSpans(spans: List<TextSpan>): List<TextSpan> {

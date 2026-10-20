@@ -41,7 +41,6 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells.*
-import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridItemSpan
 import androidx.compose.foundation.lazy.staggeredgrid.items
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.outlined.NoteAdd
@@ -96,6 +95,7 @@ import ru.plumsoftware.notepad.data.model.Group
 import ru.plumsoftware.notepad.data.model.Note
 import ru.plumsoftware.notepad.ui.NoteViewModel
 import ru.plumsoftware.notepad.ui.Screen
+import ru.plumsoftware.notepad.ui.ads.HomeNativeAdBanner
 import ru.plumsoftware.notepad.ui.dialog.FullscreenImageDialog
 import ru.plumsoftware.notepad.ui.dialog.LoadingDialog
 import ru.plumsoftware.notepad.ui.elements.IOSGroupList
@@ -126,11 +126,6 @@ import ru.plumsoftware.notepad.ui.elements.SortOrder
 import ru.plumsoftware.notepad.ui.theme.Dimens
 import ru.plumsoftware.notepad.ui.elements.RateAppBottomSheet
 import ru.plumsoftware.notepad.ui.elements.getNotesForDate
-import ru.plumsoftware.notepad.ui.ads.NoteFeedItem
-import ru.plumsoftware.notepad.ui.ads.YandexNativeAdCard
-import ru.plumsoftware.notepad.ui.ads.buildNoteFeedWithAds
-import ru.plumsoftware.notepad.ui.ads.nativeAdGridWidth
-import ru.plumsoftware.notepad.ui.ads.nativeAdListWidth
 import ru.plumsoftware.notepad.ui.habit.HabitsContent
 import ru.plumsoftware.notepad.ui.rememberBiometricPrompt
 import java.text.SimpleDateFormat
@@ -334,9 +329,6 @@ fun NoteListScreen(
     val displayedNotes = remember(notes, selectedFilter, dateRange) {
         filterNotesByDateRange(sortNotes(notes, selectedFilter), dateRange)
     }
-    val feedItems = remember(displayedNotes) {
-        buildNoteFeedWithAds(displayedNotes)
-    }
 
     // Scroll to note if noteId is provided
     LaunchedEffect(scrollToNoteId, notes) {
@@ -538,6 +530,8 @@ fun NoteListScreen(
                     notesForCalendar = notes
                 )
 
+                HomeNativeAdBanner()
+
                 IOSGroupList(
                             groups = groups,
                             selectedGroupId = selectedGroupId,
@@ -579,121 +573,100 @@ fun NoteListScreen(
                                             vertical = 8.dp
                                         )
                                     ) {
-                                        items(
-                                            items = feedItems,
-                                            key = { it.key },
-                                            span = { item ->
-                                                when (item) {
-                                                    is NoteFeedItem.NativeAdSlot -> StaggeredGridItemSpan.FullLine
-                                                    is NoteFeedItem.NoteEntry -> StaggeredGridItemSpan.SingleLane
-                                                }
-                                            }
-                                        ) { item ->
-                                            when (item) {
-                                                is NoteFeedItem.NativeAdSlot -> {
-                                                    YandexNativeAdCard(
-                                                        slotIndex = item.index,
-                                                        modifier = Modifier.nativeAdGridWidth(),
-                                                    )
-                                                }
+                                        items(items = displayedNotes, key = { it.id }) { note ->
+                                            if (notesToDelete[note.id] != true) {
+                                                var showNoteMenu by remember { mutableStateOf(false) }
 
-                                                is NoteFeedItem.NoteEntry -> {
-                                                    val note = item.note
-                                                    if (notesToDelete[note.id] != true) {
-                                                        var showNoteMenu by remember { mutableStateOf(false) }
-
-                                                        Box {
-                                                            IOSNoteCard(
-                                                                note = note,
-                                                                groups = groups.map { it.group },
-                                                                tags = allTags,
-                                                                modifier = Modifier.fillMaxWidth(),
-                                                                elevated = showNoteMenu,
-                                                                onClick = {
-                                                                    navController.navigate(
-                                                                        Screen.EditNote.createRoute(note.id)
-                                                                    )
-                                                                },
-                                                                onLongClick = {
-                                                                    showNoteMenu = true
-                                                                    playSound(
-                                                                        context,
-                                                                        exoPlayer,
-                                                                        R.raw.note_create
-                                                                    )
-                                                                },
-                                                                onImageClick = { path ->
-                                                                    fullscreenImagePath = path
-                                                                },
-                                                                onNoteUpdated = { updatedNote ->
-                                                                    viewModel.updateNote(
-                                                                        updatedNote,
-                                                                        context
-                                                                    )
-                                                                }
+                                                Box {
+                                                    IOSNoteCard(
+                                                        note = note,
+                                                        groups = groups.map { it.group },
+                                                        tags = allTags,
+                                                        modifier = Modifier.fillMaxWidth(),
+                                                        elevated = showNoteMenu,
+                                                        onClick = {
+                                                            navController.navigate(
+                                                                Screen.EditNote.createRoute(note.id)
                                                             )
+                                                        },
+                                                        onLongClick = {
+                                                            showNoteMenu = true
+                                                            playSound(
+                                                                context,
+                                                                exoPlayer,
+                                                                R.raw.note_create
+                                                            )
+                                                        },
+                                                        onImageClick = { path ->
+                                                            fullscreenImagePath = path
+                                                        },
+                                                        onNoteUpdated = { updatedNote ->
+                                                            viewModel.updateNote(
+                                                                updatedNote,
+                                                                context
+                                                            )
+                                                        }
+                                                    )
 
-                                                            DropdownMenu(
-                                                                expanded = showNoteMenu,
-                                                                onDismissRequest = { showNoteMenu = false },
-                                                                offset = DpOffset(x = 10.dp, y = 0.dp),
-                                                                containerColor = MaterialTheme.colorScheme.surfaceContainer,
-                                                                shape = RoundedCornerShape(12.dp)
-                                                            ) {
-                                                                DropdownMenuItem(
-                                                                    text = { Text(stringResource(R.string.move_to_folder)) },
-                                                                    onClick = {
-                                                                        showNoteMenu = false
-                                                                        noteToMove = note
-                                                                    },
-                                                                    leadingIcon = {
-                                                                        Icon(Icons.Default.FolderOpen, null)
+                                                    DropdownMenu(
+                                                        expanded = showNoteMenu,
+                                                        onDismissRequest = { showNoteMenu = false },
+                                                        offset = DpOffset(x = 10.dp, y = 0.dp),
+                                                        containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                                                        shape = RoundedCornerShape(12.dp)
+                                                    ) {
+                                                        DropdownMenuItem(
+                                                            text = { Text(stringResource(R.string.move_to_folder)) },
+                                                            onClick = {
+                                                                showNoteMenu = false
+                                                                noteToMove = note
+                                                            },
+                                                            leadingIcon = {
+                                                                Icon(Icons.Default.FolderOpen, null)
+                                                            }
+                                                        )
+                                                        DropdownMenuItem(
+                                                            text = {
+                                                                Text(
+                                                                    if (note.isPinned) {
+                                                                        stringResource(R.string.unpin_note)
+                                                                    } else {
+                                                                        stringResource(R.string.pin_note)
                                                                     }
                                                                 )
-                                                                DropdownMenuItem(
-                                                                    text = {
-                                                                        Text(
-                                                                            if (note.isPinned) {
-                                                                                stringResource(R.string.unpin_note)
-                                                                            } else {
-                                                                                stringResource(R.string.pin_note)
-                                                                            }
-                                                                        )
-                                                                    },
-                                                                    onClick = {
-                                                                        showNoteMenu = false
-                                                                        viewModel.togglePin(note)
-                                                                    },
-                                                                    leadingIcon = {
-                                                                        Icon(Icons.Outlined.PushPin, null)
-                                                                    }
+                                                            },
+                                                            onClick = {
+                                                                showNoteMenu = false
+                                                                viewModel.togglePin(note)
+                                                            },
+                                                            leadingIcon = {
+                                                                Icon(Icons.Outlined.PushPin, null)
+                                                            }
+                                                        )
+                                                        DropdownMenuItem(
+                                                            text = {
+                                                                Text(
+                                                                    stringResource(R.string.delete),
+                                                                    color = MaterialTheme.colorScheme.error
                                                                 )
-                                                                DropdownMenuItem(
-                                                                    text = {
-                                                                        Text(
-                                                                            stringResource(R.string.delete),
-                                                                            color = MaterialTheme.colorScheme.error
-                                                                        )
-                                                                    },
-                                                                    onClick = {
-                                                                        showNoteMenu = false
-                                                                        notesToDelete[note.id] = true
-                                                                        playSound(context, exoPlayer, R.raw.note_delete)
-                                                                        coroutineScope.launch {
-                                                                            delay(400)
-                                                                            viewModel.deleteNote(note, context)
-                                                                        }
-                                                                    },
-                                                                    leadingIcon = {
-                                                                        Icon(
-                                                                            Icons.Default.Delete,
-                                                                            null,
-                                                                            tint = MaterialTheme.colorScheme.error
-                                                                        )
-                                                                    }
+                                                            },
+                                                            onClick = {
+                                                                showNoteMenu = false
+                                                                notesToDelete[note.id] = true
+                                                                playSound(context, exoPlayer, R.raw.note_delete)
+                                                                coroutineScope.launch {
+                                                                    delay(400)
+                                                                    viewModel.deleteNote(note, context)
+                                                                }
+                                                            },
+                                                            leadingIcon = {
+                                                                Icon(
+                                                                    Icons.Default.Delete,
+                                                                    null,
+                                                                    tint = MaterialTheme.colorScheme.error
                                                                 )
                                                             }
-                                                        }
+                                                        )
                                                     }
                                                 }
                                             }
@@ -718,112 +691,100 @@ fun NoteListScreen(
                                             .fillMaxSize()
                                             .padding(top = 10.dp)
                                     ) {
-                                        items(feedItems, key = { it.key }) { item ->
-                                            when (item) {
-                                                is NoteFeedItem.NativeAdSlot -> {
-                                                    YandexNativeAdCard(
-                                                        slotIndex = item.index,
-                                                        modifier = Modifier.nativeAdListWidth(),
-                                                    )
-                                                }
+                                        items(displayedNotes, key = { it.id }) { note ->
+                                            if (notesToDelete[note.id] != true) {
+                                                var showNoteMenu by remember { mutableStateOf(false) }
 
-                                                is NoteFeedItem.NoteEntry -> {
-                                                    val note = item.note
-                                                    if (notesToDelete[note.id] != true) {
-                                                        var showNoteMenu by remember { mutableStateOf(false) }
-
-                                                        Box {
-                                                            IOSNoteCard(
-                                                                note = note,
-                                                                groups = groups.map { it.group },
-                                                                tags = allTags,
-                                                                modifier = Modifier.fillMaxWidth(),
-                                                                elevated = showNoteMenu,
-                                                                onClick = {
-                                                                    navController.navigate(
-                                                                        Screen.EditNote.createRoute(note.id)
-                                                                    )
-                                                                },
-                                                                onLongClick = {
-                                                                    showNoteMenu = true
-                                                                    playSound(
-                                                                        context,
-                                                                        exoPlayer,
-                                                                        R.raw.note_create
-                                                                    )
-                                                                },
-                                                                onImageClick = { path ->
-                                                                    fullscreenImagePath = path
-                                                                },
-                                                                onNoteUpdated = { updatedNote ->
-                                                                    viewModel.updateNote(
-                                                                        updatedNote,
-                                                                        context
-                                                                    )
-                                                                }
+                                                Box {
+                                                    IOSNoteCard(
+                                                        note = note,
+                                                        groups = groups.map { it.group },
+                                                        tags = allTags,
+                                                        modifier = Modifier.fillMaxWidth(),
+                                                        elevated = showNoteMenu,
+                                                        onClick = {
+                                                            navController.navigate(
+                                                                Screen.EditNote.createRoute(note.id)
                                                             )
+                                                        },
+                                                        onLongClick = {
+                                                            showNoteMenu = true
+                                                            playSound(
+                                                                context,
+                                                                exoPlayer,
+                                                                R.raw.note_create
+                                                            )
+                                                        },
+                                                        onImageClick = { path ->
+                                                            fullscreenImagePath = path
+                                                        },
+                                                        onNoteUpdated = { updatedNote ->
+                                                            viewModel.updateNote(
+                                                                updatedNote,
+                                                                context
+                                                            )
+                                                        }
+                                                    )
 
-                                                            DropdownMenu(
-                                                                expanded = showNoteMenu,
-                                                                onDismissRequest = { showNoteMenu = false },
-                                                                offset = DpOffset(x = 10.dp, y = 0.dp),
-                                                                containerColor = MaterialTheme.colorScheme.surfaceContainer,
-                                                                shape = RoundedCornerShape(12.dp)
-                                                            ) {
-                                                                DropdownMenuItem(
-                                                                    text = { Text(stringResource(R.string.move_to_folder)) },
-                                                                    onClick = {
-                                                                        showNoteMenu = false
-                                                                        noteToMove = note
-                                                                    },
-                                                                    leadingIcon = {
-                                                                        Icon(Icons.Default.FolderOpen, null)
+                                                    DropdownMenu(
+                                                        expanded = showNoteMenu,
+                                                        onDismissRequest = { showNoteMenu = false },
+                                                        offset = DpOffset(x = 10.dp, y = 0.dp),
+                                                        containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                                                        shape = RoundedCornerShape(12.dp)
+                                                    ) {
+                                                        DropdownMenuItem(
+                                                            text = { Text(stringResource(R.string.move_to_folder)) },
+                                                            onClick = {
+                                                                showNoteMenu = false
+                                                                noteToMove = note
+                                                            },
+                                                            leadingIcon = {
+                                                                Icon(Icons.Default.FolderOpen, null)
+                                                            }
+                                                        )
+                                                        DropdownMenuItem(
+                                                            text = {
+                                                                Text(
+                                                                    if (note.isPinned) {
+                                                                        stringResource(R.string.unpin_note)
+                                                                    } else {
+                                                                        stringResource(R.string.pin_note)
                                                                     }
                                                                 )
-                                                                DropdownMenuItem(
-                                                                    text = {
-                                                                        Text(
-                                                                            if (note.isPinned) {
-                                                                                stringResource(R.string.unpin_note)
-                                                                            } else {
-                                                                                stringResource(R.string.pin_note)
-                                                                            }
-                                                                        )
-                                                                    },
-                                                                    onClick = {
-                                                                        showNoteMenu = false
-                                                                        viewModel.togglePin(note)
-                                                                    },
-                                                                    leadingIcon = {
-                                                                        Icon(Icons.Outlined.PushPin, null)
-                                                                    }
+                                                            },
+                                                            onClick = {
+                                                                showNoteMenu = false
+                                                                viewModel.togglePin(note)
+                                                            },
+                                                            leadingIcon = {
+                                                                Icon(Icons.Outlined.PushPin, null)
+                                                            }
+                                                        )
+                                                        DropdownMenuItem(
+                                                            text = {
+                                                                Text(
+                                                                    stringResource(R.string.delete),
+                                                                    color = MaterialTheme.colorScheme.error
                                                                 )
-                                                                DropdownMenuItem(
-                                                                    text = {
-                                                                        Text(
-                                                                            stringResource(R.string.delete),
-                                                                            color = MaterialTheme.colorScheme.error
-                                                                        )
-                                                                    },
-                                                                    onClick = {
-                                                                        showNoteMenu = false
-                                                                        notesToDelete[note.id] = true
-                                                                        playSound(context, exoPlayer, R.raw.note_delete)
-                                                                        coroutineScope.launch {
-                                                                            delay(400)
-                                                                            viewModel.deleteNote(note, context)
-                                                                        }
-                                                                    },
-                                                                    leadingIcon = {
-                                                                        Icon(
-                                                                            Icons.Default.Delete,
-                                                                            null,
-                                                                            tint = MaterialTheme.colorScheme.error
-                                                                        )
-                                                                    }
+                                                            },
+                                                            onClick = {
+                                                                showNoteMenu = false
+                                                                notesToDelete[note.id] = true
+                                                                playSound(context, exoPlayer, R.raw.note_delete)
+                                                                coroutineScope.launch {
+                                                                    delay(400)
+                                                                    viewModel.deleteNote(note, context)
+                                                                }
+                                                            },
+                                                            leadingIcon = {
+                                                                Icon(
+                                                                    Icons.Default.Delete,
+                                                                    null,
+                                                                    tint = MaterialTheme.colorScheme.error
                                                                 )
                                                             }
-                                                        }
+                                                        )
                                                     }
                                                 }
                                             }
